@@ -16,6 +16,8 @@
 //     EncodeVersion) to avoid the copyAndConvert path in cyclonedx-go v0.12.0.
 //     That path's supportsComponentType() has no case for CryptographicAsset,
 //     so EncodeVersion silently downgrades it to "application" (library bug).
+//     See https://github.com/CycloneDX/cyclonedx-go/issues/298 — once fixed
+//     upstream, switch back to EncodeVersion.
 package cdx16
 
 import (

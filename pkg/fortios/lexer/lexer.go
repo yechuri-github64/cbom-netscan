@@ -110,6 +110,12 @@ func (l *Lexer) readHeader() error {
 	}
 	first = strings.TrimRight(first, "\r\n")
 
+	// Strip a UTF-8 BOM (\xEF\xBB\xBF) that Windows text editors sometimes
+	// prepend when saving a file.  It must be removed before the prefix check
+	// or files edited on Windows will be rejected.
+	const bom = "\xEF\xBB\xBF"
+	first = strings.TrimPrefix(first, bom)
+
 	const prefix = "#config-version="
 	if !strings.HasPrefix(first, prefix) {
 		snip := first

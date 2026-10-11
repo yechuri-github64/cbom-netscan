@@ -35,6 +35,12 @@ jobs:
       - name: test
         run: go test -race ./...
 
+      # Short fuzz smoke run: replays the seed corpus and mutates for 20 s to
+      # catch panics or hangs on malformed input.  Run longer locally with
+      # -fuzztime=60s or more when changing the lexer.
+      - name: fuzz lexer
+        run: go test -run='^$' -fuzz=FuzzLexer -fuzztime=20s ./pkg/fortios/lexer/
+
       # Download cyclonedx-cli and validate every golden file in pkg/testdata/golden/
       # against the official CycloneDX 1.6 JSON schema.  This catches emitter bugs
       # that our own assertions might miss (e.g. a required field going missing).

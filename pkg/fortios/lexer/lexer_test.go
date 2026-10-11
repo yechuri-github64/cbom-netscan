@@ -384,6 +384,110 @@ func TestLexer_Tokens(t *testing.T) {
 	}
 }
 
+// TestLexer_UnterminatedQuote verifies that a quoted string that reaches EOF
+// without a closing delimiter returns a clear error with the opening line
+// number, and never hangs or panics.
+func TestLexer_UnterminatedQuote(t *testing.T) {
+	cases := []struct {
+		name    string
+		body    string
+		wantErr string // required substring in error message
+	}{
+		{
+			name:    "double_quote_at_eof",
+			body:    "set x \"no closing quote",
+			wantErr: "unterminated double-quoted string starting at line 2",
+		},
+		{
+			name:    "single_quote_at_eof",
+			body:    "set x 'no closing quote",
+			wantErr: "unterminated single-quoted string starting at line 2",
+		},
+		{
+			// Multi-line: opening " on line 2, spans to EOF with no closing ".
+			name: "double_quote_multiline_at_eof",
+			body: "set pem \"-----BEGIN CERTIFICATE-----\n" +
+				"MIIBIQIDAQAB\n" +
+				"(no end marker, no closing quote)",
+			wantErr: "unterminated double-quoted string starting at line 2",
+		},
+		{
+			// Opening quote is deeper in the file; error must report its line.
+			name:    "double_quote_on_later_line",
+			body:    "config test\n    set x \"missing\nend\n",
+			wantErr: "unterminated double-quoted string starting at line 3",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			l, err := lexer.New(strings.NewReader(hdr + tc.body))
+			if err != nil {
+				t.Fatalf("New: unexpected error: %v", err)
+			}
+			var lexErr error
+			for {
+				tok, err := l.Next()
+				if err != nil {
+					lexErr = err
+					break
+				}
+				if tok.Kind == lexer.TokEOF {
+					break
+				}
+			}
+			if lexErr == nil {
+				t.Fatal("expected an error for unterminated quote, got nil")
+			}
+			if !strings.Contains(lexErr.Error(), tc.wantErr) {
+				t.Errorf("error = %q, want substring %q", lexErr.Error(), tc.wantErr)
+			}
+		})
+	}
+}
+
+// TestLexer_UTF8BOM verifies that a UTF-8 BOM (\xEF\xBB\xBF) at the start
+// of the file is silently stripped before the #config-version= check, so
+// configs saved by Windows text editors are accepted without manual cleaning.
+func TestLexer_UTF8BOM(t *testing.T) {
+	const bomPrefix = "\xEF\xBB\xBF"
+	input := bomPrefix + hdr + "config test\nend\n"
+
+	l, err := lexer.New(strings.NewReader(input))
+	if err != nil {
+		t.Fatalf("New with BOM: %v", err)
+	}
+	if l.Header.Model != "FGT80F" {
+		t.Errorf("Header.Model = %q, want FGT80F", l.Header.Model)
+	}
+	if l.Header.Version != "7.4.12" {
+		t.Errorf("Header.Version = %q, want 7.4.12", l.Header.Version)
+	}
+
+	// Confirm tokenization works normally after the BOM.
+	var kinds []lexer.TokenKind
+	for {
+		tok, err := l.Next()
+		if err != nil {
+			t.Fatalf("Next after BOM: %v", err)
+		}
+		if tok.Kind == lexer.TokEOF {
+			break
+		}
+		kinds = append(kinds, tok.Kind)
+	}
+	// Expect: config test end
+	want := []lexer.TokenKind{lexer.TokConfig, lexer.TokWord, lexer.TokEnd}
+	if len(kinds) != len(want) {
+		t.Fatalf("token kinds: got %v, want %v", kinds, want)
+	}
+	for i, k := range want {
+		if kinds[i] != k {
+			t.Errorf("token[%d] kind: got %v, want %v", i, kinds[i], k)
+		}
+	}
+}
+
 // TestLexer_LineNumbers verifies that tokens in a multi-line input carry the
 // correct 1-based source line numbers, including after a multi-line PEM value.
 func TestLexer_LineNumbers(t *testing.T) {

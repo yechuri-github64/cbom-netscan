@@ -155,6 +155,54 @@ func TestEmit_AES256GCM(t *testing.T) {
 	t.Logf("golden file written to %s", goldenPath)
 }
 
+// TestGoldenCryptoAssetType guards against the cyclonedx-go bug where
+// EncodeVersion silently downgrades "cryptographic-asset" to "application"
+// (https://github.com/CycloneDX/cyclonedx-go/issues/298).
+// It reads every *.cdx.json in pkg/testdata/golden/ and asserts that any
+// component carrying a cryptoProperties object has type "cryptographic-asset".
+func TestGoldenCryptoAssetType(t *testing.T) {
+	goldenDir := filepath.Join("..", "..", "testdata", "golden")
+	entries, err := os.ReadDir(goldenDir)
+	if err != nil {
+		t.Fatalf("ReadDir(%s): %v", goldenDir, err)
+	}
+
+	var checked int
+	for _, e := range entries {
+		if e.IsDir() || filepath.Ext(e.Name()) != ".json" {
+			continue
+		}
+
+		path := filepath.Join(goldenDir, e.Name())
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("ReadFile(%s): %v", path, err)
+		}
+
+		var bom struct {
+			Components []map[string]any `json:"components"`
+		}
+		if err := json.Unmarshal(data, &bom); err != nil {
+			t.Fatalf("%s: invalid JSON: %v", e.Name(), err)
+		}
+
+		for i, comp := range bom.Components {
+			if _, hasCrypto := comp["cryptoProperties"]; !hasCrypto {
+				continue
+			}
+			got, _ := comp["type"].(string)
+			if got != "cryptographic-asset" {
+				t.Errorf("%s: components[%d].type = %q, want \"cryptographic-asset\" (EncodeVersion downgrade bug?)", e.Name(), i, got)
+			}
+			checked++
+		}
+	}
+
+	if checked == 0 {
+		t.Error("no components with cryptoProperties found in any golden file — golden files missing or empty?")
+	}
+}
+
 // assertEqual is a tiny assertion helper that avoids importing testify for now.
 func assertEqual(t *testing.T, field string, want, got any) {
 	t.Helper()

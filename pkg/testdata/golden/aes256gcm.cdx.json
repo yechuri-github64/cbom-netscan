@@ -1,0 +1,44 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:60f4096c-3a98-4d2c-8e90-e1d86f3843b0",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-10-11T00:00:00Z",
+    "lifecycles": [
+      {
+        "phase": "discovery"
+      }
+    ],
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "name": "cbom-netscan",
+          "version": "test"
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "crypto/49a34631d3aa0efc",
+      "type": "cryptographic-asset",
+      "name": "AES-256-GCM",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "ae",
+          "mode": "gcm",
+          "cryptoFunctions": [
+            "encrypt",
+            "decrypt"
+          ],
+          "classicalSecurityLevel": 256
+        },
+        "oid": "2.16.840.1.101.3.4.1.46"
+      }
+    }
+  ]
+}

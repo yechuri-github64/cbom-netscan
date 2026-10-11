@@ -77,11 +77,11 @@ type Protocol struct {
 	CipherSuites []CipherSuite
 
 	// IKEv2 transform type asset IDs (bom-refs).
-	IKEEncr []string
-	IKEPRF  []string
+	IKEEncr  []string
+	IKEPRF   []string
 	IKEInteg []string
-	IKEKE   []string
-	IKEAuth []string
+	IKEKE    []string
+	IKEAuth  []string
 
 	// ESN is nil when unknown (emitter omits the field rather than defaulting to false).
 	ESN *bool
@@ -140,7 +140,7 @@ type Material struct {
 // Asset is one entry in the CBOM.  ID becomes the CycloneDX bom-ref and is
 // computed deterministically with BOMRef().
 type Asset struct {
-	ID   string    // deterministic bom-ref; set by BOMRef()
+	ID   string // deterministic bom-ref; set by BOMRef()
 	Type AssetType
 	Name string
 	OID  string // dotted OID string; empty if none assigned

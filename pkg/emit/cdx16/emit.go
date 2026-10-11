@@ -178,14 +178,14 @@ func buildCryptoProps(a *model.Asset) *cdx.CryptoProperties {
 // buildAlgProps maps model.Algorithm → cdx.CryptoAlgorithmProperties.
 func buildAlgProps(alg *model.Algorithm) *cdx.CryptoAlgorithmProperties {
 	p := &cdx.CryptoAlgorithmProperties{
-		Primitive:              cdx.CryptoPrimitive(alg.Primitive),
-		ParameterSetIdentifier: alg.ParameterSetIdentifier,
-		Curve:                  alg.Curve,
-		Mode:                   cdx.CryptoAlgorithmMode(alg.Mode),
-		Padding:                cdx.CryptoPadding(alg.Padding),
-		ExecutionEnvironment:   cdx.CryptoExecutionEnvironment(alg.ExecutionEnvironment),
-		ImplementationPlatform: cdx.ImplementationPlatform(alg.ImplementationPlatform),
-		ClassicalSecurityLevel: alg.ClassicalSecurityLevel,
+		Primitive:                cdx.CryptoPrimitive(alg.Primitive),
+		ParameterSetIdentifier:   alg.ParameterSetIdentifier,
+		Curve:                    alg.Curve,
+		Mode:                     cdx.CryptoAlgorithmMode(alg.Mode),
+		Padding:                  cdx.CryptoPadding(alg.Padding),
+		ExecutionEnvironment:     cdx.CryptoExecutionEnvironment(alg.ExecutionEnvironment),
+		ImplementationPlatform:   cdx.ImplementationPlatform(alg.ImplementationPlatform),
+		ClassicalSecurityLevel:   alg.ClassicalSecurityLevel,
 		NistQuantumSecurityLevel: alg.NISTQuantumLevel,
 	}
 
@@ -205,10 +205,10 @@ func buildAlgProps(alg *model.Algorithm) *cdx.CryptoAlgorithmProperties {
 // emitted as properties on the component (see buildProperties).
 func buildCertProps(cert *model.Cert) *cdx.CertificateProperties {
 	p := &cdx.CertificateProperties{
-		SubjectName:           cert.SubjectName,
-		IssuerName:            cert.IssuerName,
-		CertificateFormat:     cert.Format,
-		CertificateExtension:  cert.Extension,
+		SubjectName:          cert.SubjectName,
+		IssuerName:           cert.IssuerName,
+		CertificateFormat:    cert.Format,
+		CertificateExtension: cert.Extension,
 	}
 
 	if cert.NotValidBefore != nil {

@@ -29,8 +29,8 @@ type Parser[T any] interface {
 // Accepts() is a cheap sniff (header bytes, JSON shape) and must not
 // consume src.Reader.
 type Collector interface {
-	Name() string                                          // "fortigate" | "testssl"
-	Accepts(src Source) bool                               // cheap sniff, does not consume Reader
+	Name() string            // "fortigate" | "testssl"
+	Accepts(src Source) bool // cheap sniff, does not consume Reader
 	Collect(ctx context.Context, src Source) (*Inventory, error)
 }
 
@@ -38,13 +38,13 @@ type Collector interface {
 // It must not mutate the Inventory (assessment is separate from scanning,
 // per cbomkit-theia #149 discussion).
 type Assessor interface {
-	ID() string                                            // "certin-t9" | "pqc" | "certlife"
+	ID() string // "certin-t9" | "pqc" | "certlife"
 	Assess(ctx context.Context, inv *Inventory) ([]Finding, error)
 }
 
 // Emitter serialises an Inventory to a writer.
 type Emitter interface {
-	Format() string                                        // "cyclonedx-1.6-json"
+	Format() string // "cyclonedx-1.6-json"
 	Emit(ctx context.Context, w io.Writer, inv *Inventory, meta Meta) error
 }
 
@@ -60,10 +60,10 @@ type Warning struct {
 
 // Finding is one result from an Assessor.
 type Finding struct {
-	Rule     string // e.g. "certin-t9/certificates/not-valid-after"
-	AssetID  string // bom-ref of the assessed asset
+	Rule    string // e.g. "certin-t9/certificates/not-valid-after"
+	AssetID string // bom-ref of the assessed asset
 	// Outcome values: present|missing|not-applicable|not-derivable-offline|pass|fail
-	Outcome  string
+	Outcome string
 	// Severity values: info|low|medium|high
 	Severity string
 	Detail   string

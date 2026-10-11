@@ -1,3 +1,5 @@
+# CI: format check, vet, race-enabled tests, and golden-file schema validation.
+# Actions will be pinned to SHA digests in Week 12 (supply-chain hardening).
 name: ci
 
 on:
@@ -5,7 +7,7 @@ on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: read   # least-privilege: CI only reads the repo
 
 jobs:
   test:
@@ -13,19 +15,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # go-version-file means CI always uses the same Go version declared in
+      # go.mod, so there's no second place to keep it in sync.
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
 
+      # gofmt -l prints files that aren't formatted; "test -z" fails the step
+      # if there are any.  This catches style drift before review.
       - name: gofmt
         run: test -z "$(gofmt -l .)"
 
+      # go vet catches common correctness mistakes the compiler doesn't (e.g.
+      # mismatched Printf format verbs, unreachable code, suspicious lock copies).
       - name: vet
         run: go vet ./...
 
+      # -race enables the Go race detector.  It slows tests ~5x but catches
+      # data races that only show up under concurrent execution.
       - name: test
         run: go test -race ./...
 
+      # Download cyclonedx-cli and validate every golden file in pkg/testdata/golden/
+      # against the official CycloneDX 1.6 JSON schema.  This catches emitter bugs
+      # that our own assertions might miss (e.g. a required field going missing).
       - name: validate golden files
         run: |
           curl -sL https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.33.1/cyclonedx-linux-x64 \

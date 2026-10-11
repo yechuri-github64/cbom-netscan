@@ -1,0 +1,11 @@
+Creative Commons Legal Code
+CC0 1.0 Universal
+
+SPDX short identifier: CC0-1.0
+
+Statement of Purpose: The person who associated a work with this deed has
+dedicated the work to the public domain by waiving all of their rights
+to the work worldwide under copyright law, including all related and
+neighboring rights, to the extent allowed by law.
+
+Full legal text: https://creativecommons.org/publicdomain/zero/1.0/legalcode

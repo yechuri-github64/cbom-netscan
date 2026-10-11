@@ -1,0 +1,38 @@
+# CI: format check, vet, and race-enabled tests.
+# Actions will be pinned to SHA digests in Week 12 (supply-chain hardening).
+# govulncheck, fuzz steps, and golden-file schema validation are added in Week 2+.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read   # least-privilege: CI only reads the repo
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # go-version-file means CI always uses the same Go version declared in
+      # go.mod, so there's no second place to keep it in sync.
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      # gofmt -l prints files that aren't formatted; "test -z" fails the step
+      # if there are any.  This catches style drift before review.
+      - name: gofmt
+        run: test -z "$(gofmt -l .)"
+
+      # go vet catches common correctness mistakes the compiler doesn't (e.g.
+      # mismatched Printf format verbs, unreachable code, suspicious lock copies).
+      - name: vet
+        run: go vet ./...
+
+      # -race enables the Go race detector.  It slows tests ~5x but catches
+      # data races that only show up under concurrent execution.
+      - name: test
+        run: go test -race ./...

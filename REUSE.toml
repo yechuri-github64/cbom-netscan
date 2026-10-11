@@ -1,0 +1,20 @@
+# REUSE.toml – machine-readable licence declarations for non-source files.
+# REUSE spec 3.x: https://reuse.software/spec/
+#
+# Source files carry their own SPDX headers.
+# This file handles bulk annotations for directories whose files don't.
+
+version = 1
+
+# Test fixtures and IANA registry data are dedicated to the public domain.
+# Nobody has to worry about licence compliance when writing tests.
+[[annotations]]
+path = ["testdata/**", "LICENSES/**"]
+SPDX-FileCopyrightText = "2026 contributors to cbom-netscan"
+SPDX-License-Identifier = "CC0-1.0"
+
+# Documentation that doesn't have its own SPDX header.
+[[annotations]]
+path = ["docs/**", "*.md", "NOTICE"]
+SPDX-FileCopyrightText = "2026 contributors to cbom-netscan"
+SPDX-License-Identifier = "Apache-2.0"

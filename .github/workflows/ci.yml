@@ -1,5 +1,4 @@
 # CI: format check, vet, race-enabled tests, and golden-file schema validation.
-# Actions will be pinned to SHA digests in Week 12 (supply-chain hardening).
 name: ci
 
 on:
@@ -39,10 +38,14 @@ jobs:
       # Download cyclonedx-cli and validate every golden file in pkg/testdata/golden/
       # against the official CycloneDX 1.6 JSON schema.  This catches emitter bugs
       # that our own assertions might miss (e.g. a required field going missing).
+      # The SHA-256 is verified before chmod+x so a tampered binary is rejected
+      # before it can execute.
       - name: validate golden files
         run: |
           curl -sL https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.33.1/cyclonedx-linux-x64 \
             -o /usr/local/bin/cyclonedx-cli
+          echo "bfc8b2538da86fe239bc53658bbb63c1c8c510a293c1e6891aa5bea5d3c58746  /usr/local/bin/cyclonedx-cli" \
+            | sha256sum --check --strict
           chmod +x /usr/local/bin/cyclonedx-cli
           find pkg/testdata/golden -name '*.cdx.json' -print0 \
             | xargs -0 -I{} cyclonedx-cli validate \

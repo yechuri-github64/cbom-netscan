@@ -6,6 +6,7 @@ package ipsec
 
 import (
 	"regexp"
+	"strconv"
 
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/internal/field"
 	"github.com/yechuri-github64/cbom-netscan/pkg/model"
@@ -145,15 +146,24 @@ func kem(name, psi string, level *int) alg {
 	return alg{name, model.Algorithm{Primitive: "kem", ParameterSetIdentifier: psi, NISTQuantumLevel: level}}
 }
 
+// privateUseFrom is the first IKEv2 transform ID reserved for private use:
+// RFC 7296 §3.3.2 reserves 1024-65535 "for private use among mutually
+// consenting parties". FortiOS uses 1080-1094 for the Kyber, FrodoKEM, BIKE,
+// and HQC key exchanges (research notes §3.3), so those IDs are FortiOS's own,
+// not IANA assignments, and their components say so.
+const privateUseFrom = 1024
+
 // addkeAlgs maps both addke spellings (numeric up to 7.6.6, named from 7.6.7,
 // research notes §3.3 and §8.2) to one algorithm. NIST levels are set only
 // for ML-KEM (FIPS 203); the other schemes are not NIST standards.
 // Built by a variable initializer, not init(), because specAddke depends
 // on it and package variables are initialized before init functions run.
-var addkeAlgs = buildAddke()
+// addkeProps holds per-algorithm properties, keyed by component name.
+var addkeAlgs, addkeProps = buildAddke()
 
-func buildAddke() map[string]alg {
+func buildAddke() (map[string]alg, map[string]map[string]string) {
 	m := map[string]alg{}
+	props := map[string]map[string]string{}
 	for _, e := range []struct {
 		num, named string
 		a          alg
@@ -174,10 +184,16 @@ func buildAddke() map[string]alg {
 		{"1093", "hqc192", kem("HQC-192", "192", nil)},
 		{"1094", "hqc256", kem("HQC-256", "256", nil)},
 	} {
+		if n, _ := strconv.Atoi(e.num); n >= privateUseFrom {
+			props[e.a.name] = map[string]string{
+				field.Prefix + "ike-transform-id":             e.num,
+				field.Prefix + "ike-transform-id:private-use": "true",
+			}
+		}
 		m[e.num] = e.a
 		m[e.named] = e.a
 	}
-	return m
+	return m, props
 }
 
 // addkeNone are the tokens that mean "no additional key exchange".

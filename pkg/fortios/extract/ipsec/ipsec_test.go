@@ -170,6 +170,12 @@ func TestExtract(t *testing.T) {
 					t.Errorf("ML-KEM-768 alg = %+v", mlkem.Alg)
 				}
 				eq(t, "ML-KEM-768 occurrences", occurrences(mlkem), []string{"37 ", "58 "})
+				prop(t, find(t, inv, "KYBER-768"), "ike-transform-id", "1081")
+				prop(t, find(t, inv, "KYBER-768"), "ike-transform-id:private-use", "true")
+				prop(t, find(t, inv, "HQC-192"), "ike-transform-id", "1093")
+				if _, ok := mlkem.Properties["cbom-netscan:fortios:ike-transform-id:private-use"]; ok {
+					t.Errorf("ML-KEM-768 marked private-use")
+				}
 				levels := map[string]string{}
 				for _, n := range []string{"DH group 20 (ECP-384)", "DH group 21 (ECP-521)", "KYBER-768", "AES-256-GCM", "HMAC-SHA256"} {
 					levels[n] = "unset"

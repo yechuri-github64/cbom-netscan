@@ -925,6 +925,16 @@
       "bom-ref": "crypto/cb5bec34f690e79a",
       "type": "cryptographic-asset",
       "name": "HQC-192",
+      "properties": [
+        {
+          "name": "cbom-netscan:fortios:ike-transform-id",
+          "value": "1093"
+        },
+        {
+          "name": "cbom-netscan:fortios:ike-transform-id:private-use",
+          "value": "true"
+        }
+      ],
       "evidence": {
         "occurrences": [
           {
@@ -946,6 +956,16 @@
       "bom-ref": "crypto/e5848a7169d1e7a6",
       "type": "cryptographic-asset",
       "name": "KYBER-768",
+      "properties": [
+        {
+          "name": "cbom-netscan:fortios:ike-transform-id",
+          "value": "1081"
+        },
+        {
+          "name": "cbom-netscan:fortios:ike-transform-id:private-use",
+          "value": "true"
+        }
+      ],
       "evidence": {
         "occurrences": [
           {

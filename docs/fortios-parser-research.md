@@ -149,6 +149,14 @@ CBOM column uses CDX-1.6 field names only. "alg-ref" = bom-ref of a component wi
 
 Doc conflict: the AG strong-crypto SSH kex table omits mlkem768x25519-sha256, which CLI-8.0.1 lists in the default.
 
+Exact tokens (the table above abbreviates them). Verified 2026-10-14 against the CLI HTML pages 207795941/config-system-ssh-config for 7.4.12, 7.6.7, and 8.0.0; all three agree except for mlkem768x25519-sha256:
+- ssh-enc-algo options: `chacha20-poly1305@openssh.com aes128-ctr aes192-ctr aes256-ctr arcfour256 arcfour128 aes128-cbc 3des-cbc blowfish-cbc cast128-cbc aes192-cbc aes256-cbc arcfour rijndael-cbc@lysator.liu.se aes128-gcm@openssh.com aes256-gcm@openssh.com`. Default `aes256-ctr aes256-gcm@openssh.com`.
+- ssh-kex-algo options: `diffie-hellman-group1-sha1 diffie-hellman-group14-sha1 diffie-hellman-group14-sha256 diffie-hellman-group16-sha512 diffie-hellman-group18-sha512 diffie-hellman-group-exchange-sha1 diffie-hellman-group-exchange-sha256 curve25519-sha256@libssh.org ecdh-sha2-nistp256 ecdh-sha2-nistp384 ecdh-sha2-nistp521`, plus `mlkem768x25519-sha256` on the 8.0 page. Default `diffie-hellman-group14-sha256 diffie-hellman-group16-sha512 diffie-hellman-group18-sha512 diffie-hellman-group-exchange-sha256 curve25519-sha256@libssh.org ecdh-sha2-nistp256 ecdh-sha2-nistp384 ecdh-sha2-nistp521`, with `mlkem768x25519-sha256` appended on the 8.0 page.
+- ssh-mac-algo options: `hmac-md5 hmac-md5-etm@openssh.com hmac-md5-96 hmac-md5-96-etm@openssh.com hmac-sha1 hmac-sha1-etm@openssh.com hmac-sha2-256 hmac-sha2-256-etm@openssh.com hmac-sha2-512 hmac-sha2-512-etm@openssh.com hmac-ripemd160 hmac-ripemd160@openssh.com hmac-ripemd160-etm@openssh.com umac-64@openssh.com umac-128@openssh.com umac-64-etm@openssh.com umac-128-etm@openssh.com`. Default `hmac-sha2-256 hmac-sha2-256-etm@openssh.com hmac-sha2-512 hmac-sha2-512-etm@openssh.com`.
+- ssh-hsk-algo options: `ssh-rsa ecdsa-sha2-nistp521 ecdsa-sha2-nistp384 ecdsa-sha2-nistp256 rsa-sha2-256 rsa-sha2-512 ssh-ed25519`. Default `ecdsa-sha2-nistp521 ecdsa-sha2-nistp384 ecdsa-sha2-nistp256 rsa-sha2-256 rsa-sha2-512 ssh-ed25519`.
+
+The same check on 339914554/config-system-global confirmed the §3.1 tokens and defaults for admin-https-ssl-versions, admin-https-ssl-ciphersuites, admin-https-ssl-banned-ciphers (no default), and admin-server-cert in all three versions. strong-crypto and ssl-static-key-ciphers were not in the fetched part of that page; their defaults above come from the CLI PDF pages cited in §3.1.
+
 ### 3.3 `config vpn ipsec phase1-interface` (305883427) and `phase1` (574570212)
 Pages: phase1-interface CLI-7.4.12 p2239–2265, CLI-7.6.3 p2187–2219, CLI-7.6.7 p2286–2318, CLI-8.0.1 p2411–2443. phase1 CLI-7.4.12 p2213+, CLI-7.6.7 p2253+, CLI-8.0.1 p2378+. The fields below are identical in both tables unless noted.
 | Field | Values | Default 7.4.12 / 7.6 / 8.0.1 | CBOM |

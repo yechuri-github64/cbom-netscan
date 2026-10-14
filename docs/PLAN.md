@@ -69,7 +69,7 @@ Conventions: Conventional Commits, every commit signed off with `git commit -s` 
 
 ### Week 1 · 12–18 Oct · Align upstream, bootstrap, lab feasibility · ~11 h
 **Build**
-- Create `github.com/<you>/cbom-netscan`. Add Apache-2.0 `LICENSE`, `NOTICE`, `REUSE.toml` (testdata = CC0-1.0), `go.mod` with `go 1.26` (theia uses `go 1.26.8`), DCO GitHub App, and branch protection (require CI, require sign-off).
+- Create `github.com/<you>/cbom-netscan`. Add Apache-2.0 `LICENSE`, `NOTICE`, `REUSE.toml` (testdata = CC0-1.0), `go.mod` with `go 1.26` (theia uses `go 1.26.8`), DCO GitHub App. Branch protection moved to the v0.1.0 go-public checklist (Week 5): it is free once the repo is public.
 - Write `docs/MAPPING.md` (copy of §5) and `docs/SCOPE.md`. Scope rules: offline config parsing, ingesting testssl.sh JSON you produced yourself, no live scanning without the `--authorized` flag, never reading secrets.
 - Lab: FortiGate-VM eval on KVM/VirtualBox, host-only network, personal FortiCloud account. Run the ⚠U1/⚠U2/⚠U3 checks and keep raw notes **private** (`~/lab-notes/`, outside git).
 - Generate the testssl.sh fixture matrix seed with OpenSSL 3.5 `s_server` (already proven to work, V10).
@@ -79,7 +79,7 @@ Conventions: Conventional Commits, every commit signed off with `git commit -s` 
 - `docs: add CERT-In Table 9 → CycloneDX 1.6 mapping`
 - `docs: scope, threat model, fixture policy`
 - `ci: go vet, go test, cyclonedx-cli schema validation`
-- **Upstream PR (cbomkit):** `fix(opa): match CycloneDX primitive "key-agree" in quantum_safe policy` plus `opa/quantum_safe_test.rego` (§3.4)
+- **Upstream PR (cbomkit):** `fix(opa): match CycloneDX primitive "key-agree" in quantum_safe policy` plus `opa/quantum_safe_test.rego` (§3.4). **Done:** cbomkit #379, merged 2026-10-12.
 - **Upstream issue (theia):** appliance-config scope question (§3.1). **Comments:** theia #235 (§3.2), testssl.sh #3116 (§3.3)
 - No tag.
 
@@ -136,6 +136,10 @@ Conventions: Conventional Commits, every commit signed off with `git commit -s` 
 - Release pipeline (§2.7): goreleaser, syft SBOM per archive, cosign bundle on `checksums.txt`, `actions/attest-build-provenance`.
 
 **Commits:** `feat(fortios): ipsec phase1 extraction incl. addke1-7` · `feat(fortios): local certificates, agentless VPN, admin TLS` · `feat(fortios): version-aware defaults with warnings` · `ci: goreleaser release with SBOM, cosign bundle, build provenance`
+**Go-public checklist (before tagging `v0.1.0`):**
+- Make the repository public.
+- Turn on branch protection for `main`: require the CI checks and DCO sign-off (free once the repo is public; moved here from Week 1).
+
 **Tag:** `v0.1.0`
 
 **Post:** GitHub Release notes plus [r/fortinet](https://www.reddit.com/r/fortinet/) (read the sub's self-promotion rules first) plus LinkedIn. Draft topic: "v0.1.0: read a FortiGate config backup offline and list every IPsec proposal, DH/ML-KEM group and certificate as a CycloneDX CBOM. It never reads PSKs or keys."

@@ -52,7 +52,8 @@ func privateKeyForm(values []string) (form string, warn bool) {
 	case "FortinetPasswordMask":
 		return formMasked, false
 	}
-	label := pemLabel(firstLine(values[0]))
+	// Leading blank lines or spaces do not hide a PEM key.
+	label := pemLabel(firstLine(strings.TrimLeft(values[0], " \t\r\n")))
 	switch {
 	case label == "ENCRYPTED PRIVATE KEY":
 		return formEncrypted, false

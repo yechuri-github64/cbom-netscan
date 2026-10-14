@@ -617,7 +617,11 @@ func TestPrivateKeyForms(t *testing.T) {
 		{`"-----BEGIN RSA PRIVATE KEY-----` + body + `-----END RSA PRIVATE KEY-----"`, "pem-encryption-unknown", "may be unencrypted"},
 		{`"-----BEGIN EC PRIVATE KEY-----` + body + `-----END EC PRIVATE KEY-----"`, "pem-encryption-unknown", "may be unencrypted"},
 		{`"-----BEGIN OPENSSH PRIVATE KEY-----` + body + `-----END OPENSSH PRIVATE KEY-----"`, "pem-encryption-unknown", "may be unencrypted"},
-		// A BEGIN line further down does not count: only the first line is read.
+		// Leading blank lines and spaces are skipped before the BEGIN line.
+		{`"` + "\n\n  \t" + `-----BEGIN PRIVATE KEY-----` + body + `-----END PRIVATE KEY-----"`, "plaintext-pem", "is an unencrypted PEM key"},
+		{`"` + "\r\n" + `-----BEGIN ENCRYPTED PRIVATE KEY-----` + body + `-----END ENCRYPTED PRIVATE KEY-----"`, "encrypted-pem", ""},
+		// A BEGIN line after other text does not count: only the first
+		// non-blank line is read.
 		{`"c3ludGhldGlj` + "\n" + `-----BEGIN PRIVATE KEY-----` + body + `-----END PRIVATE KEY-----"`, "other", ""},
 		{`c3ludGhldGljLXBsYWlu`, "other", ""},
 	} {

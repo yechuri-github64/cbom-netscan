@@ -1265,6 +1265,10 @@
         {
           "name": "cbom-netscan:fortios:private-key",
           "value": "present"
+        },
+        {
+          "name": "cbom-netscan:fortios:private-key:form",
+          "value": "encrypted-pem"
         }
       ],
       "evidence": {

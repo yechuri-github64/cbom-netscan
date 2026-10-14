@@ -16,7 +16,9 @@
 //	private key             related-crypto-material, presence only
 //
 // The private-key value is never parsed, decoded, or emitted: the code only
-// checks whether the field is set. The password field is never read.
+// checks whether the field is set and, to tell its form, its first token or
+// a PEM key's BEGIN line. An unencrypted PEM key is warned about. The
+// password field is never read.
 //
 // Certificates are flagged when expired at the reference time, and when a
 // leaf certificate's validity exceeds the CA/Browser Forum maximum for its
@@ -437,8 +439,10 @@ func addCert(inv *model.Inventory, location string, scope tree.Scope, tb table, 
 	addPrivateKey(inv, location, ctx, tb, e, name, &key, keyID)
 }
 
-// addPrivateKey records a private key's presence. Only whether the field is
-// set is checked; its value is never read.
+// addPrivateKey records a private key's presence and form. The key is never
+// read: only the first token, or a PEM key's BEGIN line, is looked at (see
+// privateKeyForm). A key that is, or may be, unencrypted in the backup gives
+// a plaintext-private-key warning, without the value.
 func addPrivateKey(inv *model.Inventory, location, ctx string, tb table, e *tree.Entry, certName string, key *alg, keyID string) {
 	if tb.kind != "local" {
 		return
@@ -451,13 +455,29 @@ func addPrivateKey(inv *model.Inventory, location, ctx string, tb table, e *tree
 	if key != nil {
 		m.AlgorithmRef, m.Size = keyID, sizePtr(key.bits)
 	}
+	ev := model.Evidence{Location: location, Line: a.Line, Symbol: tb.path + "/" + e.Name + "/private-key", Context: ctx}
+	form, warn := privateKeyForm(a.Values)
+	if warn {
+		msg := "is an unencrypted PEM key"
+		if form == formPEMUnknown {
+			msg = "is a PEM key whose encryption the BEGIN line does not show, so it may be unencrypted"
+		}
+		inv.AddWarning(model.Warning{
+			Code:    "plaintext-private-key",
+			Message: fmt.Sprintf("%s: the private key %s in the backup (value not shown); take backups with secrets encrypted", certName, msg),
+			Ev:      ev,
+		})
+	}
 	inv.Add(&model.Asset{
-		ID:         model.BOMRef(model.AssetTypeRelatedMaterial, certName+" private key", location),
-		Type:       model.AssetTypeRelatedMaterial,
-		Name:       certName + " private key",
-		Mat:        m,
-		Properties: map[string]string{field.Prefix + "private-key": "present"},
-		Evidence:   []model.Evidence{{Location: location, Line: a.Line, Symbol: tb.path + "/" + e.Name + "/private-key", Context: ctx}},
+		ID:   model.BOMRef(model.AssetTypeRelatedMaterial, certName+" private key", location),
+		Type: model.AssetTypeRelatedMaterial,
+		Name: certName + " private key",
+		Mat:  m,
+		Properties: map[string]string{
+			field.Prefix + "private-key":      "present",
+			field.Prefix + "private-key:form": form,
+		},
+		Evidence: []model.Evidence{ev},
 	})
 }
 

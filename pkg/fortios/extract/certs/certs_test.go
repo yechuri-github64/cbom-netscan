@@ -598,3 +598,55 @@ func level(a *model.Asset) string {
 	}
 	return strconv.Itoa(*a.Alg.NISTQuantumLevel)
 }
+
+// TestPrivateKeyForms: the form comes from the first token or the BEGIN line
+// alone. An unencrypted PKCS #8 key warns; a traditional or OpenSSH key, whose
+// encryption the BEGIN line does not show, warns that it may be unencrypted.
+// The key bodies here are not valid base64, so the test would fail if the
+// code tried to decode them, and their marker text must not reach output.
+func TestPrivateKeyForms(t *testing.T) {
+	const body = "\nc3ludGhldGlj!!not-base64!!\n"
+	for _, tc := range []struct {
+		value, form string
+		warn        string // "" none, else a message fragment
+	}{
+		{`ENC c3ludGhldGljLWtleQ==`, "ENC", ""},
+		{`FortinetPasswordMask`, "masked", ""},
+		{`"-----BEGIN ENCRYPTED PRIVATE KEY-----` + body + `-----END ENCRYPTED PRIVATE KEY-----"`, "encrypted-pem", ""},
+		{`"-----BEGIN PRIVATE KEY-----` + body + `-----END PRIVATE KEY-----"`, "plaintext-pem", "is an unencrypted PEM key"},
+		{`"-----BEGIN RSA PRIVATE KEY-----` + body + `-----END RSA PRIVATE KEY-----"`, "pem-encryption-unknown", "may be unencrypted"},
+		{`"-----BEGIN EC PRIVATE KEY-----` + body + `-----END EC PRIVATE KEY-----"`, "pem-encryption-unknown", "may be unencrypted"},
+		{`"-----BEGIN OPENSSH PRIVATE KEY-----` + body + `-----END OPENSSH PRIVATE KEY-----"`, "pem-encryption-unknown", "may be unencrypted"},
+		// A BEGIN line further down does not count: only the first line is read.
+		{`"c3ludGhldGlj` + "\n" + `-----BEGIN PRIVATE KEY-----` + body + `-----END PRIVATE KEY-----"`, "other", ""},
+		{`c3ludGhldGljLXBsYWlu`, "other", ""},
+	} {
+		cfg := hdr + "config vpn certificate local\n    edit \"k\"\n        set private-key " + tc.value +
+			"\n        set certificate \"" + pemFile(t, "gw-ecdsa.pem") + "\"\n    next\nend\n"
+		_, inv := extract(t, cfg, now)
+		k := find(t, inv, local+"k private key")
+		prop(t, k, "cbom-netscan:fortios:private-key:form", tc.form)
+		var msgs []string
+		for _, w := range inv.Warnings {
+			msgs = append(msgs, w.Code+": "+w.Message)
+			if w.Code == "plaintext-private-key" && (w.Ev.Line != 4 || w.Ev.Symbol != "vpn certificate local/k/private-key") {
+				t.Errorf("%s: warning evidence = %+v", tc.form, w.Ev)
+			}
+		}
+		switch {
+		case tc.warn == "" && len(msgs) != 0:
+			t.Errorf("%s: warnings %q, want none", tc.form, msgs)
+		case tc.warn != "" && (len(msgs) != 1 || !strings.HasPrefix(msgs[0], "plaintext-private-key: ") || !strings.Contains(msgs[0], tc.warn)):
+			t.Errorf("%s: warnings %q, want one plaintext-private-key containing %q", tc.form, msgs, tc.warn)
+		}
+		dump, _ := json.Marshal(struct {
+			A []*model.Asset
+			W []model.Warning
+		}{inv.Assets, inv.Warnings})
+		for _, s := range []string{"c3ludGhldGlj", "not-base64", "PRIVATE KEY-----"} {
+			if strings.Contains(string(dump), s) {
+				t.Errorf("%s: output contains %q", tc.form, s)
+			}
+		}
+	}
+}

@@ -3,32 +3,41 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package cli wires together all cbom-netscan cobra commands.
-// main.go calls Execute(); every subcommand (collect, merge, assess, …)
-// will be added here as the project grows.
+// main.go calls Execute(); new subcommands are registered in newRootCmd.
 package cli
 
 import (
 	"github.com/spf13/cobra"
 )
 
-// rootCmd is the top-level command.  It prints help when called with no
-// subcommand.  Global flags (--log-level, --no-color, etc.) will be added
-// here in later weeks so every subcommand inherits them automatically.
-var rootCmd = &cobra.Command{
-	Use:   "cbom-netscan",
-	Short: "Generate CycloneDX CBOMs from network-appliance configs and TLS scans",
-	Long: `cbom-netscan reads FortiOS configuration backups and testssl.sh JSON output
-and produces a CycloneDX 1.6 Cryptography Bill of Materials (CBOM).
+// newRootCmd builds the top-level command. It is a constructor rather than a
+// package-level var so tests can build a fresh command tree for every run.
+func newRootCmd(version, commit, date string) *cobra.Command {
+	root := &cobra.Command{
+		Use:   "cbom-netscan",
+		Short: "Generate CycloneDX 1.6 CBOMs from FortiOS configuration backups",
+		Long: `cbom-netscan builds a CycloneDX 1.6 Cryptography Bill of Materials (CBOM)
+from a FortiOS configuration backup:
 
-It never reads or emits secret values (PSKs, private keys, passwords).
-All test fixtures use only synthetic, RFC 5737/3849/2606 data.`,
+  cbom-netscan fortios backup.conf -o backup.cdx.json
+
+It currently reports admin HTTPS (TLS versions and cipher suites) and admin
+SSH (key exchange, ciphers, MACs, host key algorithms) from config system
+global and config system ssh-config.
+
+Secret values (passwords, ENC values, private keys) are never written to the
+CBOM or printed in warnings.`,
+		// Usage is for argument mistakes; runtime errors such as a parse
+		// failure print only the error.
+		SilenceUsage: true,
+	}
+	root.AddCommand(newVersionCmd(version, commit, date))
+	root.AddCommand(newFortiOSCmd(version))
+	return root
 }
 
-// Execute wires in the version string variables from main, registers
-// subcommands, and runs the cobra argument parser.
-// Returning the error (instead of calling os.Exit here) makes it easy to
-// test the CLI in unit tests without killing the test process.
+// Execute builds the command tree and runs it with the process arguments.
+// It returns the error instead of calling os.Exit so main decides the exit code.
 func Execute(version, commit, date string) error {
-	rootCmd.AddCommand(newVersionCmd(version, commit, date))
-	return rootCmd.Execute()
+	return newRootCmd(version, commit, date).Execute()
 }

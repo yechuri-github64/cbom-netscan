@@ -1,0 +1,206 @@
+// Copyright 2026 contributors to cbom-netscan
+//
+// SPDX-License-Identifier: Apache-2.0
+
+package cli
+
+// Synthetic test fixtures below are dedicated to the public domain (CC0-1.0).
+
+import (
+	"bytes"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+const (
+	fixture = "../../pkg/fortios/extract/global/testdata/global-7.6.conf"
+	golden  = "../../pkg/testdata/golden/fortios-global-7.6.cdx.json"
+)
+
+// run executes the full command tree with args and returns stdout, stderr,
+// and the error that main would turn into a non-zero exit status.
+func run(t *testing.T, args ...string) (string, string, error) {
+	t.Helper()
+	t.Setenv("SOURCE_DATE_EPOCH", "1791676800")
+	root := newRootCmd("test", "none", "unknown")
+	var stdout, stderr bytes.Buffer
+	root.SetOut(&stdout)
+	root.SetErr(&stderr)
+	root.SetArgs(args)
+	err := root.Execute()
+	return stdout.String(), stderr.String(), err
+}
+
+func readGolden(t *testing.T) []byte {
+	t.Helper()
+	want, err := os.ReadFile(golden)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return want
+}
+
+func writeFile(t *testing.T, path, content string) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestFortiOS_GoldenToFile runs lexer → tree → extractor → emitter through
+// the CLI and compares the written file with the golden CBOM.
+func TestFortiOS_GoldenToFile(t *testing.T) {
+	out := filepath.Join(t.TempDir(), "out.cdx.json")
+	stdout, stderr, err := run(t, "fortios", fixture, "-o", out)
+	if err != nil {
+		t.Fatalf("fortios: %v\nstderr: %s", err, stderr)
+	}
+	if stdout != "" || stderr != "" {
+		t.Errorf("expected no stdout/stderr with -o; stdout=%q stderr=%q", stdout, stderr)
+	}
+	got, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(got, readGolden(t)) {
+		t.Errorf("%s differs from golden %s", out, golden)
+	}
+}
+
+func TestFortiOS_GoldenToStdout(t *testing.T) {
+	stdout, _, err := run(t, "fortios", fixture)
+	if err != nil {
+		t.Fatalf("fortios: %v", err)
+	}
+	if stdout != string(readGolden(t)) {
+		t.Errorf("stdout differs from golden %s", golden)
+	}
+}
+
+func TestFortiOS_RefusesOverwriteWithoutForce(t *testing.T) {
+	out := filepath.Join(t.TempDir(), "existing.cdx.json")
+	writeFile(t, out, "keep me")
+
+	_, _, err := run(t, "fortios", fixture, "-o", out)
+	if err == nil || !strings.Contains(err.Error(), "already exists; use --force") {
+		t.Fatalf("err = %v, want already-exists error", err)
+	}
+	if got, _ := os.ReadFile(out); string(got) != "keep me" {
+		t.Errorf("existing file was modified: %q", got)
+	}
+
+	if _, _, err := run(t, "fortios", fixture, "-o", out, "--force"); err != nil {
+		t.Fatalf("with --force: %v", err)
+	}
+	if got, _ := os.ReadFile(out); !bytes.Equal(got, readGolden(t)) {
+		t.Errorf("--force did not write the golden CBOM")
+	}
+}
+
+func TestFortiOS_RefusesToOverwriteInput(t *testing.T) {
+	in := filepath.Join(t.TempDir(), "fw.conf")
+	data, err := os.ReadFile(fixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, in, string(data))
+
+	_, _, err = run(t, "fortios", in, "-o", in, "--force")
+	if err == nil || !strings.Contains(err.Error(), "is the input backup") {
+		t.Fatalf("err = %v, want input-backup refusal", err)
+	}
+	if got, _ := os.ReadFile(in); !bytes.Equal(got, data) {
+		t.Errorf("input backup was modified")
+	}
+}
+
+func TestFortiOS_FatalErrors(t *testing.T) {
+	dir := t.TempDir()
+	cases := []struct {
+		name, content, wantErr string
+	}{
+		{"not_a_backup", "config system global\nend\n", "not a FortiOS config backup"},
+		{"unbalanced", "#config-version=FGVMH6-7.6.7-FW-build3704-260601:opmode=0:vdom=0:user=admin\nend\n", "line 2: end without a matching config"},
+		{"unterminated_secret", "#config-version=FGVMH6-7.6.7-FW-build3704-260601:opmode=0:vdom=0:user=admin\nconfig system admin\nedit a\nset password \"c3ludGhldGlj-unterminated\n", "unterminated double-quoted string"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			in := filepath.Join(dir, tc.name+".conf")
+			out := filepath.Join(dir, tc.name+".cdx.json")
+			writeFile(t, in, tc.content)
+
+			stdout, stderr, err := run(t, "fortios", in, "-o", out)
+			if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
+				t.Fatalf("err = %v, want %q", err, tc.wantErr)
+			}
+			if strings.Contains(err.Error()+stdout+stderr, "c3ludGhldGlj") {
+				t.Errorf("secret value printed: err=%v stderr=%q", err, stderr)
+			}
+			if _, statErr := os.Stat(out); statErr == nil {
+				t.Errorf("output file created despite a fatal error")
+			}
+		})
+	}
+
+	if _, _, err := run(t, "fortios", filepath.Join(dir, "missing.conf")); err == nil {
+		t.Errorf("missing input: expected an error")
+	}
+	if _, _, err := run(t, "fortios"); err == nil {
+		t.Errorf("no argument: expected an error")
+	}
+}
+
+// TestFortiOS_WarningsOnStderr checks that warnings reach stderr with file
+// and line, while secret text dropped by the extractor is not echoed.
+func TestFortiOS_WarningsOnStderr(t *testing.T) {
+	in := filepath.Join(t.TempDir(), "fw.conf")
+	writeFile(t, in, `#config-version=FGVMH6-7.4.8-FW-build2795-250523:opmode=0:vdom=0:user=admin
+config firewall address
+    edit "a"
+end
+config system ssh-config
+    set ssh-enc-algo aes256-ctr "ENC c3ludGhldGljLWJsb2I="
+end
+`)
+	stdout, stderr, err := run(t, "fortios", in)
+	if err != nil {
+		t.Fatalf("warnings must not be fatal: %v", err)
+	}
+	if !strings.Contains(stdout, `"bomFormat": "CycloneDX"`) {
+		t.Errorf("no CBOM on stdout")
+	}
+	for _, want := range []string{
+		"fw.conf:4: warning:",
+		"[implied-next]",
+		"fw.conf:1: warning: no defaults table for FortiOS 7.4.8",
+		"[no-default-table]",
+		"fw.conf:6: warning:",
+		"[unknown-token]",
+	} {
+		if !strings.Contains(stderr, want) {
+			t.Errorf("stderr missing %q:\n%s", want, stderr)
+		}
+	}
+	for _, secret := range []string{"c3ludGhldGlj", "ENC "} {
+		if strings.Contains(stderr, secret) || strings.Contains(stdout, secret) {
+			t.Errorf("secret fragment %q printed", secret)
+		}
+	}
+}
+
+func TestRootHelp_OnlyExistingFeatures(t *testing.T) {
+	stdout, _, err := run(t, "--help")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(strings.ToLower(stdout), "testssl") {
+		t.Errorf("root help mentions testssl.sh, which is not implemented:\n%s", stdout)
+	}
+	for _, want := range []string{"fortios", "version"} {
+		if !strings.Contains(stdout, want) {
+			t.Errorf("root help missing %q", want)
+		}
+	}
+}

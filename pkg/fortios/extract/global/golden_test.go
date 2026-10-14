@@ -43,7 +43,7 @@ func TestGolden_Global76(t *testing.T) {
 	}
 
 	inv := model.NewInventory()
-	global.Extract(tr, fixture, inv)
+	global.Extract(tr, filepath.Base(fixture), inv)
 	if len(inv.Warnings) != 0 {
 		t.Errorf("unexpected warnings: %+v", inv.Warnings)
 	}

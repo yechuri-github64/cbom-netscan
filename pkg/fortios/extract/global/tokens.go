@@ -151,3 +151,23 @@ func keys[V any](m map[string]V) map[string]bool {
 	}
 	return out
 }
+
+// strongCryptoAllowed lists, per field, what stays enabled when strong-crypto
+// is enable (research notes §3.1a, AG "FortiGate encryption algorithm cipher
+// suites"). Anything else configured gets a strong-crypto-may-restrict marker.
+// mlkem768x25519-sha256 is kept: the 8.0.1 CLI default includes it although
+// the AG table omits it (research notes §9).
+var strongCryptoAllowed = map[string]map[string]bool{
+	"ssh-enc-algo": set("aes256-gcm@openssh.com", "aes256-ctr"),
+	"ssh-kex-algo": set("diffie-hellman-group14-sha256", "diffie-hellman-group16-sha512", "diffie-hellman-group18-sha512",
+		"diffie-hellman-group-exchange-sha256", "curve25519-sha256@libssh.org",
+		"ecdh-sha2-nistp256", "ecdh-sha2-nistp384", "ecdh-sha2-nistp521", "mlkem768x25519-sha256"),
+	"ssh-mac-algo": set("hmac-sha2-256", "hmac-sha2-256-etm@openssh.com", "hmac-sha2-512", "hmac-sha2-512-etm@openssh.com"),
+	"ssh-hsk-algo": set("ecdsa-sha2-nistp521", "ecdsa-sha2-nistp384", "ecdsa-sha2-nistp256", "rsa-sha2-256", "rsa-sha2-512", "ssh-ed25519"),
+}
+
+// strongCryptoDisabledTLS13 are the admin HTTPS TLS 1.3 suites the AG marks
+// "Disabled if strong-crypto enabled" (research notes §3.1a).
+var strongCryptoDisabledTLS13 = []string{"TLS-AES-128-CCM-SHA256", "TLS-AES-128-CCM-8-SHA256"}
+
+const strongCryptoReason = "strong-crypto is enable, which disables this per the FortiOS Administration Guide; the CBOM shows the configured set, not the effective one (research notes §3.1a, §8.12)"

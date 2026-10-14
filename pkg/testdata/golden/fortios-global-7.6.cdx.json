@@ -90,6 +90,10 @@
         {
           "name": "cbom-netscan:fortios:strong-crypto:value",
           "value": "enable"
+        },
+        {
+          "name": "cbom-netscan:fortios:view",
+          "value": "configured"
         }
       ],
       "evidence": {
@@ -167,6 +171,10 @@
         {
           "name": "cbom-netscan:fortios:strong-crypto:value",
           "value": "enable"
+        },
+        {
+          "name": "cbom-netscan:fortios:view",
+          "value": "configured"
         }
       ],
       "evidence": {
@@ -244,6 +252,10 @@
         {
           "name": "cbom-netscan:fortios:ssh-mac-algo:source",
           "value": "default"
+        },
+        {
+          "name": "cbom-netscan:fortios:view",
+          "value": "configured"
         }
       ],
       "evidence": {

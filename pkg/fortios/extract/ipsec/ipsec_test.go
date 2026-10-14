@@ -134,6 +134,8 @@ func TestExtract(t *testing.T) {
 				eq(t, "hq ke", names(inv, hq.Proto.IKEKE), []string{"DH group 20 (ECP-384)", "DH group 21 (ECP-521)"})
 				eq(t, "hq auth", names(inv, hq.Proto.IKEAuth), []string{p1 + "hq-ikev2 pre-shared key"})
 				prop(t, hq, "dhgrp:source", "configured")
+				prop(t, hq, "view", "configured")
+				prop(t, find(t, inv, p2+"hq-p2"), "view", "configured")
 				prop(t, hq, "dhgrp:line", "22")
 				prop(t, find(t, inv, p1+"hq-ikev2 pre-shared key"), "psksecret:form", "ENC")
 

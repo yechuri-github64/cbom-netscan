@@ -21,6 +21,9 @@
 package global
 
 import (
+	"slices"
+	"strings"
+
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/defaults"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/internal/algo"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/internal/field"
@@ -54,10 +57,17 @@ func Extract(t *tree.Tree, location string, inv *model.Inventory) {
 }
 
 type extractor struct {
-	t     *tree.Tree
-	inv   *model.Inventory
-	r     *field.Resolver
-	scope tree.Scope
+	t      *tree.Tree
+	inv    *model.Inventory
+	r      *field.Resolver
+	scope  tree.Scope
+	strong bool // strong-crypto resolves to enable (configured or default)
+}
+
+// mayRestrict marks a as something strong-crypto may disable.
+func mayRestrict(a *model.Asset) {
+	a.Properties[field.Prefix+"strong-crypto-may-restrict"] = "true"
+	a.Properties[field.Prefix+"strong-crypto-may-restrict:reason"] = strongCryptoReason
 }
 
 // resolve finds field in section of the global scope (the last set line
@@ -84,6 +94,7 @@ func (x *extractor) adminHTTPS() {
 	strong := x.resolve(sectionGlobal, "strong-crypto", specEnableDis)
 	static := x.resolve(sectionGlobal, "ssl-static-key-ciphers", specEnableDis)
 	cert := x.resolve(sectionGlobal, "admin-server-cert", specCertName)
+	x.strong = strings.Join(strong.Tokens, " ") == "enable"
 
 	newTLS := func(name, version string) *model.Asset {
 		a := &model.Asset{
@@ -92,6 +103,7 @@ func (x *extractor) adminHTTPS() {
 			Proto:      &model.Protocol{Type: "tls", Version: version},
 			Properties: map[string]string{},
 		}
+		field.MarkConfiguredView(a)
 		x.r.Record(a, versions, false)
 		x.r.Record(a, strong, true)
 		x.r.Record(a, cert, true)
@@ -112,10 +124,23 @@ func (x *extractor) adminHTTPS() {
 		a := newTLS("FortiOS admin HTTPS TLS "+ver, ver)
 		if ver == "1.3" {
 			x.r.Record(a, suites, false)
+			var restricted []string
 			for _, s := range suites.Tokens {
 				a.Proto.CipherSuites = append(a.Proto.CipherSuites, model.CipherSuite{Name: s})
+				if x.strong && slices.Contains(strongCryptoDisabledTLS13, s) {
+					restricted = append(restricted, s)
+				}
+			}
+			if len(restricted) > 0 {
+				a.Properties[field.Prefix+"strong-crypto-may-restrict:cipher-suites"] = strings.Join(restricted, " ")
+				a.Properties[field.Prefix+"strong-crypto-may-restrict:reason"] = strongCryptoReason
 			}
 		} else {
+			// "When strong encryption is enabled, only TLS 1.2 and TLS 1.3
+			// are allowed" (research notes §3.1a).
+			if ver == "1.1" && x.strong {
+				mayRestrict(a)
+			}
 			x.r.Record(a, banned, true)
 			x.r.Record(a, static, true)
 			a.Properties[field.Prefix+"cipher-suites"] = field.Unknown
@@ -133,6 +158,7 @@ func (x *extractor) ssh() {
 		Proto:      &model.Protocol{Type: "ssh"},
 		Properties: map[string]string{},
 	}
+	field.MarkConfiguredView(p)
 
 	fields := []struct {
 		name string
@@ -159,6 +185,9 @@ func (x *extractor) ssh() {
 				Properties: map[string]string{},
 			}
 			x.r.Record(a, v, false)
+			if x.strong && !strongCryptoAllowed[f.name][tok] {
+				mayRestrict(a)
+			}
 			if h, ok := hybridProp[tok]; ok {
 				a.Properties[field.Prefix+"hybrid"] = h
 			}

@@ -90,6 +90,10 @@
         {
           "name": "cbom-netscan:fortios:psksecret",
           "value": "present"
+        },
+        {
+          "name": "cbom-netscan:fortios:view",
+          "value": "configured"
         }
       ],
       "evidence": {
@@ -181,6 +185,10 @@
         {
           "name": "cbom-netscan:fortios:psksecret",
           "value": "present"
+        },
+        {
+          "name": "cbom-netscan:fortios:view",
+          "value": "configured"
         }
       ],
       "evidence": {
@@ -334,6 +342,10 @@
         {
           "name": "cbom-netscan:fortios:signature-hash-alg:value",
           "value": "sha2-512"
+        },
+        {
+          "name": "cbom-netscan:fortios:view",
+          "value": "configured"
         }
       ],
       "evidence": {
@@ -449,6 +461,10 @@
         {
           "name": "cbom-netscan:fortios:proposal:value",
           "value": "aes128-sha1"
+        },
+        {
+          "name": "cbom-netscan:fortios:view",
+          "value": "configured"
         }
       ],
       "evidence": {
@@ -528,6 +544,10 @@
         {
           "name": "cbom-netscan:fortios:proposal:value",
           "value": "aes256gcm chacha20poly1305"
+        },
+        {
+          "name": "cbom-netscan:fortios:view",
+          "value": "configured"
         }
       ],
       "evidence": {
@@ -624,6 +644,10 @@
         {
           "name": "cbom-netscan:fortios:proposal:value",
           "value": "aes256gcm"
+        },
+        {
+          "name": "cbom-netscan:fortios:view",
+          "value": "configured"
         }
       ],
       "evidence": {

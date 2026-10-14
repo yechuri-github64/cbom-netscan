@@ -265,6 +265,7 @@ func (x *extractor) phase1(scope tree.Scope, section string, e *tree.Entry) *mod
 		Proto:      &model.Protocol{Type: "ike"},
 		Properties: map[string]string{},
 	}
+	field.MarkConfiguredView(a)
 	if en.ctx != "" {
 		a.Properties[field.Prefix+"scope"] = en.ctx
 	}
@@ -360,6 +361,7 @@ func (x *extractor) phase2(scope tree.Scope, section string, e *tree.Entry, tunn
 		Proto:      &model.Protocol{Type: "ipsec"},
 		Properties: map[string]string{},
 	}
+	field.MarkConfiguredView(a)
 	if en.ctx != "" {
 		a.Properties[field.Prefix+"scope"] = en.ctx
 	}

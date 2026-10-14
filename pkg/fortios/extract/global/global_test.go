@@ -124,6 +124,9 @@ func TestExtract(t *testing.T) {
 				prop(t, inv, tls12, "ssl-static-key-ciphers:value", "enable")
 				prop(t, inv, tls12, "cipher-suites", "unknown")
 				prop(t, inv, ssh, "ssh-kex-algo:source", "default")
+				for _, name := range []string{tls12, tls13, ssh} {
+					prop(t, inv, name, "view", "configured")
+				}
 				var suites []string
 				for _, s := range find(inv, tls13).Proto.CipherSuites {
 					suites = append(suites, s.Name)
@@ -149,6 +152,53 @@ func TestExtract(t *testing.T) {
 				}
 				if len(inv.Warnings) != 0 {
 					t.Errorf("warnings = %v, want none", warnCodes(inv))
+				}
+			},
+		},
+		{
+			// strong-crypto defaults to enable: what it disables is marked,
+			// but still reported as configured.
+			name: "strong_crypto_markers",
+			cfg: hdr76 + `config system global
+    set admin-https-ssl-versions tlsv1-1 tlsv1-2 tlsv1-3
+    set admin-https-ssl-ciphersuites TLS-AES-128-CCM-SHA256 TLS-AES-256-GCM-SHA384
+end
+config system ssh-config
+    set ssh-enc-algo aes128-cbc aes256-ctr
+    set ssh-hsk-algo ssh-rsa ssh-ed25519
+end
+`,
+			check: func(t *testing.T, inv *model.Inventory) {
+				for name, want := range map[string]bool{
+					"FortiOS admin HTTPS TLS 1.1": true, tls12: false, tls13: false,
+					"aes128-cbc": true, "aes256-ctr": false, "ssh-rsa": true, "ssh-ed25519": false, "hmac-sha2-256": false,
+				} {
+					_, got := find(inv, name).Properties["cbom-netscan:fortios:strong-crypto-may-restrict"]
+					if got != want {
+						t.Errorf("%s: strong-crypto-may-restrict present = %v, want %v", name, got, want)
+					}
+				}
+				prop(t, inv, tls13, "strong-crypto-may-restrict:cipher-suites", "TLS-AES-128-CCM-SHA256")
+				prop(t, inv, "FortiOS admin HTTPS TLS 1.1", "admin-https-ssl-versions:source", "configured")
+			},
+		},
+		{
+			name: "strong_crypto_disabled_no_markers",
+			cfg: hdr76 + `config system global
+    set strong-crypto disable
+    set admin-https-ssl-versions tlsv1-1 tlsv1-2
+end
+config system ssh-config
+    set ssh-enc-algo aes128-cbc
+end
+`,
+			check: func(t *testing.T, inv *model.Inventory) {
+				for _, a := range inv.Assets {
+					for k := range a.Properties {
+						if strings.HasPrefix(k, "cbom-netscan:fortios:strong-crypto-may-restrict") {
+							t.Errorf("%s has %s although strong-crypto is disable", a.Name, k)
+						}
+					}
 				}
 			},
 		},

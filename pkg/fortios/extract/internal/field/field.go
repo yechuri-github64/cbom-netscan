@@ -57,6 +57,13 @@ type Value struct {
 	Default defaults.Field // set when Source is Default, or Unknown because undocumented
 }
 
+// MarkConfiguredView records that a protocol component shows the configured
+// settings, not what is negotiated at run time: global options such as
+// strong-crypto can narrow the effective set (research notes §8.12).
+func MarkConfiguredView(a *model.Asset) {
+	a.Properties[Prefix+"view"] = "configured"
+}
+
 // NoDefaultsWarning is the warning for a backup whose version has no
 // defaults table. Every extractor uses it, so the text is identical and the
 // CLI can print it once.

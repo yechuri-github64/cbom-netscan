@@ -90,6 +90,10 @@
         {
           "name": "cbom-netscan:fortios:scope",
           "value": "vdom branch"
+        },
+        {
+          "name": "cbom-netscan:fortios:view",
+          "value": "configured"
         }
       ],
       "evidence": {
@@ -211,6 +215,10 @@
         {
           "name": "cbom-netscan:fortios:scope",
           "value": "vdom root"
+        },
+        {
+          "name": "cbom-netscan:fortios:view",
+          "value": "configured"
         }
       ],
       "evidence": {
@@ -314,6 +322,10 @@
         {
           "name": "cbom-netscan:fortios:scope",
           "value": "vdom root"
+        },
+        {
+          "name": "cbom-netscan:fortios:view",
+          "value": "configured"
         }
       ],
       "evidence": {

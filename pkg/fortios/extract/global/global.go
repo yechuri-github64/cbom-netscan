@@ -21,8 +21,6 @@
 package global
 
 import (
-	"fmt"
-
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/defaults"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/internal/field"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/lexer"
@@ -48,21 +46,10 @@ func Extract(t *tree.Tree, location string, inv *model.Inventory) {
 		x.scope = tree.ScopeGlobal
 	}
 	if x.r.Defaults == nil {
-		inv.AddWarning(NoDefaultsWarning(t, location))
+		inv.AddWarning(field.NoDefaultsWarning(t.Header.Version, location))
 	}
 	x.adminHTTPS()
 	x.ssh()
-}
-
-// NoDefaultsWarning is the warning for a backup whose version has no
-// defaults table. Other extractors reuse it so the message is identical and
-// callers can print it once.
-func NoDefaultsWarning(t *tree.Tree, location string) model.Warning {
-	return model.Warning{
-		Code:    "no-default-table",
-		Message: fmt.Sprintf("no defaults table for FortiOS %s; fields not set in the config are reported as unknown", t.Header.Version),
-		Ev:      model.Evidence{Location: location, Line: 1, Symbol: "#config-version"},
-	}
 }
 
 type extractor struct {

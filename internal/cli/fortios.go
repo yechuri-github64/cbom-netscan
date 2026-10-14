@@ -21,6 +21,7 @@ import (
 
 	"github.com/yechuri-github64/cbom-netscan/pkg/emit/cdx16"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/global"
+	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/ipsec"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/tree"
 	"github.com/yechuri-github64/cbom-netscan/pkg/model"
 )
@@ -95,9 +96,15 @@ func runFortiOS(ctx context.Context, stdout, stderr io.Writer, in, out string, f
 	name := filepath.Base(in)
 	inv := model.NewInventory()
 	global.Extract(tr, name, inv)
+	ipsec.Extract(tr, name, inv)
 
+	// Extractors share some warnings (e.g. no defaults table); print each once.
+	printed := map[model.Warning]bool{}
 	for _, w := range append(append([]model.Warning(nil), tr.Warnings...), inv.Warnings...) {
-		printWarning(stderr, name, w)
+		if !printed[w] {
+			printed[w] = true
+			printWarning(stderr, name, w)
+		}
 	}
 
 	var buf bytes.Buffer

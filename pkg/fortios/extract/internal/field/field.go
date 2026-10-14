@@ -57,6 +57,17 @@ type Value struct {
 	Default defaults.Field // set when Source is Default, or Unknown because undocumented
 }
 
+// NoDefaultsWarning is the warning for a backup whose version has no
+// defaults table. Every extractor uses it, so the text is identical and the
+// CLI can print it once.
+func NoDefaultsWarning(version, location string) model.Warning {
+	return model.Warning{
+		Code:    "no-default-table",
+		Message: fmt.Sprintf("no defaults table for FortiOS %s; fields not set in the config are reported as unknown", version),
+		Ev:      model.Evidence{Location: location, Line: 1, Symbol: "#config-version"},
+	}
+}
+
 // Resolver resolves fields against one backup's defaults table.
 type Resolver struct {
 	Loc      string             // evidence location (the backup's file name)

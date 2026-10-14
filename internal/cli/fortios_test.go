@@ -8,6 +8,7 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -287,6 +288,85 @@ func TestFortiOS_BadSourceDateEpoch(t *testing.T) {
 	}
 	if _, _, err := run(t, "fortios", fixture); err != nil {
 		t.Errorf("without --reproducible SOURCE_DATE_EPOCH must be ignored: %v", err)
+	}
+}
+
+// TestFortiOS_IPsecWired runs the CLI on the IPsec fixtures and checks that
+// every component and dependency of the IPsec golden files is in the output
+// unchanged. The CLI output also holds the global extractor's components, so
+// it is a superset of the IPsec-only golden.
+func TestFortiOS_IPsecWired(t *testing.T) {
+	t.Setenv("SOURCE_DATE_EPOCH", "1791676800")
+	for fixtureName, goldenName := range map[string]string{
+		"ipsec-7.6.conf":           "fortios-ipsec-7.6.cdx.json",
+		"ipsec-multivdom-7.6.conf": "fortios-ipsec-multivdom-7.6.cdx.json",
+	} {
+		t.Run(fixtureName, func(t *testing.T) {
+			out, stderr, err := run(t, "fortios", "../../pkg/fortios/extract/ipsec/testdata/"+fixtureName, "--reproducible")
+			if err != nil {
+				t.Fatalf("fortios: %v", err)
+			}
+			if stderr != "" {
+				t.Errorf("unexpected warnings:\n%s", stderr)
+			}
+			want, err := os.ReadFile("../../pkg/testdata/golden/" + goldenName)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			type bom struct {
+				SerialNumber string                       `json:"serialNumber"`
+				Components   []map[string]json.RawMessage `json:"components"`
+				Dependencies []json.RawMessage            `json:"dependencies"`
+			}
+			var g, c bom
+			if err := json.Unmarshal(want, &g); err != nil {
+				t.Fatal(err)
+			}
+			if err := json.Unmarshal([]byte(out), &c); err != nil {
+				t.Fatalf("CLI output is not JSON: %v", err)
+			}
+			if g.SerialNumber != c.SerialNumber {
+				t.Errorf("serialNumber %s, golden %s", c.SerialNumber, g.SerialNumber)
+			}
+			have := map[string]string{}
+			for _, comp := range c.Components {
+				full, _ := json.Marshal(comp)
+				have[string(comp["bom-ref"])] = string(full)
+			}
+			for _, comp := range g.Components {
+				full, _ := json.Marshal(comp)
+				if got, ok := have[string(comp["bom-ref"])]; !ok {
+					t.Errorf("component %s missing from CLI output", comp["name"])
+				} else if got != string(full) {
+					t.Errorf("component %s differs from the golden file", comp["name"])
+				}
+			}
+			deps := map[string]bool{}
+			for _, d := range c.Dependencies {
+				deps[string(d)] = true
+			}
+			for _, d := range g.Dependencies {
+				if !deps[string(d)] {
+					t.Errorf("dependency %s missing from CLI output", d)
+				}
+			}
+		})
+	}
+}
+
+// TestFortiOS_SharedWarningPrintedOnce: both extractors warn about a missing
+// defaults table; the CLI prints it once.
+func TestFortiOS_SharedWarningPrintedOnce(t *testing.T) {
+	in := filepath.Join(t.TempDir(), "fw.conf")
+	writeFile(t, in, "#config-version=FGVMH6-7.4.8-FW-build2795-250523:opmode=0:vdom=0:user=admin\n"+
+		"config vpn ipsec phase1-interface\n    edit \"t\"\n        set proposal aes256-sha256\n    next\nend\n")
+	_, stderr, err := run(t, "fortios", in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := strings.Count(stderr, "[no-default-table]"); n != 1 {
+		t.Errorf("no-default-table printed %d times, want 1:\n%s", n, stderr)
 	}
 }
 

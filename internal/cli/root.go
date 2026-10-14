@@ -21,9 +21,13 @@ from a FortiOS configuration backup:
 
   cbom-netscan fortios backup.conf -o backup.cdx.json
 
-It currently reports admin HTTPS (TLS versions and cipher suites) and admin
-SSH (key exchange, ciphers, MACs, host key algorithms) from config system
-global and config system ssh-config.
+It currently reports:
+  - admin HTTPS (TLS versions and cipher suites) and admin SSH (key exchange,
+    ciphers, MACs, host key algorithms) from config system global and
+    config system ssh-config;
+  - IPsec VPN tunnels (IKE version, proposals, DH groups, authentication
+    method, PQC additional key exchanges, phase2 proposals and PFS groups)
+    from config vpn ipsec phase1/phase2 and their -interface variants.
 
 Secret values (passwords, ENC values, private keys) are never written to the
 CBOM or printed in warnings.`,

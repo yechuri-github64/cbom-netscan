@@ -1,0 +1,1108 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:ea86d969-8aae-5c4b-bbeb-46d4b23033a5",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-10-11T00:00:00Z",
+    "lifecycles": [
+      {
+        "phase": "operations"
+      }
+    ],
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "name": "cbom-netscan",
+          "version": "test"
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "crypto/5f8e47fc501d1352",
+      "type": "cryptographic-asset",
+      "name": "FortiOS IPsec phase1-interface branch-ikev1",
+      "properties": [
+        {
+          "name": "cbom-netscan:fortios:addke:source",
+          "value": "default"
+        },
+        {
+          "name": "cbom-netscan:fortios:authmethod:default-source",
+          "value": "CLI HTML 7.6.7 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14; research notes §3.3"
+        },
+        {
+          "name": "cbom-netscan:fortios:authmethod:source",
+          "value": "default"
+        },
+        {
+          "name": "cbom-netscan:fortios:authmethod:value",
+          "value": "psk"
+        },
+        {
+          "name": "cbom-netscan:fortios:defaults-table",
+          "value": "7.6"
+        },
+        {
+          "name": "cbom-netscan:fortios:dhgrp:default-note",
+          "value": "CLI reference default. AG-7.6.7 says FortiGate uses DH groups 20 and 21 by default, and RN-8.0.0 (bug 1182788) replaces default groups 5 and 14 with 20 and 21 for CLI-configured tunnels; see research notes §9."
+        },
+        {
+          "name": "cbom-netscan:fortios:dhgrp:default-source",
+          "value": "CLI HTML 7.6.7 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14; research notes §3.3"
+        },
+        {
+          "name": "cbom-netscan:fortios:dhgrp:source",
+          "value": "default"
+        },
+        {
+          "name": "cbom-netscan:fortios:dhgrp:value",
+          "value": "20"
+        },
+        {
+          "name": "cbom-netscan:fortios:ike-version:default-source",
+          "value": "CLI-7.6.3–7.6.7 via research notes §3.3"
+        },
+        {
+          "name": "cbom-netscan:fortios:ike-version:source",
+          "value": "default"
+        },
+        {
+          "name": "cbom-netscan:fortios:ike-version:value",
+          "value": "1"
+        },
+        {
+          "name": "cbom-netscan:fortios:proposal:line",
+          "value": "28"
+        },
+        {
+          "name": "cbom-netscan:fortios:proposal:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:proposal:value",
+          "value": "aes128-sha1 3des-sha1"
+        },
+        {
+          "name": "cbom-netscan:fortios:psksecret",
+          "value": "present"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 28,
+            "symbol": "vpn ipsec phase1-interface/branch-ikev1/proposal"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "protocol",
+        "protocolProperties": {
+          "type": "ike",
+          "version": "1",
+          "cryptoRefArray": [
+            "crypto/5bced78ae739ec8b",
+            "crypto/9ca8e0df5cc22027",
+            "crypto/2c2bfdf27d9e64e9",
+            "crypto/5fb44467e8c6d82e",
+            "crypto/8f3a85df2e1ce0d6",
+            "crypto/9c866699d93a25e2"
+          ]
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/76f97fcaea062268",
+      "type": "cryptographic-asset",
+      "name": "FortiOS IPsec phase1-interface hq-ikev2",
+      "properties": [
+        {
+          "name": "cbom-netscan:fortios:addke:source",
+          "value": "default"
+        },
+        {
+          "name": "cbom-netscan:fortios:authmethod:default-source",
+          "value": "CLI HTML 7.6.7 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14; research notes §3.3"
+        },
+        {
+          "name": "cbom-netscan:fortios:authmethod:source",
+          "value": "default"
+        },
+        {
+          "name": "cbom-netscan:fortios:authmethod:value",
+          "value": "psk"
+        },
+        {
+          "name": "cbom-netscan:fortios:defaults-table",
+          "value": "7.6"
+        },
+        {
+          "name": "cbom-netscan:fortios:dhgrp:line",
+          "value": "22"
+        },
+        {
+          "name": "cbom-netscan:fortios:dhgrp:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:dhgrp:value",
+          "value": "20 21"
+        },
+        {
+          "name": "cbom-netscan:fortios:ike-version:line",
+          "value": "19"
+        },
+        {
+          "name": "cbom-netscan:fortios:ike-version:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:ike-version:value",
+          "value": "2"
+        },
+        {
+          "name": "cbom-netscan:fortios:proposal:line",
+          "value": "21"
+        },
+        {
+          "name": "cbom-netscan:fortios:proposal:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:proposal:value",
+          "value": "aes256gcm-prfsha384 aes256-sha256"
+        },
+        {
+          "name": "cbom-netscan:fortios:psksecret",
+          "value": "present"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 19,
+            "symbol": "vpn ipsec phase1-interface/hq-ikev2/ike-version"
+          },
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 21,
+            "symbol": "vpn ipsec phase1-interface/hq-ikev2/proposal"
+          },
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 22,
+            "symbol": "vpn ipsec phase1-interface/hq-ikev2/dhgrp"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "protocol",
+        "protocolProperties": {
+          "type": "ike",
+          "version": "2",
+          "ikev2TransformTypes": {
+            "encr": [
+              "crypto/46785a03f5a10178",
+              "crypto/716de3be5c35cd21"
+            ],
+            "prf": [
+              "crypto/3f47c257e3ee537e",
+              "crypto/2291231427b50233"
+            ],
+            "integ": [
+              "crypto/5fb5aab4cccac96f"
+            ],
+            "ke": [
+              "crypto/8f3a85df2e1ce0d6",
+              "crypto/80ae0cb89746d242"
+            ],
+            "auth": [
+              "crypto/58ff1d1b9d6ad372"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/4512ec4882efddae",
+      "type": "cryptographic-asset",
+      "name": "FortiOS IPsec phase1-interface pqc-ikev2",
+      "properties": [
+        {
+          "name": "cbom-netscan:fortios:addke1:line",
+          "value": "37"
+        },
+        {
+          "name": "cbom-netscan:fortios:addke1:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:addke1:value",
+          "value": "ml-kem-768"
+        },
+        {
+          "name": "cbom-netscan:fortios:addke2:line",
+          "value": "38"
+        },
+        {
+          "name": "cbom-netscan:fortios:addke2:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:addke2:value",
+          "value": "kyber768 hqc192"
+        },
+        {
+          "name": "cbom-netscan:fortios:authmethod:line",
+          "value": "39"
+        },
+        {
+          "name": "cbom-netscan:fortios:authmethod:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:authmethod:value",
+          "value": "signature"
+        },
+        {
+          "name": "cbom-netscan:fortios:certificate:line",
+          "value": "40"
+        },
+        {
+          "name": "cbom-netscan:fortios:certificate:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:certificate:value",
+          "value": "lab-vpn-cert"
+        },
+        {
+          "name": "cbom-netscan:fortios:defaults-table",
+          "value": "7.6"
+        },
+        {
+          "name": "cbom-netscan:fortios:dhgrp:line",
+          "value": "36"
+        },
+        {
+          "name": "cbom-netscan:fortios:dhgrp:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:dhgrp:value",
+          "value": "21"
+        },
+        {
+          "name": "cbom-netscan:fortios:ike-version:line",
+          "value": "34"
+        },
+        {
+          "name": "cbom-netscan:fortios:ike-version:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:ike-version:value",
+          "value": "2"
+        },
+        {
+          "name": "cbom-netscan:fortios:proposal:line",
+          "value": "35"
+        },
+        {
+          "name": "cbom-netscan:fortios:proposal:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:proposal:value",
+          "value": "aes256gcm-prfsha384"
+        },
+        {
+          "name": "cbom-netscan:fortios:signature-hash-alg:default-source",
+          "value": "CLI-7.6.7 p2286–2318 via research notes §3.3"
+        },
+        {
+          "name": "cbom-netscan:fortios:signature-hash-alg:source",
+          "value": "default"
+        },
+        {
+          "name": "cbom-netscan:fortios:signature-hash-alg:value",
+          "value": "sha2-512"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 34,
+            "symbol": "vpn ipsec phase1-interface/pqc-ikev2/ike-version"
+          },
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 35,
+            "symbol": "vpn ipsec phase1-interface/pqc-ikev2/proposal"
+          },
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 36,
+            "symbol": "vpn ipsec phase1-interface/pqc-ikev2/dhgrp"
+          },
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 39,
+            "symbol": "vpn ipsec phase1-interface/pqc-ikev2/authmethod"
+          },
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 37,
+            "symbol": "vpn ipsec phase1-interface/pqc-ikev2/addke1"
+          },
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 38,
+            "symbol": "vpn ipsec phase1-interface/pqc-ikev2/addke2"
+          },
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 40,
+            "symbol": "vpn ipsec phase1-interface/pqc-ikev2/certificate"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "protocol",
+        "protocolProperties": {
+          "type": "ike",
+          "version": "2",
+          "ikev2TransformTypes": {
+            "encr": [
+              "crypto/46785a03f5a10178"
+            ],
+            "prf": [
+              "crypto/3f47c257e3ee537e"
+            ],
+            "ke": [
+              "crypto/80ae0cb89746d242",
+              "crypto/0dfe508521cabe86",
+              "crypto/e5848a7169d1e7a6",
+              "crypto/cb5bec34f690e79a"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/70661ed25ddfb494",
+      "type": "cryptographic-asset",
+      "name": "FortiOS IPsec phase2-interface branch-p2",
+      "properties": [
+        {
+          "name": "cbom-netscan:fortios:defaults-table",
+          "value": "7.6"
+        },
+        {
+          "name": "cbom-netscan:fortios:dhgrp:default-note",
+          "value": "CLI reference default. AG-7.6.7 says FortiGate uses DH groups 20 and 21 by default, and RN-8.0.0 (bug 1182788) replaces default groups 5 and 14 with 20 and 21 for CLI-configured tunnels; see research notes §9."
+        },
+        {
+          "name": "cbom-netscan:fortios:dhgrp:default-source",
+          "value": "CLI HTML 7.6.7 252893715/config-vpn-ipsec-phase2-interface, verified 2026-10-14; research notes §3.4"
+        },
+        {
+          "name": "cbom-netscan:fortios:dhgrp:source",
+          "value": "default"
+        },
+        {
+          "name": "cbom-netscan:fortios:dhgrp:value",
+          "value": "20"
+        },
+        {
+          "name": "cbom-netscan:fortios:pfs:line",
+          "value": "53"
+        },
+        {
+          "name": "cbom-netscan:fortios:pfs:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:pfs:value",
+          "value": "disable"
+        },
+        {
+          "name": "cbom-netscan:fortios:phase1name",
+          "value": "branch-ikev1"
+        },
+        {
+          "name": "cbom-netscan:fortios:proposal:line",
+          "value": "52"
+        },
+        {
+          "name": "cbom-netscan:fortios:proposal:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:proposal:value",
+          "value": "aes128-sha1"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 52,
+            "symbol": "vpn ipsec phase2-interface/branch-p2/proposal"
+          },
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 53,
+            "symbol": "vpn ipsec phase2-interface/branch-p2/pfs"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "protocol",
+        "protocolProperties": {
+          "type": "ipsec",
+          "cryptoRefArray": [
+            "crypto/5bced78ae739ec8b",
+            "crypto/2c2bfdf27d9e64e9"
+          ]
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/43df498346fd5977",
+      "type": "cryptographic-asset",
+      "name": "FortiOS IPsec phase2-interface hq-p2",
+      "properties": [
+        {
+          "name": "cbom-netscan:fortios:addke:source",
+          "value": "default"
+        },
+        {
+          "name": "cbom-netscan:fortios:defaults-table",
+          "value": "7.6"
+        },
+        {
+          "name": "cbom-netscan:fortios:dhgrp:line",
+          "value": "48"
+        },
+        {
+          "name": "cbom-netscan:fortios:dhgrp:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:dhgrp:value",
+          "value": "20"
+        },
+        {
+          "name": "cbom-netscan:fortios:pfs:default-source",
+          "value": "CLI HTML 7.6.7 252893715/config-vpn-ipsec-phase2-interface, verified 2026-10-14; research notes §3.4"
+        },
+        {
+          "name": "cbom-netscan:fortios:pfs:source",
+          "value": "default"
+        },
+        {
+          "name": "cbom-netscan:fortios:pfs:value",
+          "value": "enable"
+        },
+        {
+          "name": "cbom-netscan:fortios:phase1name",
+          "value": "hq-ikev2"
+        },
+        {
+          "name": "cbom-netscan:fortios:proposal:line",
+          "value": "47"
+        },
+        {
+          "name": "cbom-netscan:fortios:proposal:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:proposal:value",
+          "value": "aes256gcm chacha20poly1305"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 47,
+            "symbol": "vpn ipsec phase2-interface/hq-p2/proposal"
+          },
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 48,
+            "symbol": "vpn ipsec phase2-interface/hq-p2/dhgrp"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "protocol",
+        "protocolProperties": {
+          "type": "ipsec",
+          "ikev2TransformTypes": {
+            "encr": [
+              "crypto/46785a03f5a10178",
+              "crypto/bb5c27757f5502b9"
+            ],
+            "ke": [
+              "crypto/8f3a85df2e1ce0d6"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/4d35330f9f06dc84",
+      "type": "cryptographic-asset",
+      "name": "FortiOS IPsec phase2-interface pqc-p2",
+      "properties": [
+        {
+          "name": "cbom-netscan:fortios:addke1:line",
+          "value": "58"
+        },
+        {
+          "name": "cbom-netscan:fortios:addke1:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:addke1:value",
+          "value": "ml-kem-768"
+        },
+        {
+          "name": "cbom-netscan:fortios:defaults-table",
+          "value": "7.6"
+        },
+        {
+          "name": "cbom-netscan:fortios:dhgrp:default-note",
+          "value": "CLI reference default. AG-7.6.7 says FortiGate uses DH groups 20 and 21 by default, and RN-8.0.0 (bug 1182788) replaces default groups 5 and 14 with 20 and 21 for CLI-configured tunnels; see research notes §9."
+        },
+        {
+          "name": "cbom-netscan:fortios:dhgrp:default-source",
+          "value": "CLI HTML 7.6.7 252893715/config-vpn-ipsec-phase2-interface, verified 2026-10-14; research notes §3.4"
+        },
+        {
+          "name": "cbom-netscan:fortios:dhgrp:source",
+          "value": "default"
+        },
+        {
+          "name": "cbom-netscan:fortios:dhgrp:value",
+          "value": "20"
+        },
+        {
+          "name": "cbom-netscan:fortios:pfs:default-source",
+          "value": "CLI HTML 7.6.7 252893715/config-vpn-ipsec-phase2-interface, verified 2026-10-14; research notes §3.4"
+        },
+        {
+          "name": "cbom-netscan:fortios:pfs:source",
+          "value": "default"
+        },
+        {
+          "name": "cbom-netscan:fortios:pfs:value",
+          "value": "enable"
+        },
+        {
+          "name": "cbom-netscan:fortios:phase1name",
+          "value": "pqc-ikev2"
+        },
+        {
+          "name": "cbom-netscan:fortios:proposal:line",
+          "value": "57"
+        },
+        {
+          "name": "cbom-netscan:fortios:proposal:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:proposal:value",
+          "value": "aes256gcm"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 57,
+            "symbol": "vpn ipsec phase2-interface/pqc-p2/proposal"
+          },
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 58,
+            "symbol": "vpn ipsec phase2-interface/pqc-p2/addke1"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "protocol",
+        "protocolProperties": {
+          "type": "ipsec",
+          "ikev2TransformTypes": {
+            "encr": [
+              "crypto/46785a03f5a10178"
+            ],
+            "ke": [
+              "crypto/8f3a85df2e1ce0d6",
+              "crypto/0dfe508521cabe86"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/9ca8e0df5cc22027",
+      "type": "cryptographic-asset",
+      "name": "3DES-CBC",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 28,
+            "symbol": "vpn ipsec phase1-interface/branch-ikev1/proposal"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "block-cipher",
+          "mode": "cbc"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/5bced78ae739ec8b",
+      "type": "cryptographic-asset",
+      "name": "AES-128-CBC",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 28,
+            "symbol": "vpn ipsec phase1-interface/branch-ikev1/proposal"
+          },
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 52,
+            "symbol": "vpn ipsec phase2-interface/branch-p2/proposal"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "block-cipher",
+          "parameterSetIdentifier": "128",
+          "mode": "cbc"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/716de3be5c35cd21",
+      "type": "cryptographic-asset",
+      "name": "AES-256-CBC",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 21,
+            "symbol": "vpn ipsec phase1-interface/hq-ikev2/proposal"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "block-cipher",
+          "parameterSetIdentifier": "256",
+          "mode": "cbc"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/46785a03f5a10178",
+      "type": "cryptographic-asset",
+      "name": "AES-256-GCM",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 21,
+            "symbol": "vpn ipsec phase1-interface/hq-ikev2/proposal"
+          },
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 35,
+            "symbol": "vpn ipsec phase1-interface/pqc-ikev2/proposal"
+          },
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 47,
+            "symbol": "vpn ipsec phase2-interface/hq-p2/proposal"
+          },
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 57,
+            "symbol": "vpn ipsec phase2-interface/pqc-p2/proposal"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "ae",
+          "parameterSetIdentifier": "256",
+          "mode": "gcm"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/bb5c27757f5502b9",
+      "type": "cryptographic-asset",
+      "name": "ChaCha20-Poly1305",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 47,
+            "symbol": "vpn ipsec phase2-interface/hq-p2/proposal"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "ae"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/8f3a85df2e1ce0d6",
+      "type": "cryptographic-asset",
+      "name": "DH group 20 (ECP-384)",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 22,
+            "symbol": "vpn ipsec phase1-interface/hq-ikev2/dhgrp"
+          },
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 48,
+            "symbol": "vpn ipsec phase2-interface/hq-p2/dhgrp"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "key-agree",
+          "curve": "secp384r1"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/80ae0cb89746d242",
+      "type": "cryptographic-asset",
+      "name": "DH group 21 (ECP-521)",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 22,
+            "symbol": "vpn ipsec phase1-interface/hq-ikev2/dhgrp"
+          },
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 36,
+            "symbol": "vpn ipsec phase1-interface/pqc-ikev2/dhgrp"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "key-agree",
+          "curve": "secp521r1"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/2c2bfdf27d9e64e9",
+      "type": "cryptographic-asset",
+      "name": "HMAC-SHA1",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 28,
+            "symbol": "vpn ipsec phase1-interface/branch-ikev1/proposal"
+          },
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 28,
+            "symbol": "vpn ipsec phase1-interface/branch-ikev1/proposal"
+          },
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 52,
+            "symbol": "vpn ipsec phase2-interface/branch-p2/proposal"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "mac"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/5fb5aab4cccac96f",
+      "type": "cryptographic-asset",
+      "name": "HMAC-SHA256",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 21,
+            "symbol": "vpn ipsec phase1-interface/hq-ikev2/proposal"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "mac"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/cb5bec34f690e79a",
+      "type": "cryptographic-asset",
+      "name": "HQC-192",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 38,
+            "symbol": "vpn ipsec phase1-interface/pqc-ikev2/addke2"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "kem",
+          "parameterSetIdentifier": "192"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/e5848a7169d1e7a6",
+      "type": "cryptographic-asset",
+      "name": "KYBER-768",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 38,
+            "symbol": "vpn ipsec phase1-interface/pqc-ikev2/addke2"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "kem",
+          "parameterSetIdentifier": "768"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/0dfe508521cabe86",
+      "type": "cryptographic-asset",
+      "name": "ML-KEM-768",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 37,
+            "symbol": "vpn ipsec phase1-interface/pqc-ikev2/addke1"
+          },
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 58,
+            "symbol": "vpn ipsec phase2-interface/pqc-p2/addke1"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "kem",
+          "parameterSetIdentifier": "768",
+          "nistQuantumSecurityLevel": 3
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/5fb44467e8c6d82e",
+      "type": "cryptographic-asset",
+      "name": "PRF-HMAC-SHA1",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 28,
+            "symbol": "vpn ipsec phase1-interface/branch-ikev1/proposal"
+          },
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 28,
+            "symbol": "vpn ipsec phase1-interface/branch-ikev1/proposal"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "kdf"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/2291231427b50233",
+      "type": "cryptographic-asset",
+      "name": "PRF-HMAC-SHA256",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 21,
+            "symbol": "vpn ipsec phase1-interface/hq-ikev2/proposal"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "kdf"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/3f47c257e3ee537e",
+      "type": "cryptographic-asset",
+      "name": "PRF-HMAC-SHA384",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 21,
+            "symbol": "vpn ipsec phase1-interface/hq-ikev2/proposal"
+          },
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 35,
+            "symbol": "vpn ipsec phase1-interface/pqc-ikev2/proposal"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "kdf"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/9c866699d93a25e2",
+      "type": "cryptographic-asset",
+      "name": "FortiOS IPsec phase1-interface branch-ikev1 pre-shared key",
+      "properties": [
+        {
+          "name": "cbom-netscan:fortios:psksecret:form",
+          "value": "plaintext"
+        },
+        {
+          "name": "cbom-netscan:fortios:psksecret:line",
+          "value": "30"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 30,
+            "symbol": "vpn ipsec phase1-interface/branch-ikev1/psksecret"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "related-crypto-material",
+        "relatedCryptoMaterialProperties": {
+          "type": "secret-key"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/58ff1d1b9d6ad372",
+      "type": "cryptographic-asset",
+      "name": "FortiOS IPsec phase1-interface hq-ikev2 pre-shared key",
+      "properties": [
+        {
+          "name": "cbom-netscan:fortios:psksecret:form",
+          "value": "ENC"
+        },
+        {
+          "name": "cbom-netscan:fortios:psksecret:line",
+          "value": "24"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 24,
+            "symbol": "vpn ipsec phase1-interface/hq-ikev2/psksecret"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "related-crypto-material",
+        "relatedCryptoMaterialProperties": {
+          "type": "secret-key"
+        }
+      }
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "crypto/43df498346fd5977",
+      "dependsOn": [
+        "crypto/76f97fcaea062268"
+      ]
+    },
+    {
+      "ref": "crypto/70661ed25ddfb494",
+      "dependsOn": [
+        "crypto/5f8e47fc501d1352"
+      ]
+    },
+    {
+      "ref": "crypto/4d35330f9f06dc84",
+      "dependsOn": [
+        "crypto/4512ec4882efddae"
+      ]
+    }
+  ]
+}

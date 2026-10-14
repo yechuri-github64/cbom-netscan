@@ -144,15 +144,24 @@ func build(l *lexer.Lexer) ([]*Block, []model.Warning, error) {
 			case top == nil:
 				return nil, nil, errAt(line, "end without a matching config")
 			}
-			// Real backups always write next, but documentation examples and
-			// hand-edited snippets often go straight to end. Treat it as an
-			// implied next: close the edit, then the config block around it.
+			// end while an edit is open is an implied next: close the edit,
+			// then the config block around it.
+			//
+			// For a top-level "config vdom" this is the normal layout: every
+			// per-VDOM section of a multi-VDOM backup is
+			// "config vdom / edit <name> / … / end" with no next (verified on
+			// FortiOS 7.6.7 build 3704), so it is not warned about. Anywhere
+			// else, real backups write next and the omission is warned about,
+			// because it usually comes from a doc example or a hand edit.
 			if top.entry != nil {
-				warns = append(warns, model.Warning{
-					Code:    "implied-next",
-					Message: fmt.Sprintf("end closes edit %q (line %d) without a next; treated as next then end", top.entry.Name, top.entry.Line),
-					Ev:      model.Evidence{Line: line, Symbol: "edit " + top.entry.Name},
-				})
+				vdomWrapper := len(stack) == 2 && stack[0].block.Path == "vdom"
+				if !vdomWrapper {
+					warns = append(warns, model.Warning{
+						Code:    "implied-next",
+						Message: fmt.Sprintf("end closes edit %q (line %d) without a next; treated as next then end", top.entry.Name, top.entry.Line),
+						Ev:      model.Evidence{Line: line, Symbol: "edit " + top.entry.Name},
+					})
+				}
 				stack = stack[:len(stack)-1]
 			}
 			stack = stack[:len(stack)-1]

@@ -15,11 +15,14 @@ import (
 // "config vdom" block means multi-VDOM; otherwise the file is single-VDOM.
 // The lexer's vdom-mode-unknown warning is kept in that case.
 //
-// Multi-VDOM layout (research notes §1.3):
+// Multi-VDOM layout (research notes §1.3, verified on 7.6.7 build 3704):
 //
-//	config vdom / edit root / next / end      VDOM declarations
-//	config global / config system … / end      global scope
-//	config vdom / edit root / config … / next  per-VDOM scope
+//	config vdom / edit root / next / edit dmz / next / end   VDOM declarations
+//	config global / config system … / end / … / end           global scope
+//	config vdom / edit root / config … / end / end            one per VDOM
+//
+// A VDOM's declaration and its content block land in the same scope, because
+// scopes are keyed by Scope{Kind, Name}.
 func (t *Tree) assignScopes(roots []*Block) error {
 	mode := t.Header.VDOMMode
 	if mode == lexer.VDOMUnknown {

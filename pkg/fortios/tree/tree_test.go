@@ -9,6 +9,7 @@ package tree_test
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 
@@ -320,6 +321,23 @@ config vpn ipsec phase1-interface @2
 `,
 		},
 		{
+			// Inside a VDOM's content a missing next still warns; only the
+			// wrapper edit's own end (line 7) is the normal layout.
+			name: "implied_next_inside_vdom_content_still_warns",
+			input: hdrMulti + `config vdom
+edit root
+config firewall address
+    edit "a"
+end
+end
+`,
+			head: "mode=multi detected=false warnings=[implied-next@6]",
+			want: `scope vdom "root"
+config firewall address @4
+  edit "a" @5
+`,
+		},
+		{
 			// The key line is not right after the header, so the lexer
 			// drops it while tokenizing; its warning must still reach Tree.
 			name:  "private_key_warning_reaches_tree",
@@ -457,6 +475,56 @@ func TestGet_MultiVDOMScopes(t *testing.T) {
 	}
 	if bs := tr.Blocks(tree.ScopeGlobal, "system global"); len(bs) != 1 {
 		t.Errorf("Blocks(global, system global) = %d, want 1", len(bs))
+	}
+}
+
+// TestParse_MultiVDOM767Layout uses the multi-VDOM layout verified on FortiOS
+// 7.6.7 build 3704: a declaration block, an unindented config global section,
+// and one config vdom / edit <name> section per VDOM closed by end with no
+// next. Each VDOM must be one scope, and the wrapper ends must not warn.
+func TestParse_MultiVDOM767Layout(t *testing.T) {
+	data, err := os.ReadFile("testdata/multi-vdom-7.6.conf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tr := parse(t, string(data))
+
+	want := `mode=multi detected=false warnings=[]
+scope vdom "root"
+config system settings @22
+  set opmode ["nat"] @23
+config vpn ipsec phase1-interface @25
+  edit "root-vpn" @26
+    set ike-version ["2"] @27
+    set proposal ["aes256gcm-prfsha384"] @28
+scope vdom "testvdom"
+config system settings @34
+  set opmode ["nat"] @35
+config vpn ipsec phase1-interface @37
+  edit "test-vpn" @38
+    set ike-version ["2"] @39
+scope global
+config system global @12
+  set hostname ["fw-lab-02"] @13
+  set admin-https-ssl-versions ["tlsv1-3"] @14
+config system ssh-config @16
+  set ssh-enc-algo ["aes256-gcm@openssh.com"] @17
+`
+	if got := dump(tr); got != want {
+		t.Errorf("tree mismatch\n--- got ---\n%s--- want ---\n%s", got, want)
+	}
+
+	if got := fmt.Sprint(tr.Scopes()); got != `[vdom "root" vdom "testvdom" global]` {
+		t.Errorf("Scopes = %s, want each VDOM once plus global", got)
+	}
+	for scope, want := range map[tree.Scope]string{tree.VDOM("root"): "root-vpn", tree.VDOM("testvdom"): "test-vpn"} {
+		es := tr.Get(scope, "vpn ipsec phase1-interface")
+		if len(es) != 1 || es[0].Name != want {
+			t.Errorf("Get(%s) = %v, want one entry %q", scope, es, want)
+		}
+	}
+	if bs := tr.Blocks(tree.ScopeGlobal, "system ssh-config"); len(bs) != 1 {
+		t.Errorf("Blocks(global, system ssh-config) = %d, want 1", len(bs))
 	}
 }
 

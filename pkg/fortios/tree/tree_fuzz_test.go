@@ -6,6 +6,7 @@ package tree_test
 
 import (
 	"bytes"
+	"os"
 	"testing"
 
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/tree"
@@ -28,6 +29,9 @@ func FuzzParse(f *testing.F) {
 	}
 	for _, s := range seeds {
 		f.Add([]byte(s))
+	}
+	if data, err := os.ReadFile("testdata/multi-vdom-7.6.conf"); err == nil {
+		f.Add(data)
 	}
 
 	f.Fuzz(func(t *testing.T, data []byte) {

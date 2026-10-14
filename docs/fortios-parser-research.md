@@ -62,7 +62,7 @@ Verified on FortiOS 7.6.7: output values are always double-quoted (single-quoted
 | `config system global` → `set vdom-mode {no-vdom\|multi-vdom}`, default `no-vdom` (all versions) | CLI-7.4.12 p1590, CLI-7.6.7 p1591, CLI-8.0.1 p1641; https://docs.fortinet.com/document/fortigate/8.0.0/cli-reference/339914554/config-system-global |
 | Multi-VDOM CLI examples use `config vdom` / `edit <vdom>` / `config …` / `end` / `next` / `end`, and `config global` for global objects | AG-8.0.1 p142, p407, p446 |
 | Multi-VDOM backup/restore (whole or per-VDOM) | AG-8.0.1 p4285–4288 https://docs.fortinet.com/document/fortigate/8.0.1/administration-guide/87472/backing-up-and-restoring-configurations-in-multi-vdom-mode |
-| Exact multi-VDOM full-backup layout (e.g. initial `config vdom` / `edit root` / `next` / `end` declaration block, then `config global` … `end`, then per-VDOM `config vdom` / `edit <name>` blocks) | *Not documented officially. Unverified* (§10) |
+| Exact multi-VDOM full-backup layout: (1) a declaration block `config vdom` / `edit root` / `next` / `edit <name>` / `next` / `end` listing VDOM names only; (2) `config global` … `end`, with the blocks inside it not indented; (3) one separate `config vdom` / `edit <name>` block per VDOM holding that VDOM's settings, closed by a single `end` with no `next` | Not documented officially. **Verified on FortiOS 7.6.7 build 3704** (multi-VDOM backup) |
 | Some objects are scope-dependent: `vpn certificate local/ca/remote` have `range {global\|vdom}` (default `vdom` for local) | CLI-8.0.1 p2353 |
 
 ### 1.4 Non-plaintext and alternative formats (parser must detect and refuse/flag)
@@ -391,7 +391,7 @@ CDX-1.6 cryptoProperties: assetType {algorithm, certificate, protocol, related-c
 
 ## 10. Explicitly unverified / unknown
 - Meaning of `opmode`, `vdom`, `#conf_file_ver`, `#global_vdom`, and whether `#private-encryption-key=` appears in every backup or only with private-data-encryption.
-- Exact multi-VDOM full-backup layout, and CRLF vs LF.
+- CRLF vs LF. (The multi-VDOM full-backup layout is verified on 7.6.7 build 3704, §1.3.)
 - Encrypted-backup magic `#FGBK|…` and AES-GCM details (3rd-party/KB only). The secrypt value token format. The `ENC` algorithm.
 - Whether 7.6.7+/8.0.x firmware accepts or stores numeric addke values, or converts them to names (only docs checked, no device).
 - IKE/ESP default proposal lists for every version.

@@ -169,46 +169,65 @@ func (x *extractor) ssh() {
 		{"ssh-mac-algo", sshMac},
 		{"ssh-hsk-algo", sshHsk},
 	}
+	addRef := func(ids ...string) {
+		for _, id := range ids {
+			if !slices.Contains(p.Proto.Refs, id) {
+				p.Proto.Refs = append(p.Proto.Refs, id)
+			}
+		}
+	}
 	for _, f := range fields {
 		v := x.resolve(sectionSSH, f.name, field.Spec{Known: keys(f.algs), Pattern: sshTokenRE})
-		x.r.Record(p, v, false)
+		x.r.Record(p, v, true) // the SSH tokens live here; algorithm components are shared
+		var restricted []string
 		for _, tok := range v.Tokens {
+			if x.strong && !strongCryptoAllowed[f.name][tok] {
+				restricted = append(restricted, tok)
+			}
 			alg, ok := f.algs[tok]
 			if !ok {
 				alg = model.Algorithm{Primitive: "unknown"}
 			}
-			algo.MarkQuantumVulnerable(&alg)
-			a := &model.Asset{
-				Type:       model.AssetTypeAlgorithm,
-				Name:       tok,
-				Alg:        &alg,
-				Properties: map[string]string{},
+			name := tok
+			if c, ok := sshCanonical[tok]; ok {
+				name = c
 			}
-			x.r.Record(a, v, false)
-			if x.strong && !strongCryptoAllowed[f.name][tok] {
-				mayRestrict(a)
-			}
+			a := x.algorithm(name, alg, v)
 			if h, ok := hybridProp[tok]; ok {
 				a.Properties[field.Prefix+"hybrid"] = h
 			}
 			var parts []string
 			for _, hp := range hybridParts[tok] {
-				pa := hp.alg
-				algo.MarkQuantumVulnerable(&pa)
-				c := &model.Asset{
-					ID:         model.BOMRef(model.AssetTypeAlgorithm, hp.name, x.r.Loc),
-					Type:       model.AssetTypeAlgorithm,
-					Name:       hp.name,
-					Alg:        &pa,
-					Properties: map[string]string{},
-				}
-				x.r.Record(c, v, false)
-				parts = append(parts, x.inv.Add(c).ID)
+				parts = append(parts, x.inv.Add(x.algorithm(hp.name, hp.alg, v)).ID)
 			}
 			a.DependsOn = parts
-			p.Proto.Refs = append(p.Proto.Refs, x.inv.Add(a).ID)
-			p.Proto.Refs = append(p.Proto.Refs, parts...)
+			addRef(x.inv.Add(a).ID)
+			addRef(parts...)
+		}
+		if len(restricted) > 0 {
+			p.Properties[field.Prefix+f.name+":strong-crypto-may-restrict"] = strings.Join(restricted, " ")
+			p.Properties[field.Prefix+"strong-crypto-may-restrict:reason"] = strongCryptoReason
 		}
 	}
 	x.inv.Add(p)
+}
+
+// algorithm builds an algorithm component. The bom-ref is fixed from the
+// name and location, as in the IPsec extractor, so an algorithm both use is
+// one component with one ref. Field provenance lives on the protocol
+// component, because a shared algorithm can be configured in one place and a
+// default in another; a configured value adds an evidence occurrence here.
+func (x *extractor) algorithm(name string, alg model.Algorithm, v field.Value) *model.Asset {
+	algo.MarkQuantumVulnerable(&alg)
+	a := &model.Asset{
+		ID:         model.BOMRef(model.AssetTypeAlgorithm, name, x.r.Loc),
+		Type:       model.AssetTypeAlgorithm,
+		Name:       name,
+		Alg:        &alg,
+		Properties: map[string]string{},
+	}
+	if v.Source == field.Configured {
+		a.Evidence = []model.Evidence{x.r.Evidence(v)}
+	}
+	return a
 }

@@ -75,6 +75,60 @@ func prop(t *testing.T, inv *model.Inventory, name, key, want string) {
 	}
 }
 
+// TestSharedAlgorithmsWithIPsec: a cipher used by both SSH and IPsec is one
+// component referenced by both protocols, and MAC -etm variants share their
+// MAC's component.
+func TestSharedAlgorithmsWithIPsec(t *testing.T) {
+	tr, err := tree.Parse(strings.NewReader(hdr76 + `config system ssh-config
+    set ssh-enc-algo aes256-gcm@openssh.com
+    set ssh-mac-algo hmac-sha2-256 hmac-sha2-256-etm@openssh.com
+end
+config vpn ipsec phase1-interface
+    edit "t"
+        set ike-version 2
+        set proposal aes256gcm-prfsha384 aes256-sha256
+    next
+end
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	inv := model.NewInventory()
+	global.Extract(tr, "fw.conf", inv)
+	ipsec.Extract(tr, "fw.conf", inv)
+
+	count := map[string]int{}
+	ids := map[string]string{}
+	for _, a := range inv.Assets {
+		count[a.Name]++
+		ids[a.Name] = a.ID
+	}
+	for _, n := range []string{"AES-256-GCM", "HMAC-SHA256"} {
+		if count[n] != 1 {
+			t.Errorf("%s components = %d, want 1", n, count[n])
+		}
+	}
+	ssh, tunnel := find(inv, "FortiOS admin SSH"), find(inv, "FortiOS IPsec phase1-interface t")
+	if !slices.Contains(ssh.Proto.Refs, ids["AES-256-GCM"]) || !slices.Contains(tunnel.Proto.IKEEncr, ids["AES-256-GCM"]) {
+		t.Errorf("AES-256-GCM not referenced by both SSH and IPsec")
+	}
+	if !slices.Contains(ssh.Proto.Refs, ids["HMAC-SHA256"]) || !slices.Contains(tunnel.Proto.IKEInteg, ids["HMAC-SHA256"]) {
+		t.Errorf("HMAC-SHA256 not referenced by both SSH and IPsec")
+	}
+	n := 0
+	for _, id := range ssh.Proto.Refs {
+		if id == ids["HMAC-SHA256"] {
+			n++
+		}
+	}
+	if n != 1 {
+		t.Errorf("SSH references HMAC-SHA256 %d times, want once", n)
+	}
+	if got := len(find(inv, "AES-256-GCM").Evidence); got != 2 {
+		t.Errorf("AES-256-GCM occurrences = %d, want 2 (SSH and IPsec lines)", got)
+	}
+}
+
 // TestHybridSharesMLKEMWithIPsec: ML-KEM-768 inside the SSH hybrid and in an
 // IPsec addke is one component, referenced by both protocols.
 func TestHybridSharesMLKEMWithIPsec(t *testing.T) {
@@ -114,8 +168,9 @@ func TestExtract(t *testing.T) {
 			name: "defaults_only_7.6",
 			cfg:  hdr76,
 			check: func(t *testing.T, inv *model.Inventory) {
-				if len(inv.Assets) != 23 {
-					t.Errorf("components = %d, want 23 (2 TLS + SSH + 20 SSH algorithms): %v", len(inv.Assets), names(inv))
+				// 8 kex + 2 ciphers + 2 MACs (the -etm variants share the MAC) + 6 host-key algorithms
+				if len(inv.Assets) != 21 {
+					t.Errorf("components = %d, want 21 (2 TLS + SSH + 18 SSH algorithms): %v", len(inv.Assets), names(inv))
 				}
 				prop(t, inv, tls13, "admin-https-ssl-versions:source", "default")
 				prop(t, inv, tls13, "admin-https-ssl-ciphersuites:source", "default")
@@ -134,20 +189,21 @@ func TestExtract(t *testing.T) {
 				if got := strings.Join(suites, " "); got != "TLS-AES-128-GCM-SHA256 TLS-AES-256-GCM-SHA384 TLS-CHACHA20-POLY1305-SHA256" {
 					t.Errorf("TLS 1.3 suites = %s", got)
 				}
-				if n := len(find(inv, ssh).Proto.Refs); n != 20 {
-					t.Errorf("SSH refs = %d, want 20", n)
+				if n := len(find(inv, ssh).Proto.Refs); n != 18 {
+					t.Errorf("SSH refs = %d, want 18", n)
 				}
 				for name, want := range map[string]int{"ecdh-sha2-nistp384": 0, "curve25519-sha256@libssh.org": 0, "ssh-ed25519": 0, "rsa-sha2-512": 0} {
 					if l := find(inv, name).Alg.NISTQuantumLevel; l == nil || *l != want {
 						t.Errorf("%s: nistQuantumSecurityLevel = %v, want %d (classical public-key)", name, l, want)
 					}
 				}
-				for _, name := range []string{"aes256-ctr", "hmac-sha2-256"} {
+				prop(t, inv, ssh, "ssh-mac-algo:value", "hmac-sha2-256 hmac-sha2-256-etm@openssh.com hmac-sha2-512 hmac-sha2-512-etm@openssh.com")
+				for _, name := range []string{"AES-256-CTR", "HMAC-SHA256"} {
 					if l := find(inv, name).Alg.NISTQuantumLevel; l != nil {
 						t.Errorf("%s: nistQuantumSecurityLevel = %d, want unset (symmetric)", name, *l)
 					}
 				}
-				if ev := find(inv, "aes256-ctr").Evidence; len(ev) != 0 {
+				if ev := find(inv, "AES-256-CTR").Evidence; len(ev) != 0 {
 					t.Errorf("default-sourced component has evidence %v", ev)
 				}
 				if len(inv.Warnings) != 0 {
@@ -169,13 +225,27 @@ config system ssh-config
 end
 `,
 			check: func(t *testing.T, inv *model.Inventory) {
-				for name, want := range map[string]bool{
-					"FortiOS admin HTTPS TLS 1.1": true, tls12: false, tls13: false,
-					"aes128-cbc": true, "aes256-ctr": false, "ssh-rsa": true, "ssh-ed25519": false, "hmac-sha2-256": false,
-				} {
+				for name, want := range map[string]bool{"FortiOS admin HTTPS TLS 1.1": true, tls12: false, tls13: false} {
 					_, got := find(inv, name).Properties["cbom-netscan:fortios:strong-crypto-may-restrict"]
 					if got != want {
 						t.Errorf("%s: strong-crypto-may-restrict present = %v, want %v", name, got, want)
+					}
+				}
+				// SSH markers name the tokens on the protocol, not on the
+				// algorithm components, which other protocols may share.
+				prop(t, inv, ssh, "ssh-enc-algo:strong-crypto-may-restrict", "aes128-cbc")
+				prop(t, inv, ssh, "ssh-hsk-algo:strong-crypto-may-restrict", "ssh-rsa")
+				if _, ok := find(inv, ssh).Properties["cbom-netscan:fortios:ssh-mac-algo:strong-crypto-may-restrict"]; ok {
+					t.Errorf("default MACs are all allowed under strong-crypto")
+				}
+				for _, a := range inv.Assets {
+					if a.Type != model.AssetTypeAlgorithm {
+						continue
+					}
+					for k := range a.Properties {
+						if strings.Contains(k, "strong-crypto") {
+							t.Errorf("algorithm %s carries %s", a.Name, k)
+						}
 					}
 				}
 				prop(t, inv, tls13, "strong-crypto-may-restrict:cipher-suites", "TLS-AES-128-CCM-SHA256")
@@ -237,7 +307,10 @@ end
 				prop(t, inv, tlsAny, "admin-https-ssl-ciphersuites:source", "unknown")
 				prop(t, inv, ssh, "ssh-kex-algo:source", "unknown")
 				prop(t, inv, ssh, "ssh-enc-algo:source", "configured")
-				prop(t, inv, "aes256-ctr", "ssh-enc-algo:line", "3")
+				prop(t, inv, ssh, "ssh-enc-algo:line", "3")
+				if ev := find(inv, "AES-256-CTR").Evidence; len(ev) != 1 || ev[0].Line != 3 {
+					t.Errorf("AES-256-CTR evidence = %+v, want line 3", ev)
+				}
 				if n := len(find(inv, ssh).Proto.Refs); n != 1 {
 					t.Errorf("SSH refs = %d, want 1 (only the configured cipher)", n)
 				}
@@ -260,7 +333,8 @@ end
 					t.Errorf("hybrid kex alg = %+v, want a combiner with no level of its own", a.Alg)
 				}
 				prop(t, inv, "mlkem768x25519-sha256", "hybrid", "ML-KEM-768 + X25519")
-				prop(t, inv, "mlkem768x25519-sha256", "defaults-table", "8.0")
+				prop(t, inv, "FortiOS admin SSH", "defaults-table", "8.0")
+				prop(t, inv, "FortiOS admin SSH", "ssh-kex-algo:source", "default")
 
 				byID := map[string]*model.Asset{}
 				for _, x := range inv.Assets {
@@ -323,15 +397,9 @@ end
 				if a := find(inv, "new-cipher@example.com"); a == nil || a.Alg.Primitive != "unknown" {
 					t.Errorf("unknown but plain token not kept as primitive unknown: %+v", a)
 				}
-				var enc []string
-				for _, a := range inv.Assets {
-					if _, ok := a.Properties["cbom-netscan:fortios:ssh-enc-algo:source"]; ok && a.Type == model.AssetTypeAlgorithm {
-						enc = append(enc, a.Name)
-					}
-				}
-				slices.Sort(enc)
-				if !slices.Equal(enc, []string{"aes256-ctr", "new-cipher@example.com"}) {
-					t.Errorf("cipher components = %v, want [aes256-ctr new-cipher@example.com] (unsafe token dropped)", enc)
+				prop(t, inv, ssh, "ssh-enc-algo:value", "aes256-ctr new-cipher@example.com")
+				if find(inv, "AES-256-CTR") == nil {
+					t.Errorf("aes256-ctr not emitted as AES-256-CTR")
 				}
 				if got := warnCodes(inv); !slices.Equal(got, []string{"unknown-token", "unknown-token"}) {
 					t.Errorf("warnings = %v, want two unknown-token", got)

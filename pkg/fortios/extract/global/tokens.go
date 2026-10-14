@@ -49,7 +49,7 @@ var sshEnc = map[string]model.Algorithm{
 	"3des-cbc":                      {Primitive: "block-cipher", Mode: "cbc"},
 	"blowfish-cbc":                  {Primitive: "block-cipher", Mode: "cbc"},
 	"cast128-cbc":                   {Primitive: "block-cipher", Mode: "cbc"},
-	"rijndael-cbc@lysator.liu.se":   {Primitive: "block-cipher", Mode: "cbc"},
+	"rijndael-cbc@lysator.liu.se":   {Primitive: "block-cipher", Mode: "cbc", ParameterSetIdentifier: "256"},
 	"aes128-gcm@openssh.com":        {Primitive: "ae", Mode: "gcm", ParameterSetIdentifier: "128"},
 	"aes256-gcm@openssh.com":        {Primitive: "ae", Mode: "gcm", ParameterSetIdentifier: "256"},
 }
@@ -171,3 +171,51 @@ var strongCryptoAllowed = map[string]map[string]bool{
 var strongCryptoDisabledTLS13 = []string{"TLS-AES-128-CCM-SHA256", "TLS-AES-128-CCM-8-SHA256"}
 
 const strongCryptoReason = "strong-crypto is enable, which disables this per the FortiOS Administration Guide; the CBOM shows the configured set, not the effective one (research notes §3.1a, §8.12)"
+
+// sshCanonical gives SSH cipher and MAC tokens the algorithm name the IPsec
+// extractor uses for the same algorithm, so a backup using AES-256-GCM in
+// both SSH and IPsec yields one component. The SSH token itself is kept on
+// the SSH protocol component (<field>:value).
+//
+// Key-exchange methods and host-key algorithms keep their SSH names: a method
+// such as ecdh-sha2-nistp256 is a curve plus a hash, not the same thing as an
+// IKE DH group. chacha20-poly1305@openssh.com is OpenSSH's own construction,
+// not the RFC 8439 AEAD that IPsec uses, so it gets a distinct name.
+// rijndael-cbc@lysator.liu.se is OpenSSH's alias for aes256-cbc. arcfour128
+// and arcfour256 discard the first 1536 bytes of keystream (RFC 4345). The
+// -etm variants change how the MAC is applied, not the MAC algorithm.
+var sshCanonical = map[string]string{
+	"aes128-ctr":                     "AES-128-CTR",
+	"aes192-ctr":                     "AES-192-CTR",
+	"aes256-ctr":                     "AES-256-CTR",
+	"aes128-cbc":                     "AES-128-CBC",
+	"aes192-cbc":                     "AES-192-CBC",
+	"aes256-cbc":                     "AES-256-CBC",
+	"rijndael-cbc@lysator.liu.se":    "AES-256-CBC",
+	"aes128-gcm@openssh.com":         "AES-128-GCM",
+	"aes256-gcm@openssh.com":         "AES-256-GCM",
+	"3des-cbc":                       "3DES-CBC",
+	"blowfish-cbc":                   "Blowfish-CBC",
+	"cast128-cbc":                    "CAST-128-CBC",
+	"arcfour":                        "RC4",
+	"arcfour128":                     "RC4-128-drop1536",
+	"arcfour256":                     "RC4-256-drop1536",
+	"chacha20-poly1305@openssh.com":  "ChaCha20-Poly1305 (OpenSSH)",
+	"hmac-md5":                       "HMAC-MD5",
+	"hmac-md5-etm@openssh.com":       "HMAC-MD5",
+	"hmac-md5-96":                    "HMAC-MD5-96",
+	"hmac-md5-96-etm@openssh.com":    "HMAC-MD5-96",
+	"hmac-sha1":                      "HMAC-SHA1",
+	"hmac-sha1-etm@openssh.com":      "HMAC-SHA1",
+	"hmac-sha2-256":                  "HMAC-SHA256",
+	"hmac-sha2-256-etm@openssh.com":  "HMAC-SHA256",
+	"hmac-sha2-512":                  "HMAC-SHA512",
+	"hmac-sha2-512-etm@openssh.com":  "HMAC-SHA512",
+	"hmac-ripemd160":                 "HMAC-RIPEMD160",
+	"hmac-ripemd160@openssh.com":     "HMAC-RIPEMD160",
+	"hmac-ripemd160-etm@openssh.com": "HMAC-RIPEMD160",
+	"umac-64@openssh.com":            "UMAC-64",
+	"umac-64-etm@openssh.com":        "UMAC-64",
+	"umac-128@openssh.com":           "UMAC-128",
+	"umac-128-etm@openssh.com":       "UMAC-128",
+}

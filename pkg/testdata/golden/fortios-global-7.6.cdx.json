@@ -240,12 +240,20 @@
           "value": "configured"
         },
         {
+          "name": "cbom-netscan:fortios:ssh-enc-algo:value",
+          "value": "aes256-gcm@openssh.com"
+        },
+        {
           "name": "cbom-netscan:fortios:ssh-hsk-algo:default-source",
           "value": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
         },
         {
           "name": "cbom-netscan:fortios:ssh-hsk-algo:source",
           "value": "default"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssh-hsk-algo:value",
+          "value": "ecdsa-sha2-nistp521 ecdsa-sha2-nistp384 ecdsa-sha2-nistp256 rsa-sha2-256 rsa-sha2-512 ssh-ed25519"
         },
         {
           "name": "cbom-netscan:fortios:ssh-kex-algo:line",
@@ -256,12 +264,20 @@
           "value": "configured"
         },
         {
+          "name": "cbom-netscan:fortios:ssh-kex-algo:value",
+          "value": "curve25519-sha256@libssh.org ecdh-sha2-nistp384"
+        },
+        {
           "name": "cbom-netscan:fortios:ssh-mac-algo:default-source",
           "value": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
         },
         {
           "name": "cbom-netscan:fortios:ssh-mac-algo:source",
           "value": "default"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssh-mac-algo:value",
+          "value": "hmac-sha2-256 hmac-sha2-256-etm@openssh.com hmac-sha2-512 hmac-sha2-512-etm@openssh.com"
         },
         {
           "name": "cbom-netscan:fortios:view",
@@ -289,35 +305,23 @@
           "cryptoRefArray": [
             "crypto/b86e97422ff7df94",
             "crypto/271a02857dd63f8e",
-            "crypto/a0454475bf01892c",
-            "crypto/9ee313673b80f94f",
-            "crypto/aac9eeb044587ab1",
-            "crypto/c0522b8b71602490",
-            "crypto/39ac5d665e6a2901",
-            "crypto/57155ca9670c023d",
-            "crypto/f9269f8c630df153",
-            "crypto/be13e4057059ba23",
-            "crypto/839ef67a953b63d0",
-            "crypto/c3cbb461930de97e",
-            "crypto/cb1cd4b5d9a1fe35"
+            "crypto/22c2f736c6dce1d0",
+            "crypto/50f3be2e55e99813",
+            "crypto/e49c154de18ce9e3",
+            "crypto/dd8ff599bf7166f2",
+            "crypto/24d308ff656b980f",
+            "crypto/9309bba9aba9bc7a",
+            "crypto/179bd718b489d521",
+            "crypto/66bcc81114b8520c",
+            "crypto/ac5f16f80c0853b0"
           ]
         }
       }
     },
     {
-      "bom-ref": "crypto/a0454475bf01892c",
+      "bom-ref": "crypto/22c2f736c6dce1d0",
       "type": "cryptographic-asset",
-      "name": "aes256-gcm@openssh.com",
-      "properties": [
-        {
-          "name": "cbom-netscan:fortios:ssh-enc-algo:line",
-          "value": "19"
-        },
-        {
-          "name": "cbom-netscan:fortios:ssh-enc-algo:source",
-          "value": "configured"
-        }
-      ],
+      "name": "AES-256-GCM",
       "evidence": {
         "occurrences": [
           {
@@ -337,19 +341,31 @@
       }
     },
     {
+      "bom-ref": "crypto/50f3be2e55e99813",
+      "type": "cryptographic-asset",
+      "name": "HMAC-SHA256",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "mac"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/e49c154de18ce9e3",
+      "type": "cryptographic-asset",
+      "name": "HMAC-SHA512",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "mac"
+        }
+      }
+    },
+    {
       "bom-ref": "crypto/b86e97422ff7df94",
       "type": "cryptographic-asset",
       "name": "curve25519-sha256@libssh.org",
-      "properties": [
-        {
-          "name": "cbom-netscan:fortios:ssh-kex-algo:line",
-          "value": "18"
-        },
-        {
-          "name": "cbom-netscan:fortios:ssh-kex-algo:source",
-          "value": "configured"
-        }
-      ],
       "evidence": {
         "occurrences": [
           {
@@ -372,16 +388,6 @@
       "bom-ref": "crypto/271a02857dd63f8e",
       "type": "cryptographic-asset",
       "name": "ecdh-sha2-nistp384",
-      "properties": [
-        {
-          "name": "cbom-netscan:fortios:ssh-kex-algo:line",
-          "value": "18"
-        },
-        {
-          "name": "cbom-netscan:fortios:ssh-kex-algo:source",
-          "value": "configured"
-        }
-      ],
       "evidence": {
         "occurrences": [
           {
@@ -401,23 +407,9 @@
       }
     },
     {
-      "bom-ref": "crypto/be13e4057059ba23",
+      "bom-ref": "crypto/9309bba9aba9bc7a",
       "type": "cryptographic-asset",
       "name": "ecdsa-sha2-nistp256",
-      "properties": [
-        {
-          "name": "cbom-netscan:fortios:defaults-table",
-          "value": "7.6"
-        },
-        {
-          "name": "cbom-netscan:fortios:ssh-hsk-algo:default-source",
-          "value": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
-        },
-        {
-          "name": "cbom-netscan:fortios:ssh-hsk-algo:source",
-          "value": "default"
-        }
-      ],
       "cryptoProperties": {
         "assetType": "algorithm",
         "algorithmProperties": {
@@ -428,23 +420,9 @@
       }
     },
     {
-      "bom-ref": "crypto/f9269f8c630df153",
+      "bom-ref": "crypto/24d308ff656b980f",
       "type": "cryptographic-asset",
       "name": "ecdsa-sha2-nistp384",
-      "properties": [
-        {
-          "name": "cbom-netscan:fortios:defaults-table",
-          "value": "7.6"
-        },
-        {
-          "name": "cbom-netscan:fortios:ssh-hsk-algo:default-source",
-          "value": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
-        },
-        {
-          "name": "cbom-netscan:fortios:ssh-hsk-algo:source",
-          "value": "default"
-        }
-      ],
       "cryptoProperties": {
         "assetType": "algorithm",
         "algorithmProperties": {
@@ -455,23 +433,9 @@
       }
     },
     {
-      "bom-ref": "crypto/57155ca9670c023d",
+      "bom-ref": "crypto/dd8ff599bf7166f2",
       "type": "cryptographic-asset",
       "name": "ecdsa-sha2-nistp521",
-      "properties": [
-        {
-          "name": "cbom-netscan:fortios:defaults-table",
-          "value": "7.6"
-        },
-        {
-          "name": "cbom-netscan:fortios:ssh-hsk-algo:default-source",
-          "value": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
-        },
-        {
-          "name": "cbom-netscan:fortios:ssh-hsk-algo:source",
-          "value": "default"
-        }
-      ],
       "cryptoProperties": {
         "assetType": "algorithm",
         "algorithmProperties": {
@@ -482,123 +446,9 @@
       }
     },
     {
-      "bom-ref": "crypto/9ee313673b80f94f",
-      "type": "cryptographic-asset",
-      "name": "hmac-sha2-256",
-      "properties": [
-        {
-          "name": "cbom-netscan:fortios:defaults-table",
-          "value": "7.6"
-        },
-        {
-          "name": "cbom-netscan:fortios:ssh-mac-algo:default-source",
-          "value": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
-        },
-        {
-          "name": "cbom-netscan:fortios:ssh-mac-algo:source",
-          "value": "default"
-        }
-      ],
-      "cryptoProperties": {
-        "assetType": "algorithm",
-        "algorithmProperties": {
-          "primitive": "mac"
-        }
-      }
-    },
-    {
-      "bom-ref": "crypto/aac9eeb044587ab1",
-      "type": "cryptographic-asset",
-      "name": "hmac-sha2-256-etm@openssh.com",
-      "properties": [
-        {
-          "name": "cbom-netscan:fortios:defaults-table",
-          "value": "7.6"
-        },
-        {
-          "name": "cbom-netscan:fortios:ssh-mac-algo:default-source",
-          "value": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
-        },
-        {
-          "name": "cbom-netscan:fortios:ssh-mac-algo:source",
-          "value": "default"
-        }
-      ],
-      "cryptoProperties": {
-        "assetType": "algorithm",
-        "algorithmProperties": {
-          "primitive": "mac"
-        }
-      }
-    },
-    {
-      "bom-ref": "crypto/c0522b8b71602490",
-      "type": "cryptographic-asset",
-      "name": "hmac-sha2-512",
-      "properties": [
-        {
-          "name": "cbom-netscan:fortios:defaults-table",
-          "value": "7.6"
-        },
-        {
-          "name": "cbom-netscan:fortios:ssh-mac-algo:default-source",
-          "value": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
-        },
-        {
-          "name": "cbom-netscan:fortios:ssh-mac-algo:source",
-          "value": "default"
-        }
-      ],
-      "cryptoProperties": {
-        "assetType": "algorithm",
-        "algorithmProperties": {
-          "primitive": "mac"
-        }
-      }
-    },
-    {
-      "bom-ref": "crypto/39ac5d665e6a2901",
-      "type": "cryptographic-asset",
-      "name": "hmac-sha2-512-etm@openssh.com",
-      "properties": [
-        {
-          "name": "cbom-netscan:fortios:defaults-table",
-          "value": "7.6"
-        },
-        {
-          "name": "cbom-netscan:fortios:ssh-mac-algo:default-source",
-          "value": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
-        },
-        {
-          "name": "cbom-netscan:fortios:ssh-mac-algo:source",
-          "value": "default"
-        }
-      ],
-      "cryptoProperties": {
-        "assetType": "algorithm",
-        "algorithmProperties": {
-          "primitive": "mac"
-        }
-      }
-    },
-    {
-      "bom-ref": "crypto/839ef67a953b63d0",
+      "bom-ref": "crypto/179bd718b489d521",
       "type": "cryptographic-asset",
       "name": "rsa-sha2-256",
-      "properties": [
-        {
-          "name": "cbom-netscan:fortios:defaults-table",
-          "value": "7.6"
-        },
-        {
-          "name": "cbom-netscan:fortios:ssh-hsk-algo:default-source",
-          "value": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
-        },
-        {
-          "name": "cbom-netscan:fortios:ssh-hsk-algo:source",
-          "value": "default"
-        }
-      ],
       "cryptoProperties": {
         "assetType": "algorithm",
         "algorithmProperties": {
@@ -608,23 +458,9 @@
       }
     },
     {
-      "bom-ref": "crypto/c3cbb461930de97e",
+      "bom-ref": "crypto/66bcc81114b8520c",
       "type": "cryptographic-asset",
       "name": "rsa-sha2-512",
-      "properties": [
-        {
-          "name": "cbom-netscan:fortios:defaults-table",
-          "value": "7.6"
-        },
-        {
-          "name": "cbom-netscan:fortios:ssh-hsk-algo:default-source",
-          "value": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
-        },
-        {
-          "name": "cbom-netscan:fortios:ssh-hsk-algo:source",
-          "value": "default"
-        }
-      ],
       "cryptoProperties": {
         "assetType": "algorithm",
         "algorithmProperties": {
@@ -634,23 +470,9 @@
       }
     },
     {
-      "bom-ref": "crypto/cb1cd4b5d9a1fe35",
+      "bom-ref": "crypto/ac5f16f80c0853b0",
       "type": "cryptographic-asset",
       "name": "ssh-ed25519",
-      "properties": [
-        {
-          "name": "cbom-netscan:fortios:defaults-table",
-          "value": "7.6"
-        },
-        {
-          "name": "cbom-netscan:fortios:ssh-hsk-algo:default-source",
-          "value": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
-        },
-        {
-          "name": "cbom-netscan:fortios:ssh-hsk-algo:source",
-          "value": "default"
-        }
-      ],
       "cryptoProperties": {
         "assetType": "algorithm",
         "algorithmProperties": {

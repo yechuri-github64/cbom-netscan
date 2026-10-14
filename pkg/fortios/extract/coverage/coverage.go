@@ -25,8 +25,10 @@ var Inventoried = []string{
 	"vpn ipsec phase2-interface",
 }
 
-// NotInventoried are sections the research notes list as carrying crypto
-// settings, keys, or certificates (§3.5-3.12) that no extractor reads yet.
+// NotInventoried are sections that hold crypto assets or protocols with
+// algorithm choices (research notes §3.5-3.12) that no extractor reads yet.
+// Their presence means the CBOM is missing certificates, keys, or protocols,
+// so it is warned about.
 var NotInventoried = []string{
 	// §3.5 manual keys, §3.6 QKD, §3.7 agentless/SSL VPN
 	"vpn ipsec manualkey", "vpn ipsec manualkey-interface",
@@ -41,11 +43,18 @@ var NotInventoried = []string{
 	"firewall ssl-ssh-profile",
 	"firewall vip",
 	"firewall access-proxy", "firewall access-proxy-virtual-host", "ztna web-proxy", "ztna service-connector",
-	// §3.12 other TLS, credential, and key settings
-	"system admin", "system api-user", "system snmp user", "log fortianalyzer setting", "log syslogd setting",
+	// §3.12 protocols with their own algorithm choices
+	"system snmp user", "wireless-controller vap",
+}
+
+// NotInventoriedSettings are crypto-related service settings from research
+// notes §3.12 (TLS options of management and logging connections, admin and
+// API credentials). Nearly every backup has them and they are not missing
+// algorithm inventory, so they are recorded in metadata only, not warned.
+var NotInventoriedSettings = []string{
+	"system admin", "system api-user", "log fortianalyzer setting", "log syslogd setting",
 	"system central-management", "system ha", "system fortiguard", "system fortisandbox",
 	"user ldap", "user radius", "user setting", "system dns", "system ntp", "system csf",
-	"wireless-controller vap",
 }
 
 // relevant narrows sections that also hold non-crypto configuration.
@@ -68,8 +77,9 @@ var relevant = map[string]func([]*tree.Block) bool{
 // Report lists the crypto-relevant sections present in a backup, split by
 // whether the CBOM covers them. Both lists are sorted.
 type Report struct {
-	Inventoried    []string
-	NotInventoried []string
+	Inventoried            []string
+	NotInventoried         []string // crypto assets missing from the CBOM; warned
+	NotInventoriedSettings []string // crypto-related settings; metadata only
 }
 
 // Check looks for every known section in every scope of t.
@@ -98,8 +108,14 @@ func Check(t *tree.Tree) Report {
 			r.NotInventoried = append(r.NotInventoried, p)
 		}
 	}
+	for _, p := range NotInventoriedSettings {
+		if present(p) {
+			r.NotInventoriedSettings = append(r.NotInventoriedSettings, p)
+		}
+	}
 	slices.Sort(r.Inventoried)
 	slices.Sort(r.NotInventoried)
+	slices.Sort(r.NotInventoriedSettings)
 	return r
 }
 
@@ -112,18 +128,22 @@ func (r Report) Properties() map[string]string {
 	if len(r.NotInventoried) > 0 {
 		m["cbom-netscan:fortios:sections-not-inventoried"] = strings.Join(r.NotInventoried, ", ")
 	}
+	if len(r.NotInventoriedSettings) > 0 {
+		m["cbom-netscan:fortios:settings-not-inventoried"] = strings.Join(r.NotInventoriedSettings, ", ")
+	}
 	return m
 }
 
-// Warning is one warning naming every uncovered section, or nil if the CBOM
-// covers all crypto-relevant sections present.
+// Warning is one warning naming every section with crypto assets the CBOM
+// does not cover, or nil if there are none. Settings-only sections are not
+// warned about; they are in Properties.
 func (r Report) Warning(location string) *model.Warning {
 	if len(r.NotInventoried) == 0 {
 		return nil
 	}
 	return &model.Warning{
 		Code:    "section-not-inventoried",
-		Message: "these crypto-related sections are present but not inventoried yet, so the CBOM does not cover them: " + strings.Join(r.NotInventoried, ", "),
+		Message: "the CBOM does not cover the certificates, keys, or protocols in these sections yet: " + strings.Join(r.NotInventoried, ", "),
 		Ev:      model.Evidence{Location: location},
 	}
 }

@@ -23,9 +23,9 @@ const (
 
 func TestCheck(t *testing.T) {
 	cases := []struct {
-		name               string
-		cfg                string
-		inventoried, uncov []string
+		name                         string
+		cfg                          string
+		inventoried, uncov, settings []string
 	}{
 		{
 			name:        "covered_only",
@@ -37,6 +37,13 @@ func TestCheck(t *testing.T) {
 			cfg:         hdr + "config vpn ssl settings\nend\nconfig vpn certificate local\nend\nconfig system global\nend\n",
 			inventoried: []string{"system global"},
 			uncov:       []string{"vpn certificate local", "vpn ssl settings"},
+		},
+		{
+			// Settings-only sections are recorded but not warned about.
+			name:        "settings_are_metadata_only",
+			cfg:         hdr + "config system global\nend\nconfig system admin\nend\nconfig system ntp\nend\n",
+			inventoried: []string{"system global"},
+			settings:    []string{"system admin", "system ntp"},
 		},
 		{
 			name: "vip_without_ssl_is_not_relevant",
@@ -61,8 +68,8 @@ func TestCheck(t *testing.T) {
 				t.Fatal(err)
 			}
 			r := coverage.Check(tr)
-			if !slices.Equal(r.Inventoried, tc.inventoried) || !slices.Equal(r.NotInventoried, tc.uncov) {
-				t.Errorf("Check = %+v, want inventoried %v, not inventoried %v", r, tc.inventoried, tc.uncov)
+			if !slices.Equal(r.Inventoried, tc.inventoried) || !slices.Equal(r.NotInventoried, tc.uncov) || !slices.Equal(r.NotInventoriedSettings, tc.settings) {
+				t.Errorf("Check = %+v, want inventoried %v, not inventoried %v, settings %v", r, tc.inventoried, tc.uncov, tc.settings)
 			}
 			w := r.Warning("fw.conf")
 			switch {
@@ -78,19 +85,18 @@ func TestCheck(t *testing.T) {
 			if got := props["cbom-netscan:fortios:sections-inventoried"]; got != strings.Join(tc.inventoried, ", ") {
 				t.Errorf("sections-inventoried = %q", got)
 			}
+			if got := props["cbom-netscan:fortios:settings-not-inventoried"]; got != strings.Join(tc.settings, ", ") {
+				t.Errorf("settings-not-inventoried = %q", got)
+			}
 		})
 	}
 }
 
-// TestListsDisjoint guards against a section being both covered and not.
+// TestListsDisjoint guards against a section being in two lists, or twice in one.
 func TestListsDisjoint(t *testing.T) {
-	for _, p := range coverage.NotInventoried {
-		if slices.Contains(coverage.Inventoried, p) {
-			t.Errorf("%q is in both lists", p)
-		}
-	}
-	if n := len(coverage.NotInventoried); n != len(slicesCompactSorted(coverage.NotInventoried)) {
-		t.Errorf("NotInventoried has duplicates: %s", fmt.Sprint(coverage.NotInventoried))
+	all := append(append(slices.Clone(coverage.Inventoried), coverage.NotInventoried...), coverage.NotInventoriedSettings...)
+	if len(all) != len(slicesCompactSorted(all)) {
+		t.Errorf("a section is listed more than once across Inventoried, NotInventoried, NotInventoriedSettings: %s", fmt.Sprint(all))
 	}
 }
 

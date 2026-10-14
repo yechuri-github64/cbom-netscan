@@ -63,10 +63,10 @@ func TestFortiOS_GoldenToFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("fortios: %v\nstderr: %s", err, stderr)
 	}
-	// The fixture has a config system admin block, which is not inventoried yet.
-	wantStderr := "global-7.6.conf: warning: these crypto-related sections are present but not inventoried yet, so the CBOM does not cover them: system admin [section-not-inventoried]\n"
-	if stdout != "" || stderr != wantStderr {
-		t.Errorf("stdout = %q, stderr = %q; want no stdout and stderr %q", stdout, stderr, wantStderr)
+	// The fixture's config system admin block is a settings-only section:
+	// recorded in metadata, not warned about.
+	if stdout != "" || stderr != "" {
+		t.Errorf("expected no stdout/stderr with -o; stdout=%q stderr=%q", stdout, stderr)
 	}
 	got, err := os.ReadFile(out)
 	if err != nil {
@@ -312,7 +312,7 @@ func TestFortiOS_IPsecWired(t *testing.T) {
 			// vpn certificate local block, which is not inventoried yet.
 			wantStderr := map[string]string{
 				"ipsec-7.6.conf": "ipsec-7.6.conf:30: warning: FortiOS IPsec phase1-interface branch-ikev1 has a plaintext pre-shared key in the backup (value not shown); take backups with secrets encrypted [plaintext-psk]\n" +
-					"ipsec-7.6.conf: warning: these crypto-related sections are present but not inventoried yet, so the CBOM does not cover them: vpn certificate local [section-not-inventoried]\n",
+					"ipsec-7.6.conf: warning: the CBOM does not cover the certificates, keys, or protocols in these sections yet: vpn certificate local [section-not-inventoried]\n",
 			}[fixtureName]
 			if stderr != wantStderr {
 				t.Errorf("stderr = %q, want %q", stderr, wantStderr)

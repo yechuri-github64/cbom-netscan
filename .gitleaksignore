@@ -1,0 +1,85 @@
+# SPDX-FileCopyrightText: 2026 contributors to cbom-netscan
+# SPDX-License-Identifier: CC0-1.0
+
+# gitleaks findings reviewed and known to be safe. Each entry is a fingerprint
+# (commit:file:rule:line) from a full-history scan (gitleaks git --log-opts=--all).
+# All but one are synthetic test data: PEM label strings, or base64 of text
+# starting with "synthetic" (c3ludGhldGlj...), which the secret-leak tests look
+# for. One is a public Fortinet documentation example. Fingerprints include the
+# commit, so a rewritten commit needs its entries regenerated; a new finding
+# must be reviewed, never added here unread.
+
+# Documentation table naming PEM labels (ENCRYPTED PRIVATE KEY, RSA/EC/DSA PRIVATE KEY); no key material.
+e714f5fcae03252862ff2b07c8f4484e928b557b:MAPPING.md:private-key:205
+
+# Sample #private-encryption-key= value printed in Fortinet's public FortiOS 8.0.1 admin guide ("TPM support for FortiGate-VM"); a documentation example, not from any device. Replaced with <base64> in 7d89c49; this entry covers the older commit.
+ea433376a791eb104a9a3e144dd0eee8bc819f9c:docs/fortios-parser-research.md:generic-api-key:37
+
+# Fuzz-test marker: base64 of "synthetic-fuzz-key", checked never to reach output.
+8584c3ce0b6a6e52385a9db30307ec8dbc616496:pkg/fortios/extract/certs/certs_fuzz_test.go:generic-api-key:37
+
+# Fuzz seed: a PRIVATE KEY BEGIN line with body "x"; no key material.
+48e8e083a9ad147fa402c756108a25d2f43f6c80:pkg/fortios/extract/certs/certs_internal_test.go:private-key:97
+
+# pemLabel test table: a BEGIN line string only, no key body.
+b00252a283e3bc6c3503680c82facdacbce4e02d:pkg/fortios/extract/certs/certs_internal_test.go:private-key:137
+
+# pemLabel test table: a BEGIN line string only, no key body.
+b00252a283e3bc6c3503680c82facdacbce4e02d:pkg/fortios/extract/certs/certs_internal_test.go:private-key:140
+
+# pemLabel test table: a BEGIN line string only, no key body.
+b00252a283e3bc6c3503680c82facdacbce4e02d:pkg/fortios/extract/certs/certs_internal_test.go:private-key:146
+
+# TestPrivateKeyForms case: PEM labels around `body` is "c3ludGhldGlj!!not-base64!!": base64 of "synthetic" plus characters that are not base64, so not a key.
+f0cc3e21893ed51547c8d4dfb551738f1ce0d698:pkg/fortios/extract/certs/certs_test.go:private-key:615
+
+# TestPrivateKeyForms case: PEM labels around `body` is "c3ludGhldGlj!!not-base64!!": base64 of "synthetic" plus characters that are not base64, so not a key.
+f0cc3e21893ed51547c8d4dfb551738f1ce0d698:pkg/fortios/extract/certs/certs_test.go:private-key:617
+
+# TestPrivateKeyForms case: PEM labels around `body` is "c3ludGhldGlj!!not-base64!!": base64 of "synthetic" plus characters that are not base64, so not a key.
+f0cc3e21893ed51547c8d4dfb551738f1ce0d698:pkg/fortios/extract/certs/certs_test.go:private-key:619
+
+# TestPrivateKeyForms case: PEM labels around `body` is "c3ludGhldGlj!!not-base64!!": base64 of "synthetic" plus characters that are not base64, so not a key.
+19e4e04b59e2a3f87b716bce8dcb55f32626451d:pkg/fortios/extract/certs/certs_test.go:private-key:620
+
+# TestPrivateKeyForms case (leading whitespace): PEM labels around `body` is "c3ludGhldGlj!!not-base64!!": base64 of "synthetic" plus characters that are not base64, so not a key.
+3f0450c5ff7a189693090c6c84eba6b791bbcf39:pkg/fortios/extract/certs/certs_test.go:private-key:621
+
+# TestPrivateKeyForms case: PEM labels around `body` is "c3ludGhldGlj!!not-base64!!": base64 of "synthetic" plus characters that are not base64, so not a key.
+19e4e04b59e2a3f87b716bce8dcb55f32626451d:pkg/fortios/extract/certs/certs_test.go:private-key:622
+
+# TestPrivateKeyForms case: made-up Proc-Type/DEK-Info headers (IV 00112233...EEFF) and `body` is "c3ludGhldGlj!!not-base64!!": base64 of "synthetic" plus characters that are not base64, so not a key.
+19e4e04b59e2a3f87b716bce8dcb55f32626451d:pkg/fortios/extract/certs/certs_test.go:private-key:624
+
+# TestPrivateKeyForms case: made-up Proc-Type: 4,MIC-ONLY header and `body` is "c3ludGhldGlj!!not-base64!!": base64 of "synthetic" plus characters that are not base64, so not a key.
+19e4e04b59e2a3f87b716bce8dcb55f32626451d:pkg/fortios/extract/certs/certs_test.go:private-key:627
+
+# TestPrivateKeyForms case (byte order mark): PEM labels around `body` is "c3ludGhldGlj!!not-base64!!": base64 of "synthetic" plus characters that are not base64, so not a key.
+81508e4a7c22b1e8ebdf426acafb78b8bf3864c4:pkg/fortios/extract/certs/certs_test.go:private-key:632
+
+# TestCertificateFieldBlocks key block: `body` is "c3ludGhldGlj!!not-base64!!": base64 of "synthetic" plus characters that are not base64, so not a key.
+48e8e083a9ad147fa402c756108a25d2f43f6c80:pkg/fortios/extract/certs/certs_test.go:private-key:659
+
+# Code comment naming the PEM label ENCRYPTED PRIVATE KEY; no key material.
+f0cc3e21893ed51547c8d4dfb551738f1ce0d698:pkg/fortios/extract/certs/pem.go:private-key:38
+
+# Synthetic CC0 fixture: encrypted-PEM key whose body is base64 of "synthetic-rsa-private-key".
+42b62991bce42c457f83ef6e34cbd2c4dc5e4f8d:pkg/fortios/extract/sslvpn/testdata/certs-sslvpn-7.6.conf:private-key:12
+
+# Fuzz seed: #private-encryption-key= set to base64 of "synthetic-test-key-001".
+88423158b0995d47b88e3eb038268ea5e0ae5425:pkg/fortios/lexer/lexer_fuzz_test.go:generic-api-key:37
+
+# Test value for #private-encryption-key=: base64 of "synthetic-test-key-001".
+88423158b0995d47b88e3eb038268ea5e0ae5425:pkg/fortios/lexer/lexer_test.go:generic-api-key:250
+
+# Rejected-file test input: fake OpenSSH key whose body lines are base64 of "synthetic-fake-private-key-line-1/2".
+c5a66e5e9aee18932fb23a209d1e35bbd00f3302:pkg/fortios/lexer/lexer_test.go:private-key:353
+
+# Rejected-file test input: API_TOKEN= base64 of "synthetic-token".
+c5a66e5e9aee18932fb23a209d1e35bbd00f3302:pkg/fortios/lexer/lexer_test.go:generic-api-key:361
+
+# Rejected-file test input: "hunter2-" plus base64 of "synthetic".
+c5a66e5e9aee18932fb23a209d1e35bbd00f3302:pkg/fortios/lexer/lexer_test.go:generic-api-key:362
+
+# Malformed-header test input: base64 of "synthetic-key" and "synthetic-pek".
+ae7906841cbdc4609479995c7786c725cb89561a:pkg/fortios/lexer/lexer_test.go:generic-api-key:368

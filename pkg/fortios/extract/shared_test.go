@@ -10,22 +10,28 @@ package extract_test
 import (
 	"bytes"
 	"context"
+	"os"
 	"reflect"
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/yechuri-github64/cbom-netscan/pkg/emit/cdx16"
+	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/certs"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/global"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/ipsec"
+	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/sslvpn"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/tree"
 	"github.com/yechuri-github64/cbom-netscan/pkg/model"
 )
 
 // shared uses, in one backup, every SSH cipher and MAC with a canonical name,
 // the hybrid SSH key exchange, and IPsec proposals, DH groups, and addke that
-// produce the same algorithms.
-const shared = `#config-version=FGVMH6-8.0.1-FW-build1500-260801:opmode=0:vdom=0:user=admin
+// produce the same algorithms, plus SSL VPN TLS groups that share X25519,
+// ECP-384, and ML-KEM-768, and a local certificate that both a signature
+// tunnel and the SSL VPN use.
+var shared = `#config-version=FGVMH6-8.0.1-FW-build1500-260801:opmode=0:vdom=0:user=admin
 config system ssh-config
     set ssh-enc-algo aes128-ctr aes192-ctr aes256-ctr aes128-cbc aes192-cbc aes256-cbc rijndael-cbc@lysator.liu.se aes128-gcm@openssh.com aes256-gcm@openssh.com 3des-cbc
     set ssh-mac-algo hmac-md5 hmac-sha1 hmac-sha2-256 hmac-sha2-256-etm@openssh.com hmac-sha2-512
@@ -38,8 +44,31 @@ config vpn ipsec phase1-interface
         set dhgrp 31 20
         set addke1 ml-kem-768
     next
+    edit "sig"
+        set ike-version 2
+        set authmethod signature
+        set certificate "gw"
+    next
+end
+config vpn certificate local
+    edit "gw"
+        set certificate "` + gwPEM + `"
+    next
+end
+config vpn ssl settings
+    set servercert "gw"
+    set tls-groups X25519-MLKEM768 P-384 ML-KEM768 X25519
 end
 `
+
+// gwPEM is the synthetic gw-ecdsa test certificate (certs/testdata).
+var gwPEM = func() string {
+	data, err := os.ReadFile("certs/testdata/gw-ecdsa.pem")
+	if err != nil {
+		panic(err)
+	}
+	return strings.TrimSpace(string(data))
+}()
 
 func parse(t *testing.T) *tree.Tree {
 	t.Helper()
@@ -81,6 +110,30 @@ func TestSharedDefinitionsAgree(t *testing.T) {
 	}
 	if shared < 8 {
 		t.Errorf("only %d algorithms shared; the fixture should share at least 8", shared)
+	}
+
+	// SSL VPN groups against SSH and IPsec.
+	for _, b := range i.Assets {
+		if b.Type == model.AssetTypeAlgorithm {
+			byName[b.Name] = b
+		}
+	}
+	v := model.NewInventory()
+	sslvpn.Extract(tr, "fw.conf", v)
+	var tlsShared []string
+	for _, b := range v.Assets {
+		a, ok := byName[b.Name]
+		if !ok || b.Type != model.AssetTypeAlgorithm {
+			continue
+		}
+		tlsShared = append(tlsShared, b.Name)
+		if !reflect.DeepEqual(a.Alg, b.Alg) || a.ID != b.ID {
+			t.Errorf("%s: SSH/IPsec define %s %+v, SSL VPN defines %s %+v", b.Name, a.ID, *a.Alg, b.ID, *b.Alg)
+		}
+	}
+	slices.Sort(tlsShared)
+	if !slices.Equal(tlsShared, []string{"ECP-384", "ML-KEM-768", "X25519"}) {
+		t.Errorf("SSL VPN shares %v, want [ECP-384 ML-KEM-768 X25519]", tlsShared)
 	}
 }
 
@@ -130,18 +183,25 @@ func TestX25519CountedOnce(t *testing.T) {
 	}
 }
 
-// TestExtractorOrderIndependent: running the extractors in either order gives
-// byte-identical CBOMs, including components both add evidence to.
+// TestExtractorOrderIndependent: running the extractors forwards or backwards
+// gives byte-identical CBOMs, including components several add evidence to
+// and the references from IPsec and SSL VPN to certificates.
 func TestExtractorOrderIndependent(t *testing.T) {
-	emit := func(globalFirst bool) []byte {
+	now := time.Unix(1791676800, 0)
+	extractors := []func(*tree.Tree, string, *model.Inventory){
+		global.Extract,
+		func(tr *tree.Tree, loc string, inv *model.Inventory) { certs.Extract(tr, loc, inv, now) },
+		ipsec.Extract,
+		sslvpn.Extract,
+	}
+	emit := func(forward bool) []byte {
 		tr := parse(t)
 		inv := model.NewInventory()
-		if globalFirst {
-			global.Extract(tr, "fw.conf", inv)
-			ipsec.Extract(tr, "fw.conf", inv)
-		} else {
-			ipsec.Extract(tr, "fw.conf", inv)
-			global.Extract(tr, "fw.conf", inv)
+		for i := range extractors {
+			if !forward {
+				i = len(extractors) - 1 - i
+			}
+			extractors[i](tr, "fw.conf", inv)
 		}
 		var buf bytes.Buffer
 		meta := model.Meta{SerialNumber: "urn:uuid:00000000-0000-5000-8000-000000000000", OmitTimestamp: true}

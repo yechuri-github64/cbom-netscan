@@ -7,12 +7,14 @@ package global_test
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"flag"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/yechuri-github64/cbom-netscan/pkg/emit/cdx16"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/global"
@@ -32,12 +34,11 @@ func TestGolden_Global76(t *testing.T) {
 	const fixture = "testdata/global-7.6.conf"
 	golden := filepath.Join("..", "..", "..", "testdata", "golden", "fortios-global-7.6.cdx.json")
 
-	f, err := os.Open(fixture)
+	data, err := os.ReadFile(fixture)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
-	tr, err := tree.Parse(f)
+	tr, err := tree.Parse(bytes.NewReader(data))
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
@@ -48,9 +49,16 @@ func TestGolden_Global76(t *testing.T) {
 		t.Errorf("unexpected warnings: %+v", inv.Warnings)
 	}
 
-	t.Setenv("SOURCE_DATE_EPOCH", "1791676800")
+	// The same serial and timestamp that "cbom-netscan fortios --reproducible"
+	// produces with tool version "test" and SOURCE_DATE_EPOCH=1791676800, so
+	// the CLI end-to-end test can compare against this golden file.
 	var buf bytes.Buffer
-	meta := model.Meta{ToolVersion: "test", Lifecycle: "operations"}
+	meta := model.Meta{
+		ToolVersion:  "test",
+		Lifecycle:    "operations",
+		Created:      time.Unix(1791676800, 0),
+		SerialNumber: cdx16.ReproducibleSerial(sha256.Sum256(data), "test"),
+	}
 	if err := (cdx16.Emitter{}).Emit(context.Background(), &buf, inv, meta); err != nil {
 		t.Fatalf("Emit: %v", err)
 	}

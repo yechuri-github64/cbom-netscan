@@ -7,9 +7,10 @@
 //
 // Design decisions:
 //
-//   - Output is deterministic when SOURCE_DATE_EPOCH is set: the BOM serial
-//     number and timestamp are both derived from that value, so two runs on
-//     the same inventory produce byte-identical output.
+//   - The serial number is a random UUIDv4 unless meta.SerialNumber is set;
+//     the timestamp is meta.Created, omitted with meta.OmitTimestamp, or now.
+//     The emitter reads no environment variables; reproducible output is the
+//     caller's choice (see ReproducibleSerial).
 //   - Components are sorted protocols first, then algorithms, certificates,
 //     and related crypto material, then by name (bom-ref breaks ties), so
 //     the output reads top-down and diffs are stable.
@@ -25,13 +26,11 @@ package cdx16
 import (
 	"context"
 	"crypto/rand"
-	"crypto/sha256"
+	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
 	"io"
-	"os"
 	"sort"
-	"strconv"
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
@@ -47,9 +46,8 @@ func (Emitter) Format() string { return "cyclonedx-1.6-json" }
 
 // Emit serialises inv to w as a pretty-printed CycloneDX 1.6 JSON BOM.
 //
-// If meta.Created is zero, the timestamp comes from the SOURCE_DATE_EPOCH
-// environment variable (if set) or time.Now().  The same epoch also drives
-// the BOM serial number so that builds are reproducible.
+// See bomSerial and bomTimestamp for how meta controls the serial number and
+// timestamp.
 func (Emitter) Emit(_ context.Context, w io.Writer, inv *model.Inventory, meta model.Meta) error {
 	bom := cdx.NewBOM()
 	// Pin to 1.6 before Encode so the $schema field is correct and the
@@ -57,7 +55,7 @@ func (Emitter) Emit(_ context.Context, w io.Writer, inv *model.Inventory, meta m
 	// copyAndConvert (which would silently downgrade cryptographic-asset).
 	bom.SpecVersion = cdx.SpecVersion1_6
 	bom.JSONSchema = "http://cyclonedx.org/schema/bom-1.6.schema.json"
-	bom.SerialNumber = bomSerial()
+	bom.SerialNumber = bomSerial(meta)
 	bom.Metadata = buildMetadata(meta)
 
 	components, deps := buildComponents(inv.Assets)
@@ -75,7 +73,7 @@ func (Emitter) Emit(_ context.Context, w io.Writer, inv *model.Inventory, meta m
 
 func buildMetadata(meta model.Meta) *cdx.Metadata {
 	md := &cdx.Metadata{
-		Timestamp: bomTimestamp(meta.Created),
+		Timestamp: bomTimestamp(meta),
 	}
 
 	// Lifecycle: map our two values to the CycloneDX enum.
@@ -433,45 +431,57 @@ func buildProperties(m map[string]string) *[]cdx.Property {
 
 // ── timestamp & serial ───────────────────────────────────────────────────────
 
-// bomTimestamp returns an RFC 3339 timestamp.  Priority:
-//  1. meta.Created (if non-zero)
-//  2. SOURCE_DATE_EPOCH env var (for reproducible builds)
-//  3. time.Now()
-func bomTimestamp(created time.Time) string {
-	if !created.IsZero() {
-		return created.UTC().Format(time.RFC3339)
-	}
-	if v := os.Getenv("SOURCE_DATE_EPOCH"); v != "" {
-		if epoch, err := strconv.ParseInt(v, 10, 64); err == nil {
-			return time.Unix(epoch, 0).UTC().Format(time.RFC3339)
-		}
+// bomTimestamp returns meta.Created, nothing when OmitTimestamp is set, or
+// the current time.
+func bomTimestamp(meta model.Meta) string {
+	switch {
+	case !meta.Created.IsZero():
+		return meta.Created.UTC().Format(time.RFC3339)
+	case meta.OmitTimestamp:
+		return ""
 	}
 	return time.Now().UTC().Format(time.RFC3339)
 }
 
-// bomSerial returns a "urn:uuid:…" serial number.
-// When SOURCE_DATE_EPOCH is set, the UUID is deterministic (derived from the
-// epoch via SHA-256) so two runs produce the same serial.
-// Otherwise a random UUID v4 is used.
-func bomSerial() string {
-	if v := os.Getenv("SOURCE_DATE_EPOCH"); v != "" {
-		if epoch, err := strconv.ParseInt(v, 10, 64); err == nil {
-			h := sha256.Sum256([]byte(fmt.Sprintf("cbom-netscan:serial:%d", epoch)))
-			return uuidFromBytes(h[:16])
-		}
+// bomSerial returns meta.SerialNumber, or a random UUIDv4 URN, which is what
+// CycloneDX expects: every BOM, even of the same input, gets a new serial.
+func bomSerial(meta model.Meta) string {
+	if meta.SerialNumber != "" {
+		return meta.SerialNumber
 	}
-
 	var b [16]byte
 	if _, err := io.ReadFull(rand.Reader, b[:]); err != nil {
 		panic(fmt.Sprintf("cbom-netscan: crypto/rand failed: %v", err))
 	}
-	return uuidFromBytes(b[:])
+	b[6] = (b[6] & 0x0f) | 0x40 // version 4
+	b[8] = (b[8] & 0x3f) | 0x80 // RFC 9562 variant
+	return uuidURN(b)
 }
 
-// uuidFromBytes formats 16 bytes as a RFC 4122 UUID v4 string.
-func uuidFromBytes(b []byte) string {
-	b[6] = (b[6] & 0x0f) | 0x40 // version 4
-	b[8] = (b[8] & 0x3f) | 0x80 // variant bits
-	s := hex.EncodeToString(b[:16])
+// serialNamespace is the UUIDv5 namespace for reproducible serial numbers.
+// It was generated once at random for this project and must never change,
+// or every reproducible serial would change with it.
+var serialNamespace = [16]byte{
+	0x96, 0x03, 0x81, 0xc8, 0xef, 0xa9, 0x46, 0x27,
+	0xaf, 0x02, 0x76, 0x5c, 0x8f, 0x7e, 0xe1, 0xe7,
+} // 960381c8-efa9-4627-af02-765c8f7ee1e7
+
+// ReproducibleSerial returns a UUIDv5 URN (RFC 9562 §5.5) derived from the
+// SHA-256 of the input and the tool version, so the same input processed by
+// the same release always gets the same serial, and any change to either
+// gives a new one.
+func ReproducibleSerial(inputSHA256 [32]byte, toolVersion string) string {
+	h := sha1.New() // UUIDv5 is defined over SHA-1; this is an identifier, not a security use.
+	h.Write(serialNamespace[:])
+	fmt.Fprintf(h, "sha256=%s;tool-version=%s", hex.EncodeToString(inputSHA256[:]), toolVersion)
+	var b [16]byte
+	copy(b[:], h.Sum(nil))
+	b[6] = (b[6] & 0x0f) | 0x50 // version 5
+	b[8] = (b[8] & 0x3f) | 0x80 // RFC 9562 variant
+	return uuidURN(b)
+}
+
+func uuidURN(b [16]byte) string {
+	s := hex.EncodeToString(b[:])
 	return "urn:uuid:" + s[0:8] + "-" + s[8:12] + "-" + s[12:16] + "-" + s[16:20] + "-" + s[20:32]
 }

@@ -7,10 +7,12 @@ package cdx16_test
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 	"time"
 
@@ -47,13 +49,13 @@ func TestEmit_AES256GCM(t *testing.T) {
 	inv.Add(asset)
 
 	// ── 2. Emit ──────────────────────────────────────────────────────────────
-	// Fix SOURCE_DATE_EPOCH so the output is deterministic (timestamp and
-	// serial are derived from the epoch, not from time.Now()).
-	t.Setenv("SOURCE_DATE_EPOCH", "1791676800") // 2026-10-11 00:00:00 UTC
-
+	// Fixed timestamp and serial so the golden file is stable; the emitter
+	// defaults (now, random UUIDv4) are covered by TestEmit_DefaultSerialAndTimestamp.
 	meta := model.Meta{
-		ToolVersion: "test",
-		Lifecycle:   "discovery",
+		ToolVersion:  "test",
+		Lifecycle:    "discovery",
+		Created:      time.Unix(1791676800, 0), // 2026-10-11 00:00:00 UTC
+		SerialNumber: "urn:uuid:60f4096c-3a98-4d2c-8e90-e1d86f3843b0",
 	}
 
 	var buf bytes.Buffer
@@ -217,8 +219,6 @@ func TestEmit_EvidenceOccurrence(t *testing.T) {
 			{Location: "other.conf"},
 		},
 	})
-	t.Setenv("SOURCE_DATE_EPOCH", "1791676800")
-
 	var buf bytes.Buffer
 	if err := (cdx16.Emitter{}).Emit(context.Background(), &buf, inv, model.Meta{ToolVersion: "test"}); err != nil {
 		t.Fatalf("Emit: %v", err)
@@ -287,6 +287,73 @@ func TestEmit_ComponentOrder(t *testing.T) {
 	want := []string{"a-proto", "z-proto", "aa-alg", "zz-alg", "a-cert", "a-key"}
 	if fmt.Sprint(got) != fmt.Sprint(want) {
 		t.Errorf("order = %v, want %v", got, want)
+	}
+}
+
+// emitMeta emits a one-component inventory with meta and returns the BOM.
+func emitMeta(t *testing.T, meta model.Meta) map[string]any {
+	t.Helper()
+	inv := model.NewInventory()
+	inv.Add(&model.Asset{Type: model.AssetTypeAlgorithm, Name: "aes256-ctr", Alg: &model.Algorithm{Primitive: "block-cipher"}})
+	var buf bytes.Buffer
+	if err := (cdx16.Emitter{}).Emit(context.Background(), &buf, inv, meta); err != nil {
+		t.Fatalf("Emit: %v", err)
+	}
+	var bom map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &bom); err != nil {
+		t.Fatal(err)
+	}
+	return bom
+}
+
+var uuidV4RE = regexp.MustCompile(`^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`)
+
+// TestEmit_DefaultSerialAndTimestamp: with an empty Meta every BOM gets a new
+// random UUIDv4 serial and the current time, even with SOURCE_DATE_EPOCH set,
+// because the emitter reads no environment variables.
+func TestEmit_DefaultSerialAndTimestamp(t *testing.T) {
+	t.Setenv("SOURCE_DATE_EPOCH", "1791676800")
+	before := time.Now().UTC().Add(-time.Second)
+	a, b := emitMeta(t, model.Meta{}), emitMeta(t, model.Meta{})
+
+	sa, sb := a["serialNumber"].(string), b["serialNumber"].(string)
+	if !uuidV4RE.MatchString(sa) || !uuidV4RE.MatchString(sb) {
+		t.Errorf("serials %q, %q are not UUIDv4 URNs", sa, sb)
+	}
+	if sa == sb {
+		t.Errorf("two default BOMs share serial %s", sa)
+	}
+	ts, _ := a["metadata"].(map[string]any)["timestamp"].(string)
+	got, err := time.Parse(time.RFC3339, ts)
+	if err != nil || got.Before(before) {
+		t.Errorf("timestamp %q is not the current time (SOURCE_DATE_EPOCH must be ignored)", ts)
+	}
+}
+
+func TestEmit_OmitTimestamp(t *testing.T) {
+	bom := emitMeta(t, model.Meta{OmitTimestamp: true, SerialNumber: "urn:uuid:00000000-0000-5000-8000-000000000000"})
+	if _, ok := bom["metadata"].(map[string]any)["timestamp"]; ok {
+		t.Errorf("timestamp present although OmitTimestamp is set")
+	}
+	if bom["serialNumber"] != "urn:uuid:00000000-0000-5000-8000-000000000000" {
+		t.Errorf("serialNumber = %v, want the one from Meta", bom["serialNumber"])
+	}
+}
+
+// TestReproducibleSerial checks the UUIDv5 against Python's uuid.uuid5 for
+// the same namespace and name, an independent implementation.
+func TestReproducibleSerial(t *testing.T) {
+	sum := sha256.Sum256([]byte("cbom-netscan reproducible-serial test vector\n"))
+	const want = "urn:uuid:050dac56-225b-5fd1-ad24-521a83f9fdb6"
+	if got := cdx16.ReproducibleSerial(sum, "v1.2.3"); got != want {
+		t.Errorf("ReproducibleSerial = %s, want %s", got, want)
+	}
+	if cdx16.ReproducibleSerial(sum, "v1.2.4") == want {
+		t.Errorf("serial does not change with the tool version")
+	}
+	other := sha256.Sum256([]byte("different input"))
+	if cdx16.ReproducibleSerial(other, "v1.2.3") == want {
+		t.Errorf("serial does not change with the input")
 	}
 }
 

@@ -7,12 +7,15 @@ package cli
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strconv"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -24,7 +27,7 @@ import (
 
 func newFortiOSCmd(version string) *cobra.Command {
 	var out string
-	var force bool
+	var force, reproducible bool
 
 	cmd := &cobra.Command{
 		Use:   "fortios <backup.conf>",
@@ -38,33 +41,53 @@ secret values. The exit status is non-zero if the backup cannot be parsed or
 the output cannot be written.
 
 Evidence in the CBOM records the backup's file name, not its full path, so
-the output does not depend on where the command is run.`,
+the output does not depend on where the command is run.
+
+By default every run gets a new random serialNumber and the current time, as
+CycloneDX expects. With --reproducible the serialNumber is a UUIDv5 derived
+from the SHA-256 of the backup and the tool version, and the timestamp comes
+from SOURCE_DATE_EPOCH when set and is omitted otherwise, so two runs on the
+same backup produce byte-identical output.`,
 		Example: `  cbom-netscan fortios fw01.conf -o fw01.cdx.json
   cbom-netscan fortios fw01.conf > fw01.cdx.json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runFortiOS(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), args[0], out, force, version)
+			return runFortiOS(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), args[0], out, force, reproducible, version)
 		},
 	}
 	cmd.Flags().StringVarP(&out, "output", "o", "", "write the CBOM to this file instead of stdout")
 	cmd.Flags().BoolVar(&force, "force", false, "overwrite the output file if it already exists")
+	cmd.Flags().BoolVar(&reproducible, "reproducible", false, "derive serialNumber from the input and tool version; timestamp from SOURCE_DATE_EPOCH or omitted")
 	return cmd
 }
 
-func runFortiOS(ctx context.Context, stdout, stderr io.Writer, in, out string, force bool, version string) error {
+func runFortiOS(ctx context.Context, stdout, stderr io.Writer, in, out string, force, reproducible bool, version string) error {
 	if out != "" {
 		if err := checkOutput(in, out, force); err != nil {
 			return err
 		}
 	}
 
-	f, err := os.Open(in)
+	meta := model.Meta{ToolVersion: version, Lifecycle: "operations"}
+	if reproducible {
+		created, ok, err := sourceDateEpoch()
+		if err != nil {
+			return err
+		}
+		meta.Created, meta.OmitTimestamp = created, !ok
+	}
+
+	// The whole backup is read once so the bytes that are hashed for the
+	// reproducible serial are exactly the bytes that are parsed.
+	data, err := os.ReadFile(in)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	if reproducible {
+		meta.SerialNumber = cdx16.ReproducibleSerial(sha256.Sum256(data), version)
+	}
 
-	tr, err := tree.Parse(f)
+	tr, err := tree.Parse(bytes.NewReader(data))
 	if err != nil {
 		return fmt.Errorf("%s: %w", in, err)
 	}
@@ -78,7 +101,6 @@ func runFortiOS(ctx context.Context, stdout, stderr io.Writer, in, out string, f
 	}
 
 	var buf bytes.Buffer
-	meta := model.Meta{ToolVersion: version, Lifecycle: "operations"}
 	if err := (cdx16.Emitter{}).Emit(ctx, &buf, inv, meta); err != nil {
 		return fmt.Errorf("writing CBOM: %w", err)
 	}
@@ -88,6 +110,21 @@ func runFortiOS(ctx context.Context, stdout, stderr io.Writer, in, out string, f
 		return err
 	}
 	return writeOutput(out, buf.Bytes(), force)
+}
+
+// sourceDateEpoch reads SOURCE_DATE_EPOCH (reproducible-builds.org). ok is
+// false when it is unset or empty; a malformed value is an error, as the
+// spec asks.
+func sourceDateEpoch() (t time.Time, ok bool, err error) {
+	v := os.Getenv("SOURCE_DATE_EPOCH")
+	if v == "" {
+		return time.Time{}, false, nil
+	}
+	n, err := strconv.ParseInt(v, 10, 64)
+	if err != nil || n < 0 {
+		return time.Time{}, false, fmt.Errorf("SOURCE_DATE_EPOCH=%q is not a non-negative integer number of seconds", v)
+	}
+	return time.Unix(n, 0).UTC(), true, nil
 }
 
 // printWarning writes one warning line. Warning messages are built by the

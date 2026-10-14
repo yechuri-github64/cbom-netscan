@@ -19,12 +19,16 @@ const (
 	golden  = "../../pkg/testdata/golden/fortios-global-7.6.cdx.json"
 )
 
-// run executes the full command tree with args and returns stdout, stderr,
-// and the error that main would turn into a non-zero exit status.
+// run executes the full command tree with tool version "test" and returns
+// stdout, stderr, and the error that main turns into a non-zero exit status.
 func run(t *testing.T, args ...string) (string, string, error) {
 	t.Helper()
-	t.Setenv("SOURCE_DATE_EPOCH", "1791676800")
-	root := newRootCmd("test", "none", "unknown")
+	return runVersion(t, "test", args...)
+}
+
+func runVersion(t *testing.T, version string, args ...string) (string, string, error) {
+	t.Helper()
+	root := newRootCmd(version, "none", "unknown")
 	var stdout, stderr bytes.Buffer
 	root.SetOut(&stdout)
 	root.SetErr(&stderr)
@@ -52,8 +56,9 @@ func writeFile(t *testing.T, path, content string) {
 // TestFortiOS_GoldenToFile runs lexer → tree → extractor → emitter through
 // the CLI and compares the written file with the golden CBOM.
 func TestFortiOS_GoldenToFile(t *testing.T) {
+	t.Setenv("SOURCE_DATE_EPOCH", "1791676800")
 	out := filepath.Join(t.TempDir(), "out.cdx.json")
-	stdout, stderr, err := run(t, "fortios", fixture, "-o", out)
+	stdout, stderr, err := run(t, "fortios", fixture, "-o", out, "--reproducible")
 	if err != nil {
 		t.Fatalf("fortios: %v\nstderr: %s", err, stderr)
 	}
@@ -70,7 +75,8 @@ func TestFortiOS_GoldenToFile(t *testing.T) {
 }
 
 func TestFortiOS_GoldenToStdout(t *testing.T) {
-	stdout, _, err := run(t, "fortios", fixture)
+	t.Setenv("SOURCE_DATE_EPOCH", "1791676800")
+	stdout, _, err := run(t, "fortios", fixture, "--reproducible")
 	if err != nil {
 		t.Fatalf("fortios: %v", err)
 	}
@@ -91,7 +97,8 @@ func TestFortiOS_RefusesOverwriteWithoutForce(t *testing.T) {
 		t.Errorf("existing file was modified: %q", got)
 	}
 
-	if _, _, err := run(t, "fortios", fixture, "-o", out, "--force"); err != nil {
+	t.Setenv("SOURCE_DATE_EPOCH", "1791676800")
+	if _, _, err := run(t, "fortios", fixture, "-o", out, "--force", "--reproducible"); err != nil {
 		t.Fatalf("with --force: %v", err)
 	}
 	if got, _ := os.ReadFile(out); !bytes.Equal(got, readGolden(t)) {
@@ -187,6 +194,99 @@ end
 		if strings.Contains(stderr, secret) || strings.Contains(stdout, secret) {
 			t.Errorf("secret fragment %q printed", secret)
 		}
+	}
+}
+
+// TestFortiOS_ReproducibleByteIdentical: two --reproducible runs on the same
+// backup are byte-identical, with SOURCE_DATE_EPOCH set (fixed timestamp) and
+// unset (no timestamp).
+func TestFortiOS_ReproducibleByteIdentical(t *testing.T) {
+	for _, epoch := range []string{"1791676800", ""} {
+		t.Run("SOURCE_DATE_EPOCH="+epoch, func(t *testing.T) {
+			t.Setenv("SOURCE_DATE_EPOCH", epoch)
+			a, _, err := run(t, "fortios", fixture, "--reproducible")
+			if err != nil {
+				t.Fatal(err)
+			}
+			b, _, err := run(t, "fortios", fixture, "--reproducible")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if a != b {
+				t.Errorf("two --reproducible runs differ")
+			}
+			hasTS := strings.Contains(a, `"timestamp"`)
+			if epoch == "" && hasTS {
+				t.Errorf("timestamp present although SOURCE_DATE_EPOCH is unset")
+			}
+			if epoch != "" && !strings.Contains(a, `"timestamp": "2026-10-11T00:00:00Z"`) {
+				t.Errorf("timestamp not taken from SOURCE_DATE_EPOCH")
+			}
+		})
+	}
+}
+
+// TestFortiOS_ReproducibleSerialTracksInputAndVersion: the serial changes
+// when any input byte or the tool version changes.
+func TestFortiOS_ReproducibleSerialTracksInputAndVersion(t *testing.T) {
+	t.Setenv("SOURCE_DATE_EPOCH", "")
+	serialOf := func(version, in string) string {
+		t.Helper()
+		out, _, err := runVersion(t, version, "fortios", in, "--reproducible")
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, rest, _ := strings.Cut(out, `"serialNumber": "`)
+		serial, _, _ := strings.Cut(rest, `"`)
+		return serial
+	}
+
+	data, err := os.ReadFile(fixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	edited := filepath.Join(t.TempDir(), "global-7.6.conf")
+	writeFile(t, edited, string(data)+"# trailing comment\n")
+
+	base := serialOf("test", fixture)
+	if !strings.HasPrefix(base, "urn:uuid:") || base[23] != '5' {
+		t.Errorf("serial %q is not a UUIDv5 URN", base)
+	}
+	if serialOf("test", edited) == base {
+		t.Errorf("serial unchanged after the input changed")
+	}
+	if serialOf("test2", fixture) == base {
+		t.Errorf("serial unchanged after the tool version changed")
+	}
+}
+
+// TestFortiOS_DefaultNotReproducible: without --reproducible each run gets a
+// new random serial and a timestamp, and SOURCE_DATE_EPOCH is not used.
+func TestFortiOS_DefaultNotReproducible(t *testing.T) {
+	t.Setenv("SOURCE_DATE_EPOCH", "1791676800")
+	a, _, err := run(t, "fortios", fixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, _, err := run(t, "fortios", fixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a == b {
+		t.Errorf("two default runs are identical; serialNumber should be random")
+	}
+	if strings.Contains(a, "2026-10-11T00:00:00Z") || !strings.Contains(a, `"timestamp"`) {
+		t.Errorf("default run should carry the current time, not SOURCE_DATE_EPOCH")
+	}
+}
+
+func TestFortiOS_BadSourceDateEpoch(t *testing.T) {
+	t.Setenv("SOURCE_DATE_EPOCH", "yesterday")
+	if _, _, err := run(t, "fortios", fixture, "--reproducible"); err == nil || !strings.Contains(err.Error(), "SOURCE_DATE_EPOCH") {
+		t.Errorf("err = %v, want a SOURCE_DATE_EPOCH error", err)
+	}
+	if _, _, err := run(t, "fortios", fixture); err != nil {
+		t.Errorf("without --reproducible SOURCE_DATE_EPOCH must be ignored: %v", err)
 	}
 }
 

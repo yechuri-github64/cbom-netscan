@@ -179,7 +179,11 @@ type Meta struct {
 	// Lifecycle is the CycloneDX metadata.lifecycles phase.
 	// Use "operations" for production configs, "discovery" for scan results.
 	Lifecycle string
-	// Created is used as the BOM timestamp.  If zero, the emitter falls back
-	// to SOURCE_DATE_EPOCH (for reproducible builds) or time.Now().
-	Created time.Time
+	// Created is used as the BOM timestamp. If zero, the emitter uses
+	// time.Now(), or omits the timestamp when OmitTimestamp is set.
+	Created       time.Time
+	OmitTimestamp bool
+	// SerialNumber is the BOM serial ("urn:uuid:…"). If empty, the emitter
+	// generates a random UUIDv4, as CycloneDX expects for each new BOM.
+	SerialNumber string
 }

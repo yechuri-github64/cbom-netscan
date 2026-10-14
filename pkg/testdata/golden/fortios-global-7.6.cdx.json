@@ -196,13 +196,13 @@
           },
           {
             "location": "global-7.6.conf",
-            "line": 8,
-            "symbol": "system global/admin-server-cert"
+            "line": 7,
+            "symbol": "system global/admin-https-ssl-ciphersuites"
           },
           {
             "location": "global-7.6.conf",
-            "line": 7,
-            "symbol": "system global/admin-https-ssl-ciphersuites"
+            "line": 8,
+            "symbol": "system global/admin-server-cert"
           }
         ]
       },

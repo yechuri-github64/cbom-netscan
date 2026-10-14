@@ -377,11 +377,6 @@
           },
           {
             "location": "ipsec-7.6.conf",
-            "line": 39,
-            "symbol": "vpn ipsec phase1-interface/pqc-ikev2/authmethod"
-          },
-          {
-            "location": "ipsec-7.6.conf",
             "line": 37,
             "symbol": "vpn ipsec phase1-interface/pqc-ikev2/addke1"
           },
@@ -389,6 +384,11 @@
             "location": "ipsec-7.6.conf",
             "line": 38,
             "symbol": "vpn ipsec phase1-interface/pqc-ikev2/addke2"
+          },
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 39,
+            "symbol": "vpn ipsec phase1-interface/pqc-ikev2/authmethod"
           },
           {
             "location": "ipsec-7.6.conf",
@@ -884,11 +884,6 @@
           },
           {
             "location": "ipsec-7.6.conf",
-            "line": 28,
-            "symbol": "vpn ipsec phase1-interface/branch-ikev1/proposal"
-          },
-          {
-            "location": "ipsec-7.6.conf",
             "line": 52,
             "symbol": "vpn ipsec phase2-interface/branch-p2/proposal"
           }
@@ -1016,11 +1011,6 @@
       "name": "PRF-HMAC-SHA1",
       "evidence": {
         "occurrences": [
-          {
-            "location": "ipsec-7.6.conf",
-            "line": 28,
-            "symbol": "vpn ipsec phase1-interface/branch-ikev1/proposal"
-          },
           {
             "location": "ipsec-7.6.conf",
             "line": 28,

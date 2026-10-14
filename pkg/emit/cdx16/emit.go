@@ -484,6 +484,13 @@ func buildMatProps(mat *model.Material) *cdx.RelatedCryptoMaterialProperties {
 
 // ── evidence ─────────────────────────────────────────────────────────────────
 
+func lineOf(o cdx.EvidenceOccurrence) int {
+	if o.Line == nil {
+		return 0
+	}
+	return *o.Line
+}
+
 func buildEvidence(evs []model.Evidence) *cdx.Evidence {
 	if len(evs) == 0 {
 		return nil
@@ -507,6 +514,21 @@ func buildEvidence(evs []model.Evidence) *cdx.Evidence {
 	if len(occs) == 0 {
 		return nil
 	}
+	// Sorted so the order does not depend on which extractor added which
+	// occurrence to a shared component.
+	sort.Slice(occs, func(i, j int) bool {
+		a, b := occs[i], occs[j]
+		if a.Location != b.Location {
+			return a.Location < b.Location
+		}
+		if la, lb := lineOf(a), lineOf(b); la != lb {
+			return la < lb
+		}
+		if a.Symbol != b.Symbol {
+			return a.Symbol < b.Symbol
+		}
+		return a.AdditionalContext < b.AdditionalContext
+	})
 	return &cdx.Evidence{Occurrences: &occs}
 }
 

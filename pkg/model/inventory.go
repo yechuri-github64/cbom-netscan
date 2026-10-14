@@ -4,6 +4,8 @@
 
 package model
 
+import "slices"
+
 // NewInventory creates an empty Inventory with the dedupe map initialised.
 // Always use this constructor; the zero value of Inventory has a nil map
 // and will panic on Add().
@@ -35,13 +37,39 @@ func (inv *Inventory) Add(a *Asset) *Asset {
 
 	key := string(a.Type) + "\x00" + a.Name + "\x00" + a.OID
 	if existing, ok := inv.byKey[key]; ok {
-		existing.Evidence = append(existing.Evidence, a.Evidence...)
+		existing.merge(a)
 		return existing
 	}
 
 	inv.byKey[key] = a
 	inv.Assets = append(inv.Assets, a)
 	return a
+}
+
+// merge folds a duplicate into the stored asset so that the result does not
+// depend on which extractor added the asset first:
+//   - evidence occurrences are added unless an identical one is already there
+//     (the same proposal line naming one algorithm twice gives one occurrence);
+//   - properties are combined; if both set a key to different values, the
+//     smaller value is kept, so the outcome is the same in either order.
+//
+// The algorithm, protocol, certificate, or material details of the stored
+// asset are kept. Extractors that share components must define them
+// identically; extract/shared_test.go checks that.
+func (existing *Asset) merge(a *Asset) {
+	for _, ev := range a.Evidence {
+		if !slices.Contains(existing.Evidence, ev) {
+			existing.Evidence = append(existing.Evidence, ev)
+		}
+	}
+	if len(a.Properties) > 0 && existing.Properties == nil {
+		existing.Properties = map[string]string{}
+	}
+	for k, v := range a.Properties {
+		if old, ok := existing.Properties[k]; !ok || v < old {
+			existing.Properties[k] = v
+		}
+	}
 }
 
 // AddWarning appends a warning to the inventory.

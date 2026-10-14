@@ -209,6 +209,57 @@ func TestExtract(t *testing.T) {
 			},
 		},
 		{
+			// RFC 9370 additional key exchanges are IKEv2-only: on an IKEv1
+			// tunnel (and its phase2) they are recorded but not counted.
+			name: "addke_ignored_on_ikev1",
+			cfg: hdr767 + `config vpn ipsec phase1-interface
+    edit "v1"
+        set ike-version 1
+        set proposal aes256-sha256
+        set addke1 36
+    next
+end
+config vpn ipsec phase2-interface
+    edit "v1-p2"
+        set phase1name "v1"
+        set proposal aes256-sha256
+        set addke1 ml-kem-768
+    next
+end
+`,
+			check: func(t *testing.T, inv *model.Inventory) {
+				tn := find(t, inv, p1+"v1")
+				eq(t, "v1 refs", names(inv, tn.Proto.Refs), []string{"AES-256-CBC", "HMAC-SHA256", "PRF-HMAC-SHA256", "DH group 20 (ECP-384)"})
+				prop(t, tn, "addke1:value", "36")
+				prop(t, tn, "addke:applies", "no")
+				p := find(t, inv, p2+"v1-p2")
+				eq(t, "v1-p2 refs", names(inv, p.Proto.Refs), []string{"AES-256-CBC", "HMAC-SHA256", "DH group 20 (ECP-384)"})
+				prop(t, p, "addke:applies", "no")
+				for _, a := range inv.Assets {
+					if a.Name == "ML-KEM-768" {
+						t.Errorf("ML-KEM-768 component emitted although no IKEv2 tunnel uses it")
+					}
+				}
+				eq(t, "warnings", warnCodes(inv), []string{"addke-not-ikev2", "addke-not-ikev2"})
+			},
+		},
+		{
+			name: "addke_not_counted_when_version_unknown",
+			cfg:  hdr748 + "config vpn ipsec phase1-interface\n    edit \"u\"\n        set proposal aes256-sha256\n        set addke1 36\n    next\nend\nconfig vpn ipsec phase2-interface\n    edit \"orphan\"\n        set phase1name \"none\"\n        set addke1 36\n        set pfs enable\n    next\nend\n",
+			check: func(t *testing.T, inv *model.Inventory) {
+				tn := find(t, inv, p1+"u")
+				prop(t, tn, "addke:applies", "unknown")
+				prop(t, tn, "addke1:value", "36")
+				for _, n := range names(inv, tn.Proto.Refs) {
+					if n == "ML-KEM-768" {
+						t.Errorf("ML-KEM-768 counted although the IKE version is unknown")
+					}
+				}
+				prop(t, find(t, inv, p2+"orphan"), "addke:applies", "unknown")
+				eq(t, "warnings", warnCodes(inv), []string{"unknown-phase1", "no-default-table"})
+			},
+		},
+		{
 			name: "764_default_dhgrp_14",
 			cfg:  hdr764 + "config vpn ipsec phase1-interface\n    edit \"t\"\n        set proposal aes256-sha256\n    next\nend\n",
 			check: func(t *testing.T, inv *model.Inventory) {

@@ -190,18 +190,39 @@ func (x *extractor) dhGroups(v field.Value, rs *refs) {
 	}
 }
 
-// addke records addke1-7 on a and adds their KEMs to rs. Rounds that are not
-// set are summarised in one addke:source property instead of seven.
-func (x *extractor) addke(en entry, a *model.Asset, rs *refs) {
+// addkeApplies says whether RFC 9370 additional key exchanges take effect
+// for a tunnel with this IKE version: they exist only in IKEv2.
+func addkeApplies(ikeVersion string) string {
+	switch ikeVersion {
+	case "2":
+		return "yes"
+	case "1":
+		return "no"
+	}
+	return field.Unknown
+}
+
+// addke records addke1-7 on a. Their KEMs are added to rs only when applies
+// is "yes", so an IKEv1 tunnel, or one whose IKE version is unknown, is never
+// reported as using ML-KEM. Rounds that are not set are summarised in one
+// addke:source property instead of seven.
+func (x *extractor) addke(en entry, a *model.Asset, rs *refs, applies string) {
 	configured := false
+	line := 0
 	for i := 1; i <= 7; i++ {
 		name := "addke" + strconv.Itoa(i)
 		v := x.resolve(en, name, specAddke)
 		if v.Source != field.Configured {
 			continue
 		}
+		if !configured {
+			line = v.Line
+		}
 		configured = true
 		x.r.Record(a, v, true)
+		if applies != "yes" {
+			continue
+		}
 		for _, tok := range v.Tokens {
 			if k, ok := addkeAlgs[tok]; ok {
 				rs.add(&rs.ke, x.algorithm(k, v))
@@ -209,6 +230,19 @@ func (x *extractor) addke(en entry, a *model.Asset, rs *refs) {
 		}
 	}
 	if configured {
+		switch applies {
+		case "no":
+			a.Properties[field.Prefix+"addke:applies"] = "no"
+			a.Properties[field.Prefix+"addke:applies-reason"] = "RFC 9370 additional key exchanges apply only to IKEv2; this tunnel uses IKEv1"
+			x.inv.AddWarning(model.Warning{
+				Code:    "addke-not-ikev2",
+				Message: en.label + " sets addke on an IKEv1 tunnel; additional key exchanges are IKEv2-only, so they are not counted",
+				Ev:      model.Evidence{Location: x.r.Loc, Line: line, Symbol: en.section + "/" + en.e.Name + "/addke", Context: en.ctx},
+			})
+		case field.Unknown:
+			a.Properties[field.Prefix+"addke:applies"] = field.Unknown
+			a.Properties[field.Prefix+"addke:applies-reason"] = "the IKE version is unknown, and additional key exchanges apply only to IKEv2; they are not counted"
+		}
 		return
 	}
 	switch {
@@ -247,7 +281,7 @@ func (x *extractor) phase1(scope tree.Scope, section string, e *tree.Entry) *mod
 	var rs refs
 	x.proposals(prop, true, &rs)
 	x.dhGroups(dh, &rs)
-	x.addke(en, a, &rs)
+	x.addke(en, a, &rs, addkeApplies(a.Proto.Version))
 
 	method := strings.Join(auth.Tokens, " ")
 	if method == "signature" {
@@ -311,12 +345,13 @@ func (x *extractor) phase2(scope tree.Scope, section string, e *tree.Entry, tunn
 		a.Properties[field.Prefix+"scope"] = en.ctx
 	}
 
-	ikev2 := false
+	ikev2, parentVersion := false, ""
 	if p1 := e.Attr("phase1name"); p1 != nil && len(p1.Values) == 1 {
 		a.Properties[field.Prefix+"phase1name"] = p1.Values[0]
 		if parent, ok := tunnels[p1.Values[0]]; ok {
 			a.DependsOn = append(a.DependsOn, parent.ID)
-			ikev2 = parent.Proto.Version == "2"
+			parentVersion = parent.Proto.Version
+			ikev2 = parentVersion == "2"
 		} else {
 			x.inv.AddWarning(model.Warning{
 				Code:    "unknown-phase1",
@@ -338,7 +373,7 @@ func (x *extractor) phase2(scope tree.Scope, section string, e *tree.Entry, tunn
 	// PFS groups apply only when pfs is known to be enabled.
 	if strings.Join(pfs.Tokens, " ") == "enable" {
 		x.dhGroups(dh, &rs)
-		x.addke(en, a, &rs)
+		x.addke(en, a, &rs, addkeApplies(parentVersion))
 	}
 	rs.apply(a.Proto, ikev2)
 	x.inv.Add(a)

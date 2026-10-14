@@ -121,38 +121,41 @@ func unknownESN(components []cdx.Component, assets []*model.Asset) map[string]bo
 // order, and every other byte is kept. No tree is built, so large BOMs cost
 // one linear pass.
 func omitESN(b []byte, unknown map[string]bool) ([]byte, error) {
+	// Keys are kept as slices of b, not strings, so the scan does not
+	// allocate per key; comparing string(x) with a constant does not allocate.
 	type frame struct {
 		object    bool
-		key       string // key this container sits under in its parent
+		key       []byte // key this container sits under in its parent
 		expectKey bool   // object frames: next string is a key
-		member    string // object frames: key of the member being read
+		member    []byte // object frames: key of the member being read
 	}
-	// unquote decodes a JSON string; escapes are rare in keys, so the common
-	// case is a plain slice conversion.
-	unquote := func(raw []byte) (string, error) {
+	// unquote returns a JSON string's content: a slice of b when it has no
+	// escapes (always, for cyclonedx-go's keys), a decoded copy otherwise.
+	unquote := func(raw []byte) ([]byte, error) {
 		if bytes.IndexByte(raw, '\\') < 0 {
-			return string(raw[1 : len(raw)-1]), nil
+			return raw[1 : len(raw)-1], nil
 		}
 		var s string
 		err := json.Unmarshal(raw, &s)
-		return s, err
+		return []byte(s), err
 	}
 	type span struct{ from, to int }
 	var (
 		stack    []frame
 		dels     []span
-		compRef  string
-		compESN  *span
+		compRef  []byte
+		compESN  span
+		hasESN   bool
 		compSeen bool
 		cleaned  = map[string]bool{}
 	)
 	// path reports whether the stack is root{} → "components"[] → {} → the given keys.
 	path := func(keys ...string) bool {
-		if len(stack) != 3+len(keys) || !stack[0].object || stack[1].object || stack[1].key != "components" || !stack[2].object {
+		if len(stack) != 3+len(keys) || !stack[0].object || stack[1].object || string(stack[1].key) != "components" || !stack[2].object {
 			return false
 		}
 		for i, k := range keys {
-			if !stack[3+i].object || stack[3+i].key != k {
+			if !stack[3+i].object || string(stack[3+i].key) != k {
 				return false
 			}
 		}
@@ -178,7 +181,7 @@ func omitESN(b []byte, unknown map[string]bool) ([]byte, error) {
 				}
 				stack[top].member = key
 				stack[top].expectKey = false
-				if key == "esn" && path("cryptoProperties", "protocolProperties", "ikev2TransformTypes") {
+				if string(key) == "esn" && path("cryptoProperties", "protocolProperties", "ikev2TransformTypes") {
 					// The member is "esn":<literal>; find where the literal ends.
 					end := j + 2
 					for end < len(b) && b[end] != ',' && b[end] != '}' {
@@ -191,9 +194,9 @@ func omitESN(b []byte, unknown map[string]bool) ([]byte, error) {
 					case end < len(b) && b[end] == ',':
 						sp.to++
 					}
-					compESN = &sp
+					compESN, hasESN = sp, true
 				}
-			} else if top >= 0 && stack[top].object && stack[top].member == "bom-ref" && path() {
+			} else if top >= 0 && stack[top].object && string(stack[top].member) == "bom-ref" && path() {
 				ref, err := unquote(raw)
 				if err != nil {
 					return nil, err
@@ -202,19 +205,19 @@ func omitESN(b []byte, unknown map[string]bool) ([]byte, error) {
 			}
 			i = j
 		case '{', '[':
-			key := ""
+			var key []byte
 			if top := len(stack) - 1; top >= 0 && stack[top].object {
 				key = stack[top].member
 			}
 			stack = append(stack, frame{object: c == '{', key: key, expectKey: c == '{'})
 			if path() {
-				compRef, compESN, compSeen = "", nil, true
+				compRef, hasESN, compSeen = nil, false, true
 			}
 		case '}', ']':
 			if path() && compSeen {
-				if compESN != nil && unknown[compRef] {
-					dels = append(dels, *compESN)
-					cleaned[compRef] = true
+				if hasESN && unknown[string(compRef)] {
+					dels = append(dels, compESN)
+					cleaned[string(compRef)] = true
 				}
 				compSeen = false
 			}

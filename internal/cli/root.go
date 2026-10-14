@@ -26,9 +26,16 @@ It currently reports:
     ciphers, MACs, host key algorithms) from config system global and
     config system ssh-config;
   - IPsec VPN tunnels (IKE version, proposals, DH groups, authentication
-    method, PQC additional key exchanges, phase2 proposals and PFS groups)
-    from config vpn ipsec phase1/phase2 and their -interface variants.
+    method and certificates, PQC additional key exchanges, phase2 proposals
+    and PFS groups) from config vpn ipsec phase1/phase2 and their -interface
+    variants;
+  - certificates (key and signature algorithms, validity, expiry) from
+    config vpn certificate local/ca/remote and config certificate;
+  - SSL VPN / Agentless VPN TLS (versions, cipher suites, TLS groups
+    including post-quantum groups, server certificate) from
+    config vpn ssl settings.
 
+Only configuration backups are read; there is no live TLS scanning yet.
 Secret values (passwords, ENC values, private keys) are never written to the
 CBOM or printed in warnings.`,
 		// Usage is for argument mistakes; runtime errors such as a parse

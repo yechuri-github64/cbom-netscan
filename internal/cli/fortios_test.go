@@ -420,7 +420,8 @@ func TestRootHelp_OnlyExistingFeatures(t *testing.T) {
 	if strings.Contains(strings.ToLower(stdout), "testssl") {
 		t.Errorf("root help mentions testssl.sh, which is not implemented:\n%s", stdout)
 	}
-	for _, want := range []string{"fortios", "version"} {
+	// Every extractor the fortios command runs is described.
+	for _, want := range []string{"fortios", "version", "config system ssh-config", "config vpn ipsec", "config vpn certificate", "config vpn ssl settings", "no live TLS scanning"} {
 		if !strings.Contains(stdout, want) {
 			t.Errorf("root help missing %q", want)
 		}

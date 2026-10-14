@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // cbom-netscan generates CycloneDX Cryptography Bills of Materials (CBOMs)
-// from network-appliance configuration backups and TLS scan output.
+// from network-appliance configuration backups (FortiOS for now).
 package main
 
 import (

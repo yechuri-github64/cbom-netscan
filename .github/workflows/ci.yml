@@ -72,7 +72,10 @@ jobs:
         run: go test -run='^$' -fuzz=FuzzParse -fuzztime=20s ./pkg/fortios/tree/
 
       - name: fuzz certificate extractor
-        run: go test -run='^$' -fuzz=FuzzExtract -fuzztime=20s ./pkg/fortios/extract/certs/
+        run: go test -run='^$' -fuzz='^FuzzExtract$' -fuzztime=20s ./pkg/fortios/extract/certs/
+
+      - name: fuzz certificate field scanner
+        run: go test -run='^$' -fuzz='^FuzzScanCertField$' -fuzztime=20s ./pkg/fortios/extract/certs/
 
       # Every file must have a license and copyright (REUSE spec 3.x).
       - name: reuse lint

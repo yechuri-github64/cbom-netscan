@@ -6,8 +6,11 @@
 // "ca", and "remote" (and the same tables under "config certificate", which
 // 7.6.7 and 8.0.1 also have), per research notes §3.8.
 //
-// Only the public certificate PEM is parsed, with crypto/x509. For each
-// certificate it emits:
+// Only the public certificate PEM is parsed, with crypto/x509. A field may
+// hold several PEM blocks; they are told apart by their BEGIN lines, only the
+// first CERTIFICATE block is decoded and parsed, further certificates are
+// counted, and a private key block there is warned about without being read.
+// For each certificate it emits:
 //
 //	certificate component   subject, issuer, validity, format, fingerprint, serial
 //	  → public key          related-crypto-material, key size, SPKI fingerprint as id
@@ -220,13 +223,29 @@ type parsed struct {
 	keyOID string
 }
 
-func parsePEM(attr *tree.Attr) (*parsed, error) {
+// pemText is the certificate field's value, or "" if it is not set.
+func pemText(attr *tree.Attr) string {
 	if attr == nil || attr.Unset || len(attr.Values) == 0 {
+		return ""
+	}
+	return strings.Join(attr.Values, " ")
+}
+
+// parsePEM parses the first CERTIFICATE block of a certificate field. Blocks
+// are told apart by their BEGIN lines first (scanCertField), so only
+// certificate text is ever base64-decoded, wherever a key block sits.
+func parsePEM(attr *tree.Attr) (*parsed, error) {
+	text := pemText(attr)
+	if text == "" {
 		return nil, fmt.Errorf("no certificate PEM")
 	}
-	block, _ := pem.Decode([]byte(strings.Join(attr.Values, " ")))
+	f := scanCertField(text)
+	if f.cert == "" {
+		return nil, fmt.Errorf("no PEM CERTIFICATE block")
+	}
+	block, _ := pem.Decode([]byte(f.cert))
 	if block == nil || block.Type != "CERTIFICATE" {
-		return nil, fmt.Errorf("not a PEM CERTIFICATE block")
+		return nil, fmt.Errorf("PEM CERTIFICATE block does not decode")
 	}
 	c, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
@@ -363,6 +382,26 @@ func addCert(inv *model.Inventory, location string, scope tree.Scope, tb table, 
 		if a := e.Attr(f.key); a != nil && !a.Unset && len(a.Values) == 1 && f.known[a.Values[0]] {
 			c.Properties[field.Prefix+f.key+":value"] = a.Values[0]
 			c.Properties[field.Prefix+f.key+":line"] = strconv.Itoa(a.Line)
+		}
+	}
+
+	// Look at what else the field holds before parsing. A private key block
+	// is counted by its BEGIN line only and warned about, never read.
+	if text := pemText(pemAttr); text != "" {
+		f := scanCertField(text)
+		if f.keyBlocks > 0 {
+			c.Properties["cbom-netscan:cert:key-blocks-in-certificate-field"] = strconv.Itoa(f.keyBlocks)
+			inv.AddWarning(model.Warning{
+				Code:    "private-key-in-certificate-field",
+				Message: fmt.Sprintf("%s: the certificate field also holds a private key block (not read or shown); keys belong in private-key, and this one may be unencrypted in the backup", name),
+				Ev:      model.Evidence{Location: location, Line: pemAttr.Line, Symbol: sym, Context: ctx},
+			})
+		}
+		if f.extraCerts > 0 {
+			c.Properties["cbom-netscan:cert:additional-certificate-blocks"] = strconv.Itoa(f.extraCerts)
+		}
+		if f.other > 0 {
+			c.Properties["cbom-netscan:cert:other-pem-blocks"] = strconv.Itoa(f.other)
 		}
 	}
 

@@ -65,3 +65,50 @@ func privateKeyForm(values []string) (form string, warn bool) {
 	}
 	return formOther, false
 }
+
+// certField is what a certificate field holds, found from BEGIN and END
+// lines alone: the text of its first CERTIFICATE block, and counts of the
+// other blocks. Only certificate text is kept; other blocks are counted by
+// label and their bodies are never decoded or stored.
+type certField struct {
+	cert       string // first complete CERTIFICATE block, BEGIN to END line; "" if none
+	extraCerts int    // further CERTIFICATE blocks (a chain), not inventoried
+	keyBlocks  int    // private-key blocks of any format
+	other      int    // any other PEM blocks
+}
+
+// scanCertField splits text into PEM blocks by their BEGIN and END lines.
+func scanCertField(text string) certField {
+	var f certField
+	lines := strings.Split(text, "\n")
+	for i := 0; i < len(lines); i++ {
+		label := pemLabel(lines[i])
+		if label == "" {
+			continue
+		}
+		end := -1
+		for j := i + 1; j < len(lines); j++ {
+			if strings.TrimSpace(lines[j]) == "-----END "+label+"-----" {
+				end = j
+				break
+			}
+		}
+		switch {
+		case isKeyLabel(label):
+			f.keyBlocks++
+		case label != "CERTIFICATE":
+			f.other++
+		case end < 0:
+			// An unterminated certificate block is not a certificate.
+		case f.cert == "":
+			f.cert = strings.Join(lines[i:end+1], "\n")
+		default:
+			f.extraCerts++
+		}
+		if end < 0 {
+			break // no END line: the rest of the field belongs to this block
+		}
+		i = end
+	}
+	return f
+}

@@ -650,3 +650,70 @@ func TestPrivateKeyForms(t *testing.T) {
 		}
 	}
 }
+
+// TestCertificateFieldBlocks: a certificate field with several PEM blocks.
+// Only the first CERTIFICATE block is decoded and parsed. A private key
+// block before or after it is counted from its BEGIN line and warned about;
+// its body (not valid base64 here) is never decoded or shown.
+func TestCertificateFieldBlocks(t *testing.T) {
+	key := "-----BEGIN PRIVATE KEY-----\nc3ludGhldGlj!!not-base64!!\n-----END PRIVATE KEY-----"
+	rsaKey := strings.ReplaceAll(key, "PRIVATE KEY", "RSA PRIVATE KEY")
+	gw, vpn := pemFile(t, "gw-ecdsa.pem"), pemFile(t, "vpn-rsa.pem")
+	csr := "-----BEGIN CERTIFICATE REQUEST-----\nc3ludGhldGlj\n-----END CERTIFICATE REQUEST-----"
+	for _, tc := range []struct {
+		name, field string
+		subject     string // "" if no certificate parses
+		keys, extra string // property values, "" if absent
+		other       string
+	}{
+		{"key_before_cert", key + "\n" + gw, "CN=gw.example.net,O=Example Lab", "1", "", ""},
+		{"key_after_cert", gw + "\n" + rsaKey, "CN=gw.example.net,O=Example Lab", "1", "", ""},
+		{"key_only", key, "", "1", "", ""},
+		{"two_keys_around_cert", rsaKey + "\n" + gw + "\n" + key, "CN=gw.example.net,O=Example Lab", "2", "", ""},
+		{"chain_first_cert_parsed", vpn + "\n" + gw, "CN=vpn.example.com,O=Example Lab", "", "1", ""},
+		{"csr_then_cert", csr + "\n" + gw, "CN=gw.example.net,O=Example Lab", "", "", "1"},
+		// An unterminated key block swallows the rest of the field.
+		{"unterminated_key", "-----BEGIN PRIVATE KEY-----\nc3ludGhldGlj\n" + gw, "", "1", "", ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := hdr + "config vpn certificate local\n    edit \"f\"\n        set certificate \"" + tc.field + "\"\n    next\nend\n"
+			_, inv := extract(t, cfg, now)
+			c := find(t, inv, local+"f")
+			if c.Cert.SubjectName != tc.subject {
+				t.Errorf("subject = %q, want %q", c.Cert.SubjectName, tc.subject)
+			}
+			for key, want := range map[string]string{
+				"cbom-netscan:cert:key-blocks-in-certificate-field": tc.keys,
+				"cbom-netscan:cert:additional-certificate-blocks":   tc.extra,
+				"cbom-netscan:cert:other-pem-blocks":                tc.other,
+			} {
+				if got := c.Properties[key]; got != want {
+					t.Errorf("%s = %q, want %q", key, got, want)
+				}
+			}
+			var codes []string
+			for _, w := range inv.Warnings {
+				codes = append(codes, w.Code)
+			}
+			want := []string{}
+			if tc.keys != "" {
+				want = append(want, "private-key-in-certificate-field")
+			}
+			if tc.subject == "" {
+				want = append(want, "cert-unparseable")
+			}
+			if strings.Join(codes, " ") != strings.Join(want, " ") {
+				t.Errorf("warnings = %v, want %v", codes, want)
+			}
+			dump, _ := json.Marshal(struct {
+				A []*model.Asset
+				W []model.Warning
+			}{inv.Assets, inv.Warnings})
+			for _, s := range []string{"c3ludGhldGlj", "not-base64", "-----"} {
+				if strings.Contains(string(dump), s) {
+					t.Errorf("output contains %q", s)
+				}
+			}
+		})
+	}
+}

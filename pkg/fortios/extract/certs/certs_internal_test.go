@@ -89,3 +89,22 @@ func TestSignatureNamesDoNotShadowKeyNames(t *testing.T) {
 		}
 	}
 }
+
+// FuzzScanCertField: the block scanner must end on any text, and the
+// certificate text it returns must be one complete CERTIFICATE block.
+func FuzzScanCertField(f *testing.F) {
+	f.Add("-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----")
+	f.Add("-----BEGIN PRIVATE KEY-----\nx\n-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----")
+	f.Add("-----BEGIN CERTIFICATE-----\n-----END CERTIFICATE-----\n-----BEGIN RSA PRIVATE KEY-----")
+	f.Add("-----BEGIN -----\n-----END -----")
+	f.Fuzz(func(t *testing.T, text string) {
+		c := scanCertField(text)
+		if c.cert == "" {
+			return
+		}
+		lines := strings.Split(c.cert, "\n")
+		if pemLabel(lines[0]) != "CERTIFICATE" || strings.TrimSpace(lines[len(lines)-1]) != "-----END CERTIFICATE-----" {
+			t.Fatalf("certificate text is not one complete CERTIFICATE block")
+		}
+	})
+}

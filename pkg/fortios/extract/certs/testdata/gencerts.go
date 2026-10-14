@@ -11,17 +11,22 @@
 //	gw-ecdsa.pem     ECDSA P-256 leaf signed by the CA, 181 days
 //	old-expired.pem  RSA-2048 self-signed (SHA256-RSA), expired 2024-12-31
 //	long-lived.pem   ECDSA P-256 leaf signed by the CA, 732 days (over 200)
+//	ed25519-self.pem Ed25519 self-signed (pure Ed25519 signature), 366 days,
+//	                 like FortiOS's factory Ed25519 certificate
 //
 // Day counts are inclusive, as the CA/Browser Forum counts them. The private
 // keys are generated in memory and discarded; only certificates are written,
-// so rerunning it gives new keys and the goldens must be regenerated.
+// so rerunning it gives new keys and the goldens must be regenerated. Name
+// certificates to write only those, leaving the others as they are:
 //
-//	go run gencerts.go
+//	go run gencerts.go                # all
+//	go run gencerts.go ed25519-self   # one
 package main
 
 import (
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
@@ -30,6 +35,7 @@ import (
 	"encoding/pem"
 	"math/big"
 	"os"
+	"slices"
 	"time"
 )
 
@@ -54,6 +60,10 @@ func mk(name string, serial int64, cn string, from, to time.Time, pub crypto.Pub
 	if err != nil {
 		panic(err)
 	}
+	if len(os.Args) > 1 && !slices.Contains(os.Args[1:], name) {
+		c, _ := x509.ParseCertificate(der)
+		return c
+	}
 	if err := os.WriteFile(name+".pem", pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), 0o644); err != nil {
 		panic(err)
 	}
@@ -76,4 +86,7 @@ func main() {
 
 	longKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	mk("long-lived", 5, "long.example.com", day("2026-05-01"), day("2028-05-01"), &longKey.PublicKey, false, ca, caKey)
+
+	edPub, edKey, _ := ed25519.GenerateKey(rand.Reader)
+	mk("ed25519-self", 6, "ed.example.org", day("2026-01-01"), day("2027-01-01"), edPub, false, nil, edKey)
 }

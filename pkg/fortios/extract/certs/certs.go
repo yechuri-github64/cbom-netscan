@@ -257,6 +257,15 @@ type alg struct {
 	bits int // key size, for the public and private key components
 }
 
+// ed25519Alg is Ed25519 as both a key algorithm and a signature algorithm:
+// pure Ed25519 uses one OID (id-Ed25519, 1.3.101.112, RFC 8410) for the key
+// and the signature, and crypto/x509 names both "Ed25519". Both uses must
+// give the same definition, or the inventory would hold two different
+// copies under one bom-ref.
+func ed25519Alg(oid string) alg {
+	return alg{name: "Ed25519", oid: oid, bits: 256, a: model.Algorithm{Primitive: "signature", Curve: "ed25519"}}
+}
+
 var curveNames = map[string]string{"P-224": "secp224r1", "P-256": "secp256r1", "P-384": "secp384r1", "P-521": "secp521r1"}
 
 // keyAlgorithm names the certificate key's algorithm. RSA keys are pke (they
@@ -272,7 +281,7 @@ func keyAlgorithm(p *parsed) alg {
 		return alg{name: "ECDSA-" + strings.ReplaceAll(params.Name, "-", ""), oid: p.keyOID, bits: params.BitSize,
 			a: model.Algorithm{Primitive: "signature", Curve: curveNames[params.Name]}}
 	case ed25519.PublicKey:
-		return alg{name: "Ed25519", oid: p.keyOID, bits: 256, a: model.Algorithm{Primitive: "signature", Curve: "ed25519"}}
+		return ed25519Alg(p.keyOID)
 	}
 	return alg{name: "OID " + p.keyOID, oid: p.keyOID, a: model.Algorithm{Primitive: "unknown"}}
 }
@@ -281,6 +290,9 @@ func signatureAlgorithm(p *parsed) alg {
 	sa := p.cert.SignatureAlgorithm
 	if sa == x509.UnknownSignatureAlgorithm {
 		return alg{name: "OID " + p.sigOID, oid: p.sigOID, a: model.Algorithm{Primitive: "unknown"}}
+	}
+	if sa == x509.PureEd25519 {
+		return ed25519Alg(p.sigOID)
 	}
 	a := model.Algorithm{Primitive: "signature"}
 	switch sa {

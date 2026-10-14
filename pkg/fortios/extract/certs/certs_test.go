@@ -18,6 +18,7 @@ import (
 	"math/big"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -479,6 +480,7 @@ func TestVDOMGlobalReferences(t *testing.T) {
 		"FortiOS certificate ca Fortinet_CA (global)",
 		"FortiOS certificate local Fortinet_Factory (global)",
 		"FortiOS certificate local Fortinet_SSL_ECDSA256 (global)",
+		"FortiOS certificate local Fortinet_SSL_ED25519 (global)",
 	}
 	slices.Sort(certNames)
 	if !slices.Equal(certNames, want) {
@@ -556,4 +558,43 @@ end
 	if r := certs.Ref(tr, "fw.conf", tree.VDOM("root"), "dangling"); !r.Missing {
 		t.Errorf("Ref(dangling) = %+v, want missing", r)
 	}
+}
+
+// TestEd25519OneComponent: a pure Ed25519 certificate's key algorithm and
+// signature algorithm are the same algorithm (id-Ed25519, 1.3.101.112), and
+// Go names both "Ed25519". They must be one component with one definition;
+// two definitions under one bom-ref caused a merge-conflict warning.
+func TestEd25519OneComponent(t *testing.T) {
+	cfg := hdr + `config vpn certificate local
+    edit "Fortinet_SSL_ED25519"
+        set private-key ENC c3ludGhldGljLWVkMjU1MTkta2V5
+        set certificate "` + pemFile(t, "ed25519-self.pem") + `"
+        set source factory
+    next
+end
+`
+	_, inv := extract(t, cfg, now)
+	if len(inv.Warnings) != 0 {
+		t.Errorf("warnings = %+v, want none", inv.Warnings)
+	}
+	c := find(t, inv, local+"Fortinet_SSL_ED25519")
+	pub := byID(t, inv, c.Cert.SubjectPublicKeyRef)
+	if c.Cert.SignatureAlgorithmRef != pub.Mat.AlgorithmRef {
+		t.Errorf("signature algorithm %s and key algorithm %s differ; want the one Ed25519 component", c.Cert.SignatureAlgorithmRef, pub.Mat.AlgorithmRef)
+	}
+	ed := byID(t, inv, pub.Mat.AlgorithmRef)
+	if ed.Name != "Ed25519" || ed.OID != "1.3.101.112" || ed.Alg.Primitive != "signature" || ed.Alg.Curve != "ed25519" || level(ed) != "0" {
+		t.Errorf("Ed25519 = %s %s %+v", ed.Name, ed.OID, *ed.Alg)
+	}
+	if pub.Mat.Size == nil || *pub.Mat.Size != 256 {
+		t.Errorf("public key size = %v, want 256", pub.Mat.Size)
+	}
+	prop(t, c, "cbom-netscan:cert:validity-days", "366")
+}
+
+func level(a *model.Asset) string {
+	if a.Alg.NISTQuantumLevel == nil {
+		return "unset"
+	}
+	return strconv.Itoa(*a.Alg.NISTQuantumLevel)
 }

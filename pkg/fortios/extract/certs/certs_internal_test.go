@@ -6,6 +6,9 @@ package certs
 
 import (
 	"crypto/x509"
+	"reflect"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
@@ -60,6 +63,29 @@ func TestValidityDays(t *testing.T) {
 		c := &x509.Certificate{NotBefore: nb, NotAfter: nb.Add(tc.after)}
 		if got := validityDays(c); got != tc.want {
 			t.Errorf("validityDays(notAfter = notBefore + %v) = %d, want %d", tc.after, got, tc.want)
+		}
+	}
+}
+
+// TestSignatureNamesDoNotShadowKeyNames: key and signature algorithm
+// components share one namespace of bom-refs, so a signature algorithm may
+// share a key algorithm's name only if it is the same algorithm with the
+// same definition (pure Ed25519). Covers every signature algorithm
+// crypto/x509 knows.
+func TestSignatureNamesDoNotShadowKeyNames(t *testing.T) {
+	for sa := x509.SignatureAlgorithm(1); sa < 64; sa++ {
+		name := sa.String()
+		if _, err := strconv.Atoi(name); err == nil {
+			continue // not a known algorithm
+		}
+		got := signatureAlgorithm(&parsed{cert: &x509.Certificate{SignatureAlgorithm: sa}, sigOID: "oid"})
+		switch {
+		case got.name == "Ed25519":
+			if want := ed25519Alg("oid"); !reflect.DeepEqual(got, want) {
+				t.Errorf("Ed25519 signature = %+v, key = %+v; want one definition", got, want)
+			}
+		case strings.HasPrefix(got.name, "RSA-"), strings.HasPrefix(got.name, "ECDSA-P"), strings.HasPrefix(got.name, "OID "):
+			t.Errorf("signature algorithm %v is named %q, like a key algorithm", sa, got.name)
 		}
 	}
 }

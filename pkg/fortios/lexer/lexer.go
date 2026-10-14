@@ -16,8 +16,9 @@
 //	}
 //
 // Token stream contract:
-//   - New reads and validates the #config-version= header line. The parsed
-//     model, version, and build fields are in Lexer.Header.
+//   - New reads and validates the #config-version= header line and the
+//     #conf_file_ver=, #buildno= and #global_vdom= lines after it. The parsed
+//     fields are in Lexer.Header; those lines never appear as tokens.
 //   - Next() returns tokens until TokEOF.
 //   - Comments (# at line start, or after leading whitespace) are returned
 //     as TokComment so callers can skip or inspect them uniformly.
@@ -63,18 +64,42 @@ type Token struct {
 	Line  int    // 1-based source line number
 }
 
-// ConfigHeader holds the parsed fields from the #config-version= header line.
-// This is the first line of every FortiOS standard backup.
+// ConfigHeader holds the parsed header block of a FortiOS standard backup:
+// the #config-version= line plus the #conf_file_ver=, #buildno= and
+// #global_vdom= lines that follow it.
+//
+// The user= field (the exporting admin) is deliberately never stored, and is
+// redacted from error messages, so it cannot leak into a CBOM or a log.
+//
+// Only VDOM mode is interpreted; the other values are kept as raw strings
+// because Fortinet does not document their semantics (research notes §10).
 type ConfigHeader struct {
-	Model   string // FortiGate model identifier, e.g. "FGT80F" or "FGVMK6"
-	Version string // firmware version, e.g. "7.4.12"
-	Build   string // build number, e.g. "0318"
-	Raw     string // the full header line, for evidence and logging
+	Model     string // FortiGate model identifier, e.g. "FGVMH6"
+	Version   string // firmware version, e.g. "7.6.7"
+	Build     string // build number, e.g. "3704"
+	BuildDate string // build date as YYMMDD, e.g. "260601"
+	OpMode    string // opmode= value, e.g. "0"; empty if absent
+	MultiVDOM bool   // true when vdom=1 (multi-VDOM backup), false when vdom=0
+
+	ConfFileVer string // #conf_file_ver= value; empty if absent
+	BuildNo     string // #buildno= value; empty if absent
+	GlobalVDOM  string // #global_vdom= value; empty if absent
 }
 
-// headerRE matches the content that follows "#config-version=".
-// Capture groups: (1) model, (2) version (maj.min.patch), (3) build number.
-var headerRE = regexp.MustCompile(`^([^-]+)-(\d+\.\d+\.\d+)-FW-build(\d+)`)
+// headerRE matches the first colon-separated field after "#config-version=".
+// Capture groups: (1) model, (2) version, (3) build number, (4) build date.
+var headerRE = regexp.MustCompile(`^([^-]+)-(\d+\.\d+\.\d+)-FW-build(\d+)-(\d{6})$`)
+
+var userFieldRE = regexp.MustCompile(`(?i)(user=)[^:]*`)
+
+// redactUser masks the user= value so error messages never expose it.
+func redactUser(s string) string {
+	return userFieldRE.ReplaceAllString(s, "${1}[REDACTED]")
+}
+
+// metaKeys are the header-block lines read after #config-version=, in the
+// order a FortiOS backup writes them.
+var metaKeys = []string{"conf_file_ver", "buildno", "global_vdom"}
 
 // Lexer is a streaming FortiOS config tokenizer.
 type Lexer struct {
@@ -103,8 +128,8 @@ func New(r io.Reader) (*Lexer, error) {
 	return l, nil
 }
 
-// readHeader reads and parses line 1.  On return, l.line == 2 and the reader
-// is positioned at the start of line 2.
+// readHeader reads and parses line 1, then the header-block lines after it.
+// On return, l.line is the number of the first line Next() will read.
 func (l *Lexer) readHeader() error {
 	first, err := l.r.ReadString('\n')
 	if err != nil && err != io.EOF {
@@ -120,25 +145,81 @@ func (l *Lexer) readHeader() error {
 
 	const prefix = "#config-version="
 	if !strings.HasPrefix(first, prefix) {
-		snip := first
+		snip := redactUser(first)
 		if len(snip) > 40 {
 			snip = snip[:40]
 		}
 		return fmt.Errorf("fortios lexer: not a FortiOS config backup (first line: %q)", snip)
 	}
 
-	m := headerRE.FindStringSubmatch(first[len(prefix):])
+	fields := strings.Split(first[len(prefix):], ":")
+	m := headerRE.FindStringSubmatch(fields[0])
 	if m == nil {
-		return fmt.Errorf("fortios lexer: malformed #config-version line: %q", first)
+		return fmt.Errorf("fortios lexer: malformed #config-version line: %q", redactUser(first))
 	}
-	l.Header = &ConfigHeader{
-		Model:   m[1],
-		Version: m[2],
-		Build:   m[3],
-		Raw:     first,
+	h := &ConfigHeader{Model: m[1], Version: m[2], Build: m[3], BuildDate: m[4]}
+
+	vdomSeen := false
+	for _, f := range fields[1:] {
+		k, v, _ := strings.Cut(f, "=")
+		switch k {
+		case "opmode":
+			h.OpMode = v
+		case "vdom":
+			switch v {
+			case "0":
+				h.MultiVDOM = false
+			case "1":
+				h.MultiVDOM = true
+			default:
+				return fmt.Errorf("fortios lexer: #config-version has vdom=%q, want 0 or 1", v)
+			}
+			vdomSeen = true
+		}
+		// user= and unknown fields are skipped; user= is never stored.
 	}
+	if !vdomSeen {
+		return fmt.Errorf("fortios lexer: #config-version line has no vdom= field: %q", redactUser(first))
+	}
+
+	l.Header = h
 	l.line = 2
-	return nil
+	return l.readMetaLines()
+}
+
+// readMetaLines consumes the #conf_file_ver=, #buildno= and #global_vdom=
+// lines that directly follow the header, so they are stored in Header instead
+// of reaching the token stream as comments.  It stops at the first line that
+// is not one of them; anything else is left for Next().
+func (l *Lexer) readMetaLines() error {
+	for {
+		key := ""
+		for _, k := range metaKeys {
+			p := "#" + k + "="
+			if b, _ := l.r.Peek(len(p)); string(b) == p {
+				key = k
+				break
+			}
+		}
+		if key == "" {
+			return nil
+		}
+
+		line, err := l.r.ReadString('\n')
+		if err != nil && err != io.EOF {
+			return fmt.Errorf("fortios lexer line %d: %w", l.line, err)
+		}
+		val := strings.TrimRight(line, "\r\n")[len(key)+2:]
+		switch key {
+		case "conf_file_ver":
+			l.Header.ConfFileVer = val
+		case "buildno":
+			l.Header.BuildNo = val
+		case "global_vdom":
+			l.Header.GlobalVDOM = val
+		}
+		l.line++
+	}
 }
 
 // next returns the next rune, discarding \r so CRLF behaves like LF.

@@ -9,6 +9,7 @@ package lexer_test
 // but contain no real device configuration or credentials.
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -45,40 +46,48 @@ func tokenize(t *testing.T, input string) ([]lexer.Token, *lexer.ConfigHeader) {
 // correct Model, Version, and Build fields across representative firmware strings.
 func TestLexer_Header(t *testing.T) {
 	cases := []struct {
-		name        string
-		input       string
-		wantModel   string
-		wantVersion string
-		wantBuild   string
+		name          string
+		input         string
+		wantModel     string
+		wantVersion   string
+		wantBuild     string
+		wantBuildDate string
+		wantMultiVDOM bool
 	}{
 		{
-			name:        "FGT80F_7.4.12",
-			input:       "#config-version=FGT80F-7.4.12-FW-build0318-220920:opmode=0:vdom=0:user=admin\n",
-			wantModel:   "FGT80F",
-			wantVersion: "7.4.12",
-			wantBuild:   "0318",
+			name:          "FGT80F_7.4.12",
+			input:         "#config-version=FGT80F-7.4.12-FW-build0318-220920:opmode=0:vdom=0:user=admin\n",
+			wantModel:     "FGT80F",
+			wantVersion:   "7.4.12",
+			wantBuild:     "0318",
+			wantBuildDate: "220920",
 		},
 		{
-			name:        "FGVMK6_7.0.8",
-			input:       "#config-version=FGVMK6-7.0.8-FW-build0418-220920:opmode=0:vdom=0:user=admin\n",
-			wantModel:   "FGVMK6",
-			wantVersion: "7.0.8",
-			wantBuild:   "0418",
+			name:          "FGVMK6_7.0.8",
+			input:         "#config-version=FGVMK6-7.0.8-FW-build0418-220920:opmode=0:vdom=0:user=admin\n",
+			wantModel:     "FGVMK6",
+			wantVersion:   "7.0.8",
+			wantBuild:     "0418",
+			wantBuildDate: "220920",
 		},
 		{
-			name:        "FGT200F_8.0.1",
-			input:       "#config-version=FGT200F-8.0.1-FW-build1500-260101:opmode=1:vdom=1:user=sysadmin\n",
-			wantModel:   "FGT200F",
-			wantVersion: "8.0.1",
-			wantBuild:   "1500",
+			name:          "FGT200F_8.0.1_multi_vdom",
+			input:         "#config-version=FGT200F-8.0.1-FW-build1500-260101:opmode=1:vdom=1:user=sysadmin\n",
+			wantModel:     "FGT200F",
+			wantVersion:   "8.0.1",
+			wantBuild:     "1500",
+			wantBuildDate: "260101",
+			wantMultiVDOM: true,
 		},
 		{
-			// No trailing fields after the date — minimal valid header.
-			name:        "minimal_header",
-			input:       "#config-version=FGT60F-7.6.7-FW-build0999-260601\n",
-			wantModel:   "FGT60F",
-			wantVersion: "7.6.7",
-			wantBuild:   "0999",
+			// Field order is not assumed; user= first and opmode= absent.
+			name:          "reordered_fields_no_opmode",
+			input:         "#config-version=FGT60F-7.6.7-FW-build0999-260601:user=admin:vdom=1\n",
+			wantModel:     "FGT60F",
+			wantVersion:   "7.6.7",
+			wantBuild:     "0999",
+			wantBuildDate: "260601",
+			wantMultiVDOM: true,
 		},
 	}
 
@@ -94,7 +103,74 @@ func TestLexer_Header(t *testing.T) {
 			if hd.Build != tc.wantBuild {
 				t.Errorf("Build = %q, want %q", hd.Build, tc.wantBuild)
 			}
+			if hd.BuildDate != tc.wantBuildDate {
+				t.Errorf("BuildDate = %q, want %q", hd.BuildDate, tc.wantBuildDate)
+			}
+			if hd.MultiVDOM != tc.wantMultiVDOM {
+				t.Errorf("MultiVDOM = %v, want %v", hd.MultiVDOM, tc.wantMultiVDOM)
+			}
 		})
+	}
+}
+
+// TestLexer_DeviceHeader uses the #config-version= line from a FortiOS 7.6.7
+// device and the header-block lines that follow it in a backup.  Those lines
+// must land in ConfigHeader, not in the token stream.
+func TestLexer_DeviceHeader(t *testing.T) {
+	input := "#config-version=FGVMH6-7.6.7-FW-build3704-260601:opmode=0:vdom=0:user=admin\n" +
+		"#conf_file_ver=1234567890123456\n" +
+		"#buildno=3704\n" +
+		"#global_vdom=1\n" +
+		"config system global\n" +
+		"end\n"
+
+	toks, hd := tokenize(t, input)
+
+	want := lexer.ConfigHeader{
+		Model:       "FGVMH6",
+		Version:     "7.6.7",
+		Build:       "3704",
+		BuildDate:   "260601",
+		OpMode:      "0",
+		MultiVDOM:   false,
+		ConfFileVer: "1234567890123456",
+		BuildNo:     "3704",
+		GlobalVDOM:  "1",
+	}
+	if *hd != want {
+		t.Errorf("ConfigHeader:\n got %+v\nwant %+v", *hd, want)
+	}
+
+	if got := fmt.Sprintf("%#v", *hd); strings.Contains(got, "admin") {
+		t.Errorf("ConfigHeader stores the user= value: %s", got)
+	}
+
+	if len(toks) == 0 || toks[0].Kind != lexer.TokConfig || toks[0].Line != 5 {
+		t.Fatalf("first token = %v, want TokConfig on line 5 (header block consumed)", toks)
+	}
+	for _, tok := range toks {
+		if tok.Kind == lexer.TokComment {
+			t.Errorf("header-block line leaked into token stream: %+v", tok)
+		}
+	}
+}
+
+// TestLexer_HeaderErrorsRedactUser checks that error messages for bad headers
+// never contain the user= value.
+func TestLexer_HeaderErrorsRedactUser(t *testing.T) {
+	inputs := []string{
+		"#config-version=FGVMH6-7.6.7-FW-build3704:opmode=0:vdom=0:user=alice-secret\n",
+		"#config-version=FGVMH6-7.6.7-FW-build3704-260601:opmode=0:user=alice-secret\n",
+		"#cfg:user=alice-secret\n",
+	}
+	for _, in := range inputs {
+		_, err := lexer.New(strings.NewReader(in))
+		if err == nil {
+			t.Fatalf("New(%q): expected error", in)
+		}
+		if strings.Contains(err.Error(), "alice-secret") {
+			t.Errorf("error leaks user= value: %v", err)
+		}
 	}
 }
 
@@ -125,6 +201,22 @@ func TestLexer_Reject(t *testing.T) {
 			name:    "plain_text",
 			input:   "config system global\n    set hostname fw01\nend\n",
 			wantMsg: "not a FortiOS config backup",
+		},
+		{
+			// Without vdom= the tree layout is unknown, so refuse to guess.
+			name:    "missing_vdom",
+			input:   "#config-version=FGT60F-7.6.7-FW-build0999-260601\n",
+			wantMsg: "no vdom= field",
+		},
+		{
+			name:    "vdom_not_0_or_1",
+			input:   "#config-version=FGT60F-7.6.7-FW-build0999-260601:opmode=0:vdom=2:user=admin\n",
+			wantMsg: `vdom="2", want 0 or 1`,
+		},
+		{
+			name:    "missing_build_date",
+			input:   "#config-version=FGT80F-7.4.12-FW-build0318:opmode=0:vdom=0:user=admin\n",
+			wantMsg: "malformed #config-version line",
 		},
 	}
 

@@ -33,6 +33,7 @@ func FuzzLexer(f *testing.F) {
 		hdr + "set x \"no closing quote",
 		hdr + "set x 'no closing quote",
 		"\xEF\xBB\xBF" + hdr + "config test\nend\n",
+		"#config-version=FGVMH6-7.6.7-FW-build3704-260601:opmode=0:vdom=0:user=admin\n#conf_file_ver=1234567890123456\n#buildno=3704\n#global_vdom=1\nconfig system global\nend\n",
 		"#FGBK|4|FGT80F|7|4|0318|\x00\x01\x02",
 		"",
 	}

@@ -19,6 +19,7 @@ func TestMarkQuantumVulnerable(t *testing.T) {
 	}{
 		{"key-agree", nil, new(int)},
 		{"signature", nil, new(int)},
+		{"pke", nil, new(int)},  // RSA certificate keys
 		{"kem", &three, &three}, // ML-KEM keeps its level
 		{"kem", nil, nil},       // non-NIST PQC KEMs stay unset
 		{"combiner", nil, nil},

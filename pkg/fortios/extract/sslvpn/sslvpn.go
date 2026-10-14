@@ -19,7 +19,8 @@
 //     tls-groups:tls13-only property. tls-groups exists from 7.6.5; earlier
 //     versions report it unknown.
 //   - when a version is unknown (no defaults table), one component without a
-//     version stands for the section.
+//     version stands for the section. It references only the classical
+//     groups, like TLS 1.2, since it cannot claim TLS 1.3.
 //   - servercert links the component to that local certificate.
 //
 // 7.4.12 also has DTLS (dtls-tunnel, dtls-min/max-proto-ver), emitted as
@@ -210,8 +211,10 @@ func (x *extractor) scope(scope tree.Scope, blocks []*tree.Block) {
 			a.Properties[field.Prefix+"cipher-suites"] = field.Unknown
 		}
 		refs := groupRefs
-		if ver != "tls1-3" && ver != "" {
-			// ML-KEM and hybrid groups are defined for TLS 1.3 only.
+		if ver != "tls1-3" {
+			// ML-KEM and hybrid groups are defined for TLS 1.3 only. With the
+			// version unknown, the component may stand for TLS 1.2 or below,
+			// so it does not claim them either.
 			refs = classicalRefs
 			if len(pqNames) > 0 {
 				a.Properties[field.Prefix+"tls-groups:tls13-only"] = strings.Join(pqNames, " ")

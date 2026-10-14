@@ -310,7 +310,7 @@ end
 			// No defaults table: the versions are unknown, so one component
 			// without a version stands for the section.
 			name: "versions_unknown_no_table",
-			cfg:  hdr724 + "config vpn ssl settings\n    set tls-groups X25519\nend\n",
+			cfg:  hdr724 + "config vpn ssl settings\n    set tls-groups X25519-MLKEM768 X25519 ML-KEM768\nend\n",
 			check: func(t *testing.T, inv *model.Inventory) {
 				eq(t, "protocols", protocols(inv), []string{"FortiOS SSL VPN TLS"})
 				a := find(t, inv, "FortiOS SSL VPN TLS")
@@ -320,7 +320,10 @@ end
 				if a.Proto.Version != "" {
 					t.Errorf("version = %q, want empty", a.Proto.Version)
 				}
+				// It may be TLS 1.2, so it references only the classical group,
+				// and lists the TLS 1.3-only ones.
 				eq(t, "refs", names(inv, a.Proto.Refs), []string{"X25519"})
+				prop(t, a, "tls-groups:tls13-only", "X25519-MLKEM768 ML-KEM768")
 				eq(t, "warnings", warnCodes(inv), []string{"no-default-table"})
 			},
 		},

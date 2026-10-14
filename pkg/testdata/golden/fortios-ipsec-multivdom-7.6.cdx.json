@@ -140,7 +140,7 @@
               "crypto/a1a484bf4febb015"
             ],
             "ke": [
-              "crypto/2ba4c253956cc7af"
+              "crypto/a50a0b35fe4af72a"
             ],
             "auth": [
               "crypto/c845b5bb873f85bb"
@@ -259,7 +259,7 @@
               "crypto/a1a484bf4febb015"
             ],
             "ke": [
-              "crypto/01550a6c575baba7"
+              "crypto/c9465c587d430197"
             ],
             "auth": [
               "crypto/186f21b8499460cd"
@@ -356,7 +356,7 @@
               "crypto/a1a484bf4febb015"
             ],
             "ke": [
-              "crypto/01550a6c575baba7"
+              "crypto/c9465c587d430197"
             ]
           }
         }
@@ -398,32 +398,9 @@
       }
     },
     {
-      "bom-ref": "crypto/2ba4c253956cc7af",
+      "bom-ref": "crypto/c9465c587d430197",
       "type": "cryptographic-asset",
-      "name": "DH group 14 (MODP-2048)",
-      "evidence": {
-        "occurrences": [
-          {
-            "location": "ipsec-multivdom-7.6.conf",
-            "line": 38,
-            "symbol": "vpn ipsec phase1-interface/to-dc/dhgrp",
-            "additionalContext": "vdom branch"
-          }
-        ]
-      },
-      "cryptoProperties": {
-        "assetType": "algorithm",
-        "algorithmProperties": {
-          "primitive": "key-agree",
-          "parameterSetIdentifier": "2048",
-          "nistQuantumSecurityLevel": 0
-        }
-      }
-    },
-    {
-      "bom-ref": "crypto/01550a6c575baba7",
-      "type": "cryptographic-asset",
-      "name": "DH group 20 (ECP-384)",
+      "name": "ECP-384",
       "cryptoProperties": {
         "assetType": "algorithm",
         "algorithmProperties": {
@@ -463,6 +440,29 @@
         "assetType": "algorithm",
         "algorithmProperties": {
           "primitive": "mac"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/a50a0b35fe4af72a",
+      "type": "cryptographic-asset",
+      "name": "MODP-2048",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "ipsec-multivdom-7.6.conf",
+            "line": 38,
+            "symbol": "vpn ipsec phase1-interface/to-dc/dhgrp",
+            "additionalContext": "vdom branch"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "key-agree",
+          "parameterSetIdentifier": "2048",
+          "nistQuantumSecurityLevel": 0
         }
       }
     },

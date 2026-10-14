@@ -125,7 +125,7 @@
             "crypto/9ca8e0df5cc22027",
             "crypto/2c2bfdf27d9e64e9",
             "crypto/5fb44467e8c6d82e",
-            "crypto/8f3a85df2e1ce0d6",
+            "crypto/8e3fa1409b3b78a2",
             "crypto/9c866699d93a25e2"
           ]
         }
@@ -238,8 +238,8 @@
               "crypto/5fb5aab4cccac96f"
             ],
             "ke": [
-              "crypto/8f3a85df2e1ce0d6",
-              "crypto/80ae0cb89746d242"
+              "crypto/8e3fa1409b3b78a2",
+              "crypto/3f80bdd194979088"
             ],
             "auth": [
               "crypto/58ff1d1b9d6ad372"
@@ -410,7 +410,7 @@
               "crypto/3f47c257e3ee537e"
             ],
             "ke": [
-              "crypto/80ae0cb89746d242",
+              "crypto/3f80bdd194979088",
               "crypto/0dfe508521cabe86",
               "crypto/e5848a7169d1e7a6",
               "crypto/cb5bec34f690e79a"
@@ -584,7 +584,7 @@
               "crypto/bb5c27757f5502b9"
             ],
             "ke": [
-              "crypto/8f3a85df2e1ce0d6"
+              "crypto/8e3fa1409b3b78a2"
             ]
           }
         }
@@ -683,7 +683,7 @@
               "crypto/46785a03f5a10178"
             ],
             "ke": [
-              "crypto/8f3a85df2e1ce0d6",
+              "crypto/8e3fa1409b3b78a2",
               "crypto/0dfe508521cabe86"
             ]
           }
@@ -818,9 +818,9 @@
       }
     },
     {
-      "bom-ref": "crypto/8f3a85df2e1ce0d6",
+      "bom-ref": "crypto/8e3fa1409b3b78a2",
       "type": "cryptographic-asset",
-      "name": "DH group 20 (ECP-384)",
+      "name": "ECP-384",
       "evidence": {
         "occurrences": [
           {
@@ -845,9 +845,9 @@
       }
     },
     {
-      "bom-ref": "crypto/80ae0cb89746d242",
+      "bom-ref": "crypto/3f80bdd194979088",
       "type": "cryptographic-asset",
-      "name": "DH group 21 (ECP-521)",
+      "name": "ECP-521",
       "evidence": {
         "occurrences": [
           {

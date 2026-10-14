@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"context"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -80,6 +81,44 @@ func TestSharedDefinitionsAgree(t *testing.T) {
 	}
 	if shared < 8 {
 		t.Errorf("only %d algorithms shared; the fixture should share at least 8", shared)
+	}
+}
+
+// TestX25519CountedOnce: the SSH hybrid key exchange's X25519 part and IKE DH
+// group 31 are the same algorithm, so they are one component referenced by
+// both protocols. The SSH method curve25519-sha256@libssh.org (a curve plus a
+// hash) stays its own component.
+func TestX25519CountedOnce(t *testing.T) {
+	tr := parse(t)
+	inv := model.NewInventory()
+	global.Extract(tr, "fw.conf", inv)
+	ipsec.Extract(tr, "fw.conf", inv)
+
+	var x25519 []string
+	var id string
+	for _, a := range inv.Assets {
+		if a.Alg != nil && a.Alg.Curve == "x25519" {
+			x25519 = append(x25519, a.Name)
+		}
+		if a.Name == "X25519" {
+			id = a.ID
+		}
+	}
+	slices.Sort(x25519)
+	if !slices.Equal(x25519, []string{"X25519", "curve25519-sha256@libssh.org"}) {
+		t.Errorf("x25519 components = %v, want [X25519 curve25519-sha256@libssh.org]", x25519)
+	}
+	var ssh, tunnel *model.Asset
+	for _, a := range inv.Assets {
+		switch a.Name {
+		case "FortiOS admin SSH":
+			ssh = a
+		case "FortiOS IPsec phase1-interface t":
+			tunnel = a
+		}
+	}
+	if !slices.Contains(ssh.Proto.Refs, id) || !slices.Contains(tunnel.Proto.IKEKE, id) {
+		t.Errorf("X25519 not referenced by both the SSH hybrid and IKE group 31")
 	}
 }
 

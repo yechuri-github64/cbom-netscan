@@ -112,12 +112,16 @@ func prfAlg(name string) alg { return alg{name, model.Algorithm{Primitive: "kdf"
 
 var nist1, nist3, nist5 = 1, 3, 5
 
+// DH groups are named by algorithm (MODP-2048, ECP-384, X25519), not by IKE
+// group number, so a group that another protocol also uses is one component:
+// the SSH hybrid key exchange's X25519 is IKE group 31. The tunnel's
+// dhgrp:value property keeps the group numbers.
 func modp(n, bits string) alg {
-	return alg{"DH group " + n + " (MODP-" + bits + ")", model.Algorithm{Primitive: "key-agree", ParameterSetIdentifier: bits}}
+	return alg{"MODP-" + bits, model.Algorithm{Primitive: "key-agree", ParameterSetIdentifier: bits}}
 }
 
 func ecdh(n, label, curve string) alg {
-	return alg{"DH group " + n + " (" + label + ")", model.Algorithm{Primitive: "key-agree", Curve: curve}}
+	return alg{label, model.Algorithm{Primitive: "key-agree", Curve: curve}}
 }
 
 // dhGroups follows the IANA IKEv2 group registry as listed in research notes
@@ -138,8 +142,8 @@ var dhGroups = map[string]alg{
 	"28": ecdh("28", "brainpoolP256r1", "brainpoolP256r1"),
 	"29": ecdh("29", "brainpoolP384r1", "brainpoolP384r1"),
 	"30": ecdh("30", "brainpoolP512r1", "brainpoolP512r1"),
-	"31": ecdh("31", "Curve25519", "x25519"),
-	"32": ecdh("32", "Curve448", "x448"),
+	"31": ecdh("31", "X25519", "x25519"),
+	"32": ecdh("32", "X448", "x448"),
 }
 
 func kem(name, psi string, level *int) alg {

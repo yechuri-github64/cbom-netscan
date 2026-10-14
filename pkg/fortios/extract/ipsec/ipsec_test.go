@@ -131,7 +131,7 @@ func TestExtract(t *testing.T) {
 				eq(t, "hq encr", names(inv, hq.Proto.IKEEncr), []string{"AES-256-GCM", "AES-256-CBC"})
 				eq(t, "hq prf", names(inv, hq.Proto.IKEPRF), []string{"PRF-HMAC-SHA384", "PRF-HMAC-SHA256"})
 				eq(t, "hq integ", names(inv, hq.Proto.IKEInteg), []string{"HMAC-SHA256"})
-				eq(t, "hq ke", names(inv, hq.Proto.IKEKE), []string{"DH group 20 (ECP-384)", "DH group 21 (ECP-521)"})
+				eq(t, "hq ke", names(inv, hq.Proto.IKEKE), []string{"ECP-384", "ECP-521"})
 				eq(t, "hq auth", names(inv, hq.Proto.IKEAuth), []string{p1 + "hq-ikev2 pre-shared key"})
 				prop(t, hq, "dhgrp:source", "configured")
 				prop(t, hq, "view", "configured")
@@ -150,12 +150,12 @@ func TestExtract(t *testing.T) {
 				propHas(t, br, "dhgrp:default-note", "20 and 21")
 				propHas(t, br, "dhgrp:default-source", "7.6.7")
 				eq(t, "branch refs", names(inv, br.Proto.Refs), []string{
-					"AES-128-CBC", "3DES-CBC", "HMAC-SHA1", "PRF-HMAC-SHA1", "DH group 20 (ECP-384)", p1 + "branch-ikev1 pre-shared key",
+					"AES-128-CBC", "3DES-CBC", "HMAC-SHA1", "PRF-HMAC-SHA1", "ECP-384", p1 + "branch-ikev1 pre-shared key",
 				})
 				prop(t, find(t, inv, p1+"branch-ikev1 pre-shared key"), "psksecret:form", "plaintext")
 
 				pq := find(t, inv, p1+"pqc-ikev2")
-				eq(t, "pqc ke", names(inv, pq.Proto.IKEKE), []string{"DH group 21 (ECP-521)", "ML-KEM-768", "KYBER-768", "HQC-192"})
+				eq(t, "pqc ke", names(inv, pq.Proto.IKEKE), []string{"ECP-521", "ML-KEM-768", "KYBER-768", "HQC-192"})
 				prop(t, pq, "addke1:value", "ml-kem-768")
 				prop(t, pq, "addke2:value", "kyber768 hqc192")
 				prop(t, pq, "signature-hash-alg:source", "default")
@@ -177,14 +177,14 @@ func TestExtract(t *testing.T) {
 					t.Errorf("ML-KEM-768 marked private-use")
 				}
 				levels := map[string]string{}
-				for _, n := range []string{"DH group 20 (ECP-384)", "DH group 21 (ECP-521)", "KYBER-768", "AES-256-GCM", "HMAC-SHA256"} {
+				for _, n := range []string{"ECP-384", "ECP-521", "KYBER-768", "AES-256-GCM", "HMAC-SHA256"} {
 					levels[n] = "unset"
 					if l := find(t, inv, n).Alg.NISTQuantumLevel; l != nil {
 						levels[n] = fmt.Sprint(*l)
 					}
 				}
 				if fmt.Sprint(levels) != fmt.Sprint(map[string]string{
-					"DH group 20 (ECP-384)": "0", "DH group 21 (ECP-521)": "0", // classical key agreement
+					"ECP-384": "0", "ECP-521": "0", // classical key agreement
 					"KYBER-768": "unset", "AES-256-GCM": "unset", "HMAC-SHA256": "unset",
 				}) {
 					t.Errorf("nistQuantumSecurityLevel = %v", levels)
@@ -204,7 +204,7 @@ func TestExtract(t *testing.T) {
 				hqp2 := find(t, inv, p2+"hq-p2")
 				eq(t, "hq-p2 dependsOn", names(inv, hqp2.DependsOn), []string{p1 + "hq-ikev2"})
 				eq(t, "hq-p2 encr", names(inv, hqp2.Proto.IKEEncr), []string{"AES-256-GCM", "ChaCha20-Poly1305"})
-				eq(t, "hq-p2 ke", names(inv, hqp2.Proto.IKEKE), []string{"DH group 20 (ECP-384)"})
+				eq(t, "hq-p2 ke", names(inv, hqp2.Proto.IKEKE), []string{"ECP-384"})
 				prop(t, hqp2, "pfs:source", "default")
 
 				brp2 := find(t, inv, p2+"branch-p2")
@@ -213,7 +213,7 @@ func TestExtract(t *testing.T) {
 				prop(t, brp2, "pfs:value", "disable")
 
 				pqp2 := find(t, inv, p2+"pqc-p2")
-				eq(t, "pqc-p2 ke", names(inv, pqp2.Proto.IKEKE), []string{"DH group 20 (ECP-384)", "ML-KEM-768"})
+				eq(t, "pqc-p2 ke", names(inv, pqp2.Proto.IKEKE), []string{"ECP-384", "ML-KEM-768"})
 				prop(t, pqp2, "dhgrp:source", "default")
 
 				eq(t, "warnings", warnCodes(inv), []string{"plaintext-psk"})
@@ -224,7 +224,7 @@ func TestExtract(t *testing.T) {
 			cfg:  hdr765 + "config vpn ipsec phase1-interface\n    edit \"t\"\n        set ike-version 2\n        set proposal aes256gcm-prfsha384\n        set addke1 36\n    next\nend\n",
 			check: func(t *testing.T, inv *model.Inventory) {
 				tn := find(t, inv, p1+"t")
-				eq(t, "ke", names(inv, tn.Proto.IKEKE), []string{"DH group 20 (ECP-384)", "ML-KEM-768"})
+				eq(t, "ke", names(inv, tn.Proto.IKEKE), []string{"ECP-384", "ML-KEM-768"})
 				prop(t, tn, "addke1:value", "36")
 				propHas(t, tn, "dhgrp:default-note", "Model-dependent")
 			},
@@ -250,11 +250,11 @@ end
 `,
 			check: func(t *testing.T, inv *model.Inventory) {
 				tn := find(t, inv, p1+"v1")
-				eq(t, "v1 refs", names(inv, tn.Proto.Refs), []string{"AES-256-CBC", "HMAC-SHA256", "PRF-HMAC-SHA256", "DH group 20 (ECP-384)"})
+				eq(t, "v1 refs", names(inv, tn.Proto.Refs), []string{"AES-256-CBC", "HMAC-SHA256", "PRF-HMAC-SHA256", "ECP-384"})
 				prop(t, tn, "addke1:value", "36")
 				prop(t, tn, "addke:applies", "no")
 				p := find(t, inv, p2+"v1-p2")
-				eq(t, "v1-p2 refs", names(inv, p.Proto.Refs), []string{"AES-256-CBC", "HMAC-SHA256", "DH group 20 (ECP-384)"})
+				eq(t, "v1-p2 refs", names(inv, p.Proto.Refs), []string{"AES-256-CBC", "HMAC-SHA256", "ECP-384"})
 				prop(t, p, "addke:applies", "no")
 				for _, a := range inv.Assets {
 					if a.Name == "ML-KEM-768" {
@@ -286,7 +286,7 @@ end
 			check: func(t *testing.T, inv *model.Inventory) {
 				tn := find(t, inv, p1+"t")
 				prop(t, tn, "dhgrp:value", "14")
-				eq(t, "refs", names(inv, tn.Proto.Refs), []string{"AES-256-CBC", "HMAC-SHA256", "PRF-HMAC-SHA256", "DH group 14 (MODP-2048)"})
+				eq(t, "refs", names(inv, tn.Proto.Refs), []string{"AES-256-CBC", "HMAC-SHA256", "PRF-HMAC-SHA256", "MODP-2048"})
 			},
 		},
 		{
@@ -330,7 +330,7 @@ end
 				if len(p.DependsOn) != 0 || len(p.Proto.IKEEncr) != 0 {
 					t.Errorf("orphan phase2: dependsOn %v, encr %v; want neither", p.DependsOn, p.Proto.IKEEncr)
 				}
-				eq(t, "refs", names(inv, p.Proto.Refs), []string{"AES-256-GCM", "DH group 20 (ECP-384)"})
+				eq(t, "refs", names(inv, p.Proto.Refs), []string{"AES-256-GCM", "ECP-384"})
 			},
 		},
 		{

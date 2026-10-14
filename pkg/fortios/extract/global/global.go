@@ -160,7 +160,22 @@ func (x *extractor) ssh() {
 			if h, ok := hybridProp[tok]; ok {
 				a.Properties[field.Prefix+"hybrid"] = h
 			}
+			var parts []string
+			for _, hp := range hybridParts[tok] {
+				pa := hp.alg
+				c := &model.Asset{
+					ID:         model.BOMRef(model.AssetTypeAlgorithm, hp.name, x.r.Loc),
+					Type:       model.AssetTypeAlgorithm,
+					Name:       hp.name,
+					Alg:        &pa,
+					Properties: map[string]string{},
+				}
+				x.r.Record(c, v, false)
+				parts = append(parts, x.inv.Add(c).ID)
+			}
+			a.DependsOn = parts
 			p.Proto.Refs = append(p.Proto.Refs, x.inv.Add(a).ID)
+			p.Proto.Refs = append(p.Proto.Refs, parts...)
 		}
 	}
 	x.inv.Add(p)

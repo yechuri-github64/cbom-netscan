@@ -68,13 +68,33 @@ var sshKex = map[string]model.Algorithm{
 	"ecdh-sha2-nistp256":                   {Primitive: "key-agree", Curve: "secp256r1"},
 	"ecdh-sha2-nistp384":                   {Primitive: "key-agree", Curve: "secp384r1"},
 	"ecdh-sha2-nistp521":                   {Primitive: "key-agree", Curve: "secp521r1"},
-	// Hybrid ML-KEM-768 + X25519. Research notes §7 allow "kem" + props for
-	// hybrids; ML-KEM-768 is NIST level 3 (FIPS 203). See hybridProp.
-	"mlkem768x25519-sha256": {Primitive: "kem", ParameterSetIdentifier: "768", NISTQuantumLevel: &nistLevel3},
+	// Hybrid ML-KEM-768 + X25519: a combiner whose parts are separate
+	// components (research notes §7), see hybridParts.
+	"mlkem768x25519-sha256": {Primitive: "combiner"},
 }
 
 var hybridProp = map[string]string{
 	"mlkem768x25519-sha256": "ML-KEM-768 + X25519",
+}
+
+// hybridPart is one algorithm inside a hybrid key exchange.
+type hybridPart struct {
+	name string
+	alg  model.Algorithm
+}
+
+// hybridParts lists the algorithms a hybrid key exchange combines. Each part
+// is its own component, depended on by the combiner and referenced by the SSH
+// protocol, so a policy looking for a post-quantum KEM finds ML-KEM-768 and
+// one rejecting classical-only key exchange sees it is not classical-only.
+// The ML-KEM-768 name and properties match the IPsec extractor's, so a backup
+// using ML-KEM-768 in both SSH and IPsec yields one component.
+// ML-KEM-768 is NIST level 3 (FIPS 203).
+var hybridParts = map[string][]hybridPart{
+	"mlkem768x25519-sha256": {
+		{"ML-KEM-768", model.Algorithm{Primitive: "kem", ParameterSetIdentifier: "768", NISTQuantumLevel: &nistLevel3}},
+		{"X25519", model.Algorithm{Primitive: "key-agree", Curve: "x25519"}},
+	},
 }
 
 var sshMac = map[string]model.Algorithm{

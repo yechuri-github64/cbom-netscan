@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/global"
+	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/ipsec"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/tree"
 	"github.com/yechuri-github64/cbom-netscan/pkg/model"
 )
@@ -71,6 +72,33 @@ func prop(t *testing.T, inv *model.Inventory, name, key, want string) {
 	}
 	if got, ok := a.Properties["cbom-netscan:fortios:"+key]; !ok || got != want {
 		t.Errorf("%s: property %s = %q (present %v), want %q", name, key, got, ok, want)
+	}
+}
+
+// TestHybridSharesMLKEMWithIPsec: ML-KEM-768 inside the SSH hybrid and in an
+// IPsec addke is one component, referenced by both protocols.
+func TestHybridSharesMLKEMWithIPsec(t *testing.T) {
+	tr, err := tree.Parse(strings.NewReader(hdr801 + "config vpn ipsec phase1-interface\n    edit \"t\"\n        set ike-version 2\n        set proposal aes256gcm-prfsha384\n        set addke1 ml-kem-768\n    next\nend\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	inv := model.NewInventory()
+	global.Extract(tr, "fw.conf", inv)
+	ipsec.Extract(tr, "fw.conf", inv)
+
+	var id string
+	n := 0
+	for _, a := range inv.Assets {
+		if a.Name == "ML-KEM-768" {
+			id, n = a.ID, n+1
+		}
+	}
+	if n != 1 {
+		t.Fatalf("ML-KEM-768 components = %d, want 1", n)
+	}
+	ssh, tunnel := find(inv, "FortiOS admin SSH"), find(inv, "FortiOS IPsec phase1-interface t")
+	if !slices.Contains(ssh.Proto.Refs, id) || !slices.Contains(tunnel.Proto.IKEKE, id) {
+		t.Errorf("ML-KEM-768 %s not referenced by both: ssh %v, ipsec ke %v", id, ssh.Proto.Refs, tunnel.Proto.IKEKE)
 	}
 }
 
@@ -168,11 +196,38 @@ func TestExtract(t *testing.T) {
 				if a == nil {
 					t.Fatalf("hybrid kex missing; have %v", names(inv))
 				}
-				if a.Alg.Primitive != "kem" || a.Alg.NISTQuantumLevel == nil || *a.Alg.NISTQuantumLevel != 3 {
-					t.Errorf("hybrid kex alg = %+v", a.Alg)
+				if a.Alg.Primitive != "combiner" || a.Alg.NISTQuantumLevel != nil {
+					t.Errorf("hybrid kex alg = %+v, want a combiner with no level of its own", a.Alg)
 				}
 				prop(t, inv, "mlkem768x25519-sha256", "hybrid", "ML-KEM-768 + X25519")
 				prop(t, inv, "mlkem768x25519-sha256", "defaults-table", "8.0")
+
+				byID := map[string]*model.Asset{}
+				for _, x := range inv.Assets {
+					byID[x.ID] = x
+				}
+				var parts []string
+				for _, id := range a.DependsOn {
+					parts = append(parts, byID[id].Name)
+				}
+				if !slices.Equal(parts, []string{"ML-KEM-768", "X25519"}) {
+					t.Errorf("hybrid dependsOn = %v, want [ML-KEM-768 X25519]", parts)
+				}
+				if k := find(inv, "ML-KEM-768"); k == nil || k.Alg.Primitive != "kem" || k.Alg.NISTQuantumLevel == nil || *k.Alg.NISTQuantumLevel != 3 {
+					t.Errorf("ML-KEM-768 part = %+v", k)
+				}
+				if x := find(inv, "X25519"); x == nil || x.Alg.Primitive != "key-agree" || x.Alg.Curve != "x25519" {
+					t.Errorf("X25519 part = %+v", x)
+				}
+				refs := map[string]bool{}
+				for _, id := range find(inv, "FortiOS admin SSH").Proto.Refs {
+					refs[byID[id].Name] = true
+				}
+				for _, want := range []string{"mlkem768x25519-sha256", "ML-KEM-768", "X25519"} {
+					if !refs[want] {
+						t.Errorf("SSH protocol does not reference %s", want)
+					}
+				}
 			},
 		},
 		{

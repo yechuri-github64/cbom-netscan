@@ -277,7 +277,10 @@ end
 					}
 				}
 				prop(t, find(t, inv, p2+"orphan"), "addke:applies", "unknown")
-				eq(t, "warnings", warnCodes(inv), []string{"unknown-phase1", "no-default-table"})
+				eq(t, "warnings", warnCodes(inv), []string{"addke-applies-unknown", "unknown-phase1", "addke-applies-unknown", "no-default-table"})
+				if w := inv.Warnings[0]; w.Ev.Line != 5 || !strings.Contains(w.Message, p1+"u sets addke but its IKE version is unknown") {
+					t.Errorf("addke-applies-unknown warning = %+v; want the tunnel name and the addke1 line (5)", w)
+				}
 			},
 		},
 		{

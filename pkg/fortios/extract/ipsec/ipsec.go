@@ -247,6 +247,13 @@ func (x *extractor) addke(en entry, a *model.Asset, rs *refs, applies string) {
 		case field.Unknown:
 			a.Properties[field.Prefix+"addke:applies"] = field.Unknown
 			a.Properties[field.Prefix+"addke:applies-reason"] = "the IKE version is unknown, and additional key exchanges apply only to IKEv2; they are not counted"
+			// Warned as well: if the tunnel really is IKEv2, it is a
+			// post-quantum key exchange the CBOM is not crediting.
+			x.inv.AddWarning(model.Warning{
+				Code:    "addke-applies-unknown",
+				Message: en.label + " sets addke but its IKE version is unknown, so the additional key exchanges are not counted; set ike-version or use a FortiOS version with a defaults table",
+				Ev:      model.Evidence{Location: x.r.Loc, Line: line, Symbol: en.section + "/" + en.e.Name + "/addke", Context: en.ctx},
+			})
 		}
 		return
 	}

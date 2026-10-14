@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 contributors to cbom-netscan
+# SPDX-License-Identifier: Apache-2.0
+
+# Proposes updates to the SHA-pinned actions in .github/workflows.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

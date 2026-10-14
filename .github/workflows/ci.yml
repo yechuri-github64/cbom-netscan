@@ -1,7 +1,13 @@
 # SPDX-FileCopyrightText: 2026 contributors to cbom-netscan
 # SPDX-License-Identifier: Apache-2.0
 
-# CI: format check, vet, race-enabled tests, and golden-file schema validation.
+# CI: module integrity, format, vet, static analysis, vulnerability scan,
+# race-enabled tests, fuzz smoke runs, REUSE licensing, and golden-file schema
+# validation.
+#
+# Third-party actions are pinned to full commit SHAs (the tag is in the
+# comment) so a moved or compromised tag cannot change what runs here.
+# Dependabot (.github/dependabot.yml) proposes updates to these pins.
 name: ci
 
 on:
@@ -15,13 +21,21 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # persist-credentials: false keeps the job token out of .git/config,
+      # since no later step needs to push.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
       # go-version-file means CI always uses the same Go version declared in
       # go.mod, so there's no second place to keep it in sync.
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
           go-version-file: go.mod
+
+      # Checks that downloaded modules match go.sum.
+      - name: go mod verify
+        run: go mod verify
 
       # gofmt -l prints files that aren't formatted; "test -z" fails the step
       # if there are any.  This catches style drift before review.
@@ -32,6 +46,15 @@ jobs:
       # mismatched Printf format verbs, unreachable code, suspicious lock copies).
       - name: vet
         run: go vet ./...
+
+      # Tools run at pinned versions through go run, so nothing is installed
+      # and the version is reproducible. staticcheck v0.8.2 is release 2026.2.2.
+      - name: staticcheck
+        run: go run honnef.co/go/tools/cmd/staticcheck@v0.8.2 ./...
+
+      # Reports known vulnerabilities only in code the module actually calls.
+      - name: govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
 
       # -race enables the Go race detector.  It slows tests ~5x but catches
       # data races that only show up under concurrent execution.
@@ -48,14 +71,19 @@ jobs:
       - name: fuzz tree
         run: go test -run='^$' -fuzz=FuzzParse -fuzztime=20s ./pkg/fortios/tree/
 
+      # Every file must have a license and copyright (REUSE spec 3.x).
+      - name: reuse lint
+        uses: fsfe/reuse-action@676e2d560c9a403aa252096d99fcab3e1132b0f5 # v6.0.0
+
       # Download cyclonedx-cli and validate every golden file in pkg/testdata/golden/
       # against the official CycloneDX 1.6 JSON schema.  This catches emitter bugs
       # that our own assertions might miss (e.g. a required field going missing).
       # The SHA-256 is verified before chmod+x so a tampered binary is rejected
-      # before it can execute.
+      # before it can execute. -f makes an HTTP error fail here instead of saving
+      # an error page that only the checksum would catch.
       - name: validate golden files
         run: |
-          curl -sL https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.33.1/cyclonedx-linux-x64 \
+          curl -fsSL --retry 3 https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.33.1/cyclonedx-linux-x64 \
             -o /usr/local/bin/cyclonedx-cli
           echo "bfc8b2538da86fe239bc53658bbb63c1c8c510a293c1e6891aa5bea5d3c58746  /usr/local/bin/cyclonedx-cli" \
             | sha256sum --check --strict

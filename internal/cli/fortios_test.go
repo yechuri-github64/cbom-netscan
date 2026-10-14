@@ -378,6 +378,34 @@ func TestFortiOS_SharedWarningPrintedOnce(t *testing.T) {
 	}
 }
 
+func TestFortiOS_MaxSize(t *testing.T) {
+	dir := t.TempDir()
+	hdr := "#config-version=FGVMH6-7.6.7-FW-build3704-260601:opmode=0:vdom=0:user=admin\n"
+	big := filepath.Join(dir, "big.conf")
+	writeFile(t, big, hdr+strings.Repeat("# c3ludGhldGlj padding line for the size test\n", (1<<20)/40))
+	out := filepath.Join(dir, "big.cdx.json")
+
+	_, stderr, err := run(t, "fortios", big, "--max-size", "1", "-o", out)
+	if err == nil || !strings.Contains(err.Error(), "is larger than --max-size (1 MiB)") {
+		t.Fatalf("err = %v, want a --max-size error", err)
+	}
+	if strings.Contains(err.Error()+stderr, "c3ludGhldGlj") {
+		t.Errorf("error echoes file content: %v", err)
+	}
+	if _, statErr := os.Stat(out); statErr == nil {
+		t.Errorf("output written despite the size error")
+	}
+
+	small := filepath.Join(dir, "small.conf")
+	writeFile(t, small, hdr+"config system global\nend\n")
+	if _, _, err := run(t, "fortios", small, "--max-size", "1"); err != nil {
+		t.Errorf("small backup under --max-size: %v", err)
+	}
+	if _, _, err := run(t, "fortios", small, "--max-size", "0"); err == nil || !strings.Contains(err.Error(), "--max-size must be a positive") {
+		t.Errorf("--max-size 0: err = %v, want a validation error", err)
+	}
+}
+
 func TestRootHelp_OnlyExistingFeatures(t *testing.T) {
 	stdout, _, err := run(t, "--help")
 	if err != nil {

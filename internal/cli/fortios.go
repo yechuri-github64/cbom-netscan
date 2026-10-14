@@ -28,8 +28,8 @@ import (
 )
 
 func newFortiOSCmd(version string) *cobra.Command {
-	var out string
-	var force, reproducible bool
+	var o fortiosOpts
+	o.version = version
 
 	cmd := &cobra.Command{
 		Use:   "fortios <backup.conf>",
@@ -54,16 +54,28 @@ same backup produce byte-identical output.`,
   cbom-netscan fortios fw01.conf > fw01.cdx.json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runFortiOS(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), args[0], out, force, reproducible, version)
+			return runFortiOS(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), args[0], o)
 		},
 	}
-	cmd.Flags().StringVarP(&out, "output", "o", "", "write the CBOM to this file instead of stdout")
-	cmd.Flags().BoolVar(&force, "force", false, "overwrite the output file if it already exists")
-	cmd.Flags().BoolVar(&reproducible, "reproducible", false, "derive serialNumber from the input and tool version; timestamp from SOURCE_DATE_EPOCH or omitted")
+	cmd.Flags().StringVarP(&o.out, "output", "o", "", "write the CBOM to this file instead of stdout")
+	cmd.Flags().BoolVar(&o.force, "force", false, "overwrite the output file if it already exists")
+	cmd.Flags().BoolVar(&o.reproducible, "reproducible", false, "derive serialNumber from the input and tool version; timestamp from SOURCE_DATE_EPOCH or omitted")
+	cmd.Flags().Int64Var(&o.maxSizeMiB, "max-size", 256, "refuse backups larger than this many MiB")
 	return cmd
 }
 
-func runFortiOS(ctx context.Context, stdout, stderr io.Writer, in, out string, force, reproducible bool, version string) error {
+type fortiosOpts struct {
+	out                 string
+	force, reproducible bool
+	maxSizeMiB          int64
+	version             string
+}
+
+func runFortiOS(ctx context.Context, stdout, stderr io.Writer, in string, o fortiosOpts) error {
+	out, force, reproducible, version := o.out, o.force, o.reproducible, o.version
+	if o.maxSizeMiB <= 0 {
+		return fmt.Errorf("--max-size must be a positive number of MiB, got %d", o.maxSizeMiB)
+	}
 	if out != "" {
 		if err := checkOutput(in, out, force); err != nil {
 			return err
@@ -81,7 +93,7 @@ func runFortiOS(ctx context.Context, stdout, stderr io.Writer, in, out string, f
 
 	// The whole backup is read once so the bytes that are hashed for the
 	// reproducible serial are exactly the bytes that are parsed.
-	data, err := os.ReadFile(in)
+	data, err := readLimited(in, o.maxSizeMiB)
 	if err != nil {
 		return err
 	}
@@ -123,6 +135,31 @@ func runFortiOS(ctx context.Context, stdout, stderr io.Writer, in, out string, f
 		return err
 	}
 	return writeOutput(out, buf.Bytes(), force)
+}
+
+// readLimited reads the whole backup but refuses one larger than maxMiB, so a
+// wrong file (a disk image or a pcap) fails fast instead of being lexed. A
+// regular file is checked by size before reading; anything else (a pipe) is
+// read through a limit. The error never includes file content.
+func readLimited(path string, maxMiB int64) ([]byte, error) {
+	limit := maxMiB << 20
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	tooBig := fmt.Errorf("%s is larger than --max-size (%d MiB)", path, maxMiB)
+	if fi, err := f.Stat(); err == nil && fi.Mode().IsRegular() && fi.Size() > limit {
+		return nil, tooBig
+	}
+	data, err := io.ReadAll(io.LimitReader(f, limit+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(data)) > limit {
+		return nil, tooBig
+	}
+	return data, nil
 }
 
 // sourceDateEpoch reads SOURCE_DATE_EPOCH (reproducible-builds.org). ok is

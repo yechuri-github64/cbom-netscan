@@ -7,14 +7,25 @@ package certs
 import "strings"
 
 // pemLabel returns the label of a PEM BEGIN line, "X" in "-----BEGIN X-----",
-// or "" if line is not a BEGIN line. Only that one line is looked at; the
-// base64 body that follows is never read here.
+// or "" if line is not a BEGIN line. Text after the closing dashes is
+// ignored, so trailing characters do not hide a key. Only that one line is
+// looked at; the base64 body that follows is never read here.
 func pemLabel(line string) string {
-	line = strings.TrimSpace(line)
-	if !strings.HasPrefix(line, "-----BEGIN ") || !strings.HasSuffix(line, "-----") || len(line) < len("-----BEGIN -----") {
+	rest, ok := strings.CutPrefix(strings.TrimSpace(line), "-----BEGIN ")
+	if !ok {
 		return ""
 	}
-	return line[len("-----BEGIN ") : len(line)-len("-----")]
+	label, _, ok := strings.Cut(rest, "-----")
+	if !ok {
+		return ""
+	}
+	return label
+}
+
+// isEndLine reports whether line ends a block with this label; like
+// pemLabel, it ignores text after the closing dashes.
+func isEndLine(line, label string) bool {
+	return strings.HasPrefix(strings.TrimSpace(line), "-----END "+label+"-----")
 }
 
 // firstLine is text up to its first newline.
@@ -89,7 +100,7 @@ func scanCertField(text string) certField {
 		}
 		end := -1
 		for j := i + 1; j < len(lines); j++ {
-			if strings.TrimSpace(lines[j]) == "-----END "+label+"-----" {
+			if isEndLine(lines[j], label) {
 				end = j
 				break
 			}

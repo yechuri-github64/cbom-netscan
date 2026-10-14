@@ -103,7 +103,7 @@ func FuzzScanCertField(f *testing.F) {
 			return
 		}
 		lines := strings.Split(c.cert, "\n")
-		if pemLabel(lines[0]) != "CERTIFICATE" || strings.TrimSpace(lines[len(lines)-1]) != "-----END CERTIFICATE-----" {
+		if pemLabel(lines[0]) != "CERTIFICATE" || !isEndLine(lines[len(lines)-1], "CERTIFICATE") {
 			t.Fatalf("certificate text is not one complete CERTIFICATE block")
 		}
 	})
@@ -127,5 +127,29 @@ func TestDocumentedCountingExamples(t *testing.T) {
 	start := time.Date(2026, 3, 14, 23, 59, 59, 0, time.UTC)
 	if max, rule := cabfMaxDays(start); max != 398 || rule != "notBefore before 2026-03-15" {
 		t.Errorf("cabfMaxDays(%s) = %d %q", start, max, rule)
+	}
+}
+
+// TestPEMLabel: the label is read from a BEGIN line even with text after the
+// closing dashes; anything else is not a BEGIN line.
+func TestPEMLabel(t *testing.T) {
+	for line, want := range map[string]string{
+		"-----BEGIN PRIVATE KEY-----":            "PRIVATE KEY",
+		"  -----BEGIN CERTIFICATE-----\r":        "CERTIFICATE",
+		"-----BEGIN PRIVATE KEY----- trailing":   "PRIVATE KEY",
+		"-----BEGIN RSA PRIVATE KEY-----x":       "RSA PRIVATE KEY",
+		"-----BEGIN PRIVATE KEY":                 "",
+		"x -----BEGIN PRIVATE KEY-----":          "",
+		"-----BEGIN -----":                       "",
+		"-----END PRIVATE KEY-----":              "",
+		"c3ludGhldGlj":                           "",
+		"-----BEGIN ENCRYPTED PRIVATE KEY-----z": "ENCRYPTED PRIVATE KEY",
+	} {
+		if got := pemLabel(line); got != want {
+			t.Errorf("pemLabel(%q) = %q, want %q", line, got, want)
+		}
+	}
+	if !isEndLine("-----END PRIVATE KEY----- trailing", "PRIVATE KEY") || isEndLine("-----END RSA PRIVATE KEY-----", "PRIVATE KEY") {
+		t.Errorf("isEndLine does not match the END line with trailing text, or matches another label")
 	}
 }

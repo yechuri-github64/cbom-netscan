@@ -617,6 +617,8 @@ func TestPrivateKeyForms(t *testing.T) {
 		{`"-----BEGIN RSA PRIVATE KEY-----` + body + `-----END RSA PRIVATE KEY-----"`, "pem-encryption-unknown", "may be unencrypted"},
 		{`"-----BEGIN EC PRIVATE KEY-----` + body + `-----END EC PRIVATE KEY-----"`, "pem-encryption-unknown", "may be unencrypted"},
 		{`"-----BEGIN OPENSSH PRIVATE KEY-----` + body + `-----END OPENSSH PRIVATE KEY-----"`, "pem-encryption-unknown", "may be unencrypted"},
+		// Text after the BEGIN line's closing dashes does not hide the key.
+		{`"-----BEGIN PRIVATE KEY----- trailing` + body + `-----END PRIVATE KEY-----"`, "plaintext-pem", "is an unencrypted PEM key"},
 		// Leading blank lines and spaces are skipped before the BEGIN line.
 		{`"` + "\n\n  \t" + `-----BEGIN PRIVATE KEY-----` + body + `-----END PRIVATE KEY-----"`, "plaintext-pem", "is an unencrypted PEM key"},
 		{`"` + "\r\n" + `-----BEGIN ENCRYPTED PRIVATE KEY-----` + body + `-----END ENCRYPTED PRIVATE KEY-----"`, "encrypted-pem", ""},
@@ -676,6 +678,9 @@ func TestCertificateFieldBlocks(t *testing.T) {
 		{"two_keys_around_cert", rsaKey + "\n" + gw + "\n" + key, "CN=gw.example.net,O=Example Lab", "2", "", ""},
 		{"chain_first_cert_parsed", vpn + "\n" + gw, "CN=vpn.example.com,O=Example Lab", "", "1", ""},
 		{"csr_then_cert", csr + "\n" + gw, "CN=gw.example.net,O=Example Lab", "", "", "1"},
+		// BEGIN and END lines with trailing text are still recognised: the
+		// key is counted and the certificate after it is parsed.
+		{"trailing_text_on_key_lines", "-----BEGIN PRIVATE KEY-----junk\nc3ludGhldGlj\n-----END PRIVATE KEY----- junk\n" + gw, "CN=gw.example.net,O=Example Lab", "1", "", ""},
 		// An unterminated key block swallows the rest of the field.
 		{"unterminated_key", "-----BEGIN PRIVATE KEY-----\nc3ludGhldGlj\n" + gw, "", "1", "", ""},
 	} {

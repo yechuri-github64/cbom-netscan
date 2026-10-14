@@ -363,9 +363,19 @@ func buildEvidence(evs []model.Evidence) *cdx.Evidence {
 	}
 	occs := make([]cdx.EvidenceOccurrence, 0, len(evs))
 	for _, ev := range evs {
-		if ev.Location != "" {
-			occs = append(occs, cdx.EvidenceOccurrence{Location: ev.Location})
+		if ev.Location == "" {
+			continue
 		}
+		occ := cdx.EvidenceOccurrence{
+			Location:          ev.Location,
+			Symbol:            ev.Symbol,
+			AdditionalContext: ev.Context,
+		}
+		if ev.Line > 0 {
+			line := ev.Line
+			occ.Line = &line
+		}
+		occs = append(occs, occ)
 	}
 	if len(occs) == 0 {
 		return nil

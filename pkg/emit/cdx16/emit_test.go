@@ -203,6 +203,47 @@ func TestGoldenCryptoAssetType(t *testing.T) {
 	}
 }
 
+// TestEmit_EvidenceOccurrence checks that evidence line and symbol reach
+// evidence.occurrences, and that line is omitted when unknown (0).
+func TestEmit_EvidenceOccurrence(t *testing.T) {
+	inv := model.NewInventory()
+	inv.Add(&model.Asset{
+		Type: model.AssetTypeAlgorithm,
+		Name: "aes256-ctr",
+		Alg:  &model.Algorithm{Primitive: "block-cipher", Mode: "ctr"},
+		Evidence: []model.Evidence{
+			{Location: "fw.conf", Line: 12, Symbol: "system ssh-config/ssh-enc-algo"},
+			{Location: "other.conf"},
+		},
+	})
+	t.Setenv("SOURCE_DATE_EPOCH", "1791676800")
+
+	var buf bytes.Buffer
+	if err := (cdx16.Emitter{}).Emit(context.Background(), &buf, inv, model.Meta{ToolVersion: "test"}); err != nil {
+		t.Fatalf("Emit: %v", err)
+	}
+	var bom struct {
+		Components []struct {
+			Evidence struct {
+				Occurrences []map[string]any `json:"occurrences"`
+			} `json:"evidence"`
+		} `json:"components"`
+	}
+	if err := json.Unmarshal(buf.Bytes(), &bom); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	occs := bom.Components[0].Evidence.Occurrences
+	if len(occs) != 2 {
+		t.Fatalf("occurrences = %v, want 2", occs)
+	}
+	assertEqual(t, "occ[0].location", "fw.conf", occs[0]["location"])
+	assertEqual(t, "occ[0].line", float64(12), occs[0]["line"])
+	assertEqual(t, "occ[0].symbol", "system ssh-config/ssh-enc-algo", occs[0]["symbol"])
+	if _, ok := occs[1]["line"]; ok {
+		t.Errorf("occ[1] has a line although Evidence.Line is 0: %v", occs[1])
+	}
+}
+
 // assertEqual is a tiny assertion helper that avoids importing testify for now.
 func assertEqual(t *testing.T, field string, want, got any) {
 	t.Helper()

@@ -192,6 +192,44 @@ func New(r io.Reader) (*Lexer, error) {
 
 // readHeader reads and parses line 1, then the header-block lines after it.
 // On return, l.line is the number of the first line Next() will read.
+var yamlKeyRE = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_-]*:\s*$`)
+
+// classify names what a rejected file looks like from its first line. The
+// result is one of a fixed set of phrases and never contains input bytes.
+func (l *Lexer) classify(first string) string {
+	t := strings.TrimSpace(first)
+	switch {
+	case t == "" && l.restIsBlank():
+		return "empty file"
+	case strings.HasPrefix(t, "#FGBK"):
+		return "encrypted FortiOS backup (#FGBK)"
+	case t == "---" || strings.HasPrefix(t, "--- ") || strings.HasPrefix(t, "%YAML") || yamlKeyRE.MatchString(t):
+		return "looks like YAML"
+	case strings.HasPrefix(t, "-----BEGIN "),
+		strings.HasPrefix(t, "ssh-rsa "), strings.HasPrefix(t, "ssh-ed25519 "),
+		strings.HasPrefix(t, "ecdsa-sha2-"), strings.HasPrefix(t, "PuTTY-User-Key-File-"):
+		return "looks like a PEM/key file"
+	default:
+		return "unrecognised format"
+	}
+}
+
+// restIsBlank reports whether everything after the first line is whitespace.
+// It is only called while rejecting a file, so consuming the reader is fine.
+func (l *Lexer) restIsBlank() bool {
+	for {
+		b, err := l.r.ReadByte()
+		if err != nil {
+			return true
+		}
+		switch b {
+		case ' ', '\t', '\r', '\n':
+		default:
+			return false
+		}
+	}
+}
+
 func (l *Lexer) readHeader() error {
 	first, err := l.r.ReadString('\n')
 	if err != nil && err != io.EOF {
@@ -207,11 +245,9 @@ func (l *Lexer) readHeader() error {
 
 	const prefix = "#config-version="
 	if !strings.HasPrefix(first, prefix) {
-		snip := redactPrivateKey(redactUser(first))
-		if len(snip) > 40 {
-			snip = snip[:40]
-		}
-		return fmt.Errorf("fortios lexer: not a FortiOS config backup (first line: %q)", snip)
+		// Only a classification is reported, never input bytes: a file passed
+		// by mistake may be a private key or a credentials file.
+		return fmt.Errorf("fortios lexer: not a FortiOS config backup: %s", l.classify(first))
 	}
 
 	fields := strings.Split(first[len(prefix):], ":")

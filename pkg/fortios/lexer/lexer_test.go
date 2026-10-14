@@ -346,6 +346,41 @@ func TestLexer_PrivateEncryptionKeyNeverLeaks(t *testing.T) {
 
 // TestLexer_Reject verifies that New returns an error for inputs that are not
 // FortiOS standard backups: encrypted blobs, YAML exports, and empty files.
+// TestLexer_RejectNeverEchoesInput feeds files passed by mistake, led by a
+// fake PEM private key, and fails if any 6-byte run of the input appears in
+// the error. A classification phrase is all the error may contain.
+func TestLexer_RejectNeverEchoesInput(t *testing.T) {
+	const fakeKey = "-----BEGIN OPENSSH PRIVATE KEY-----\n" +
+		"c3ludGhldGljLWZha2UtcHJpdmF0ZS1rZXktbGluZS0x\n" +
+		"c3ludGhldGljLWZha2UtcHJpdmF0ZS1rZXktbGluZS0y\n" +
+		"-----END OPENSSH PRIVATE KEY-----\n"
+
+	inputs := map[string]string{
+		"pem_private_key":       fakeKey,
+		"pem_private_key_bom":   "\xEF\xBB\xBF" + fakeKey,
+		"credentials_file":      "API_TOKEN=c3ludGhldGljLXRva2Vu\n",
+		"short_secret_one_line": "hunter2-c3ludGhldGlj",
+	}
+	for name, in := range inputs {
+		t.Run(name, func(t *testing.T) {
+			_, err := lexer.New(strings.NewReader(in))
+			if err == nil {
+				t.Fatal("New: expected error")
+			}
+			msg := err.Error()
+			for i := 0; i+6 <= len(in); i++ {
+				frag := in[i : i+6]
+				if strings.TrimSpace(frag) != frag {
+					continue // whitespace-edged runs can match ordinary prose
+				}
+				if strings.Contains(msg, frag) {
+					t.Fatalf("error %q contains input bytes %q", msg, frag)
+				}
+			}
+		})
+	}
+}
+
 func TestLexer_Reject(t *testing.T) {
 	cases := []struct {
 		name    string
@@ -355,22 +390,47 @@ func TestLexer_Reject(t *testing.T) {
 		{
 			name:    "encrypted_blob_FGBK",
 			input:   "#FGBK|4|FGT80F|7|4|0318|\x00\x01\x02",
-			wantMsg: "not a FortiOS config backup",
+			wantMsg: "not a FortiOS config backup: encrypted FortiOS backup (#FGBK)",
 		},
 		{
 			name:    "yaml_export",
 			input:   "---\nfortigate:\n  hostname: fw01\n",
-			wantMsg: "not a FortiOS config backup",
+			wantMsg: "not a FortiOS config backup: looks like YAML",
+		},
+		{
+			name:    "yaml_without_document_marker",
+			input:   "fortigate:\n  hostname: fw01\n",
+			wantMsg: "not a FortiOS config backup: looks like YAML",
 		},
 		{
 			name:    "empty_file",
 			input:   "",
-			wantMsg: "not a FortiOS config backup",
+			wantMsg: "not a FortiOS config backup: empty file",
+		},
+		{
+			name:    "whitespace_only",
+			input:   "\n  \r\n\t\n",
+			wantMsg: "not a FortiOS config backup: empty file",
+		},
+		{
+			name:    "blank_first_line_then_content",
+			input:   "\nconfig system global\nend\n",
+			wantMsg: "not a FortiOS config backup: unrecognised format",
+		},
+		{
+			name:    "pem_certificate",
+			input:   "-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----\n",
+			wantMsg: "not a FortiOS config backup: looks like a PEM/key file",
+		},
+		{
+			name:    "openssh_public_key",
+			input:   "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBogus comment\n",
+			wantMsg: "not a FortiOS config backup: looks like a PEM/key file",
 		},
 		{
 			name:    "plain_text",
 			input:   "config system global\n    set hostname fw01\nend\n",
-			wantMsg: "not a FortiOS config backup",
+			wantMsg: "not a FortiOS config backup: unrecognised format",
 		},
 	}
 

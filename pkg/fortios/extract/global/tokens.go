@@ -124,7 +124,7 @@ var sshHsk = map[string]model.Algorithm{
 	"ecdsa-sha2-nistp256": {Primitive: "signature", Curve: "secp256r1"},
 	"rsa-sha2-256":        {Primitive: "signature"},
 	"rsa-sha2-512":        {Primitive: "signature"},
-	"ssh-ed25519":         {Primitive: "signature"},
+	"ssh-ed25519":         {Primitive: "signature", Curve: "ed25519"},
 }
 
 var (

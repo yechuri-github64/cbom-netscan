@@ -197,6 +197,13 @@ func TestExtract(t *testing.T) {
 						t.Errorf("%s: nistQuantumSecurityLevel = %v, want %d (classical public-key)", name, l, want)
 					}
 				}
+				// SSH host-key algorithms carry their curve, like the
+				// certificate key algorithms do.
+				for name, curve := range map[string]string{"ssh-ed25519": "ed25519", "ecdsa-sha2-nistp256": "secp256r1"} {
+					if a := find(inv, name).Alg; a.Primitive != "signature" || a.Curve != curve {
+						t.Errorf("%s: %+v, want signature on curve %s", name, *a, curve)
+					}
+				}
 				prop(t, inv, ssh, "ssh-mac-algo:value", "hmac-sha2-256 hmac-sha2-256-etm@openssh.com hmac-sha2-512 hmac-sha2-512-etm@openssh.com")
 				for _, name := range []string{"AES-256-CTR", "HMAC-SHA256"} {
 					if l := find(inv, name).Alg.NISTQuantumLevel; l != nil {

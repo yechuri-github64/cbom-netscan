@@ -1359,6 +1359,7 @@
         "assetType": "algorithm",
         "algorithmProperties": {
           "primitive": "signature",
+          "curve": "ed25519",
           "nistQuantumSecurityLevel": 0
         }
       }

@@ -218,3 +218,52 @@ func TestExtractorOrderIndependent(t *testing.T) {
 		t.Errorf("fixture does not give a shared component evidence from both extractors")
 	}
 }
+
+// TestEd25519Consistent: the SSH host-key algorithm ssh-ed25519 and a
+// certificate's Ed25519 key are separate components (different names and
+// bom-refs: one is SSH's name for the signature scheme, the other the X.509
+// key algorithm), but both describe Ed25519 signatures and must say so the
+// same way: primitive signature, curve ed25519, quantum level 0.
+func TestEd25519Consistent(t *testing.T) {
+	data, err := os.ReadFile("certs/testdata/ed25519-self.pem")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := `#config-version=FGVMH6-7.6.7-FW-build3704-260601:opmode=0:vdom=0:user=admin
+config system ssh-config
+    set ssh-hsk-algo ssh-ed25519
+end
+config vpn certificate local
+    edit "ed"
+        set certificate "` + strings.TrimSpace(string(data)) + `"
+    next
+end
+`
+	tr, err := tree.Parse(strings.NewReader(cfg))
+	if err != nil {
+		t.Fatal(err)
+	}
+	inv := model.NewInventory()
+	global.Extract(tr, "fw.conf", inv)
+	certs.Extract(tr, "fw.conf", inv, time.Unix(1791676800, 0))
+	byName := map[string]*model.Asset{}
+	for _, a := range inv.Assets {
+		byName[a.Name] = a
+	}
+	ssh, cert := byName["ssh-ed25519"], byName["Ed25519"]
+	if ssh == nil || cert == nil {
+		t.Fatalf("missing component: ssh-ed25519 %v, Ed25519 %v", ssh != nil, cert != nil)
+	}
+	if ssh.ID == cert.ID {
+		t.Errorf("ssh-ed25519 and Ed25519 share bom-ref %s", ssh.ID)
+	}
+	if !reflect.DeepEqual(ssh.Alg, cert.Alg) {
+		t.Errorf("ssh-ed25519 = %+v, certificate Ed25519 = %+v; want the same description", *ssh.Alg, *cert.Alg)
+	}
+	if cert.Alg.Curve != "ed25519" {
+		t.Errorf("Ed25519 curve = %q", cert.Alg.Curve)
+	}
+	if len(inv.Warnings) != 0 {
+		t.Errorf("warnings = %+v", inv.Warnings)
+	}
+}

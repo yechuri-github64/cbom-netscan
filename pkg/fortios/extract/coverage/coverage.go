@@ -23,6 +23,8 @@ var Inventoried = []string{
 	"vpn ipsec phase1-interface",
 	"vpn ipsec phase2",
 	"vpn ipsec phase2-interface",
+	"vpn certificate local", "vpn certificate ca", "vpn certificate remote",
+	"certificate local", "certificate ca", "certificate remote",
 }
 
 // NotInventoried are sections that hold crypto assets or protocols with
@@ -34,10 +36,9 @@ var NotInventoried = []string{
 	"vpn ipsec manualkey", "vpn ipsec manualkey-interface",
 	"vpn qkd",
 	"vpn ssl settings",
-	// §3.8 certificates and SSH keys
-	"vpn certificate local", "vpn certificate ca", "vpn certificate remote", "vpn certificate crl",
-	"vpn certificate ocsp-server", "vpn certificate hsm-local", "vpn certificate setting",
-	"certificate local", "certificate ca", "certificate remote", "certificate crl",
+	// §3.8 certificates and SSH keys not yet read
+	"vpn certificate crl", "vpn certificate ocsp-server", "vpn certificate hsm-local", "vpn certificate setting",
+	"certificate crl",
 	"firewall ssh local-key", "firewall ssh local-ca",
 	// §3.9 SSL inspection, §3.10 SSL offload (only when a VIP uses ssl-*), §3.11 ZTNA
 	"firewall ssl-ssh-profile",

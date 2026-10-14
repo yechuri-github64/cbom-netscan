@@ -23,11 +23,7 @@
     "properties": [
       {
         "name": "cbom-netscan:fortios:sections-inventoried",
-        "value": "vpn ipsec phase1-interface, vpn ipsec phase2-interface"
-      },
-      {
-        "name": "cbom-netscan:fortios:sections-not-inventoried",
-        "value": "vpn certificate local"
+        "value": "vpn certificate local, vpn ipsec phase1-interface, vpn ipsec phase2-interface"
       }
     ]
   },

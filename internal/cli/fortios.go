@@ -21,6 +21,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/yechuri-github64/cbom-netscan/pkg/emit/cdx16"
+	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/certs"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/coverage"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/global"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/ipsec"
@@ -50,7 +51,11 @@ By default every run gets a new random serialNumber and the current time, as
 CycloneDX expects. With --reproducible the serialNumber is a UUIDv5 derived
 from the SHA-256 of the backup and the tool version, and the timestamp comes
 from SOURCE_DATE_EPOCH when set and is omitted otherwise, so two runs on the
-same backup produce byte-identical output.`,
+same backup produce byte-identical output.
+
+Certificates are checked for expiry against the current time, or under
+--reproducible against SOURCE_DATE_EPOCH; with --reproducible and no
+SOURCE_DATE_EPOCH, expiry is recorded as not evaluated.`,
 		Example: `  cbom-netscan fortios fw01.conf -o fw01.cdx.json
   cbom-netscan fortios fw01.conf > fw01.cdx.json`,
 		Args: cobra.ExactArgs(1),
@@ -84,12 +89,16 @@ func runFortiOS(ctx context.Context, stdout, stderr io.Writer, in string, o fort
 	}
 
 	meta := model.Meta{ToolVersion: version, Lifecycle: "operations"}
+	// now is the reference time for certificate expiry. Under --reproducible
+	// it must not be the clock, or the output would change from day to day.
+	now := time.Now()
 	if reproducible {
 		created, ok, err := sourceDateEpoch()
 		if err != nil {
 			return err
 		}
 		meta.Created, meta.OmitTimestamp = created, !ok
+		now = created // zero when SOURCE_DATE_EPOCH is unset: not evaluated
 	}
 
 	// The whole backup is read once so the bytes that are hashed for the
@@ -110,6 +119,7 @@ func runFortiOS(ctx context.Context, stdout, stderr io.Writer, in string, o fort
 	name := filepath.Base(in)
 	inv := model.NewInventory()
 	global.Extract(tr, name, inv)
+	certs.Extract(tr, name, inv, now)
 	ipsec.Extract(tr, name, inv)
 	cov := coverage.Check(tr)
 	if w := cov.Warning(name); w != nil {

@@ -34,9 +34,9 @@ func TestCheck(t *testing.T) {
 		},
 		{
 			name:        "uncovered_sections_sorted",
-			cfg:         hdr + "config vpn ssl settings\nend\nconfig vpn certificate local\nend\nconfig system global\nend\n",
+			cfg:         hdr + "config vpn qkd\nend\nconfig vpn certificate crl\nend\nconfig vpn ssl settings\nend\nconfig system global\nend\n",
 			inventoried: []string{"system global"},
-			uncov:       []string{"vpn certificate local", "vpn ssl settings"},
+			uncov:       []string{"vpn certificate crl", "vpn qkd", "vpn ssl settings"},
 		},
 		{
 			// Settings-only sections are recorded but not warned about.
@@ -56,9 +56,9 @@ func TestCheck(t *testing.T) {
 		},
 		{
 			name:        "multi_vdom_scopes",
-			cfg:         hdrM + "config vdom\nedit root\nnext\nend\nconfig global\nconfig system global\nend\nend\nconfig vdom\nedit root\nconfig vpn certificate local\nend\nend\n",
-			inventoried: []string{"system global"},
-			uncov:       []string{"vpn certificate local"},
+			cfg:         hdrM + "config vdom\nedit root\nnext\nend\nconfig global\nconfig system global\nend\nend\nconfig vdom\nedit root\nconfig vpn certificate local\nend\nconfig vpn certificate ocsp-server\nend\nend\n",
+			inventoried: []string{"system global", "vpn certificate local"},
+			uncov:       []string{"vpn certificate ocsp-server"},
 		},
 	}
 	for _, tc := range cases {

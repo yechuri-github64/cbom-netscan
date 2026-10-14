@@ -54,6 +54,8 @@ Notation: `p` = page in the CLI-ref PDF for that version. "7.6" column = 7.6.3â€
 
 Batfish lexer (Apache-2.0, commit 540a4644, 2026-10-10 UTC): `FortiosLexer.g4` defines double-quoted text with escapes `\" \' \\`, single-quoted text with no escapes, backslash-escape of any char in unquoted words, `\`+newline continuation, and `#` comments only at line start. The word charset excludes `# ( ) < > ? ' " \` and whitespace. Batfish parses only `config system|firewall|router` (no `vpn`, `certificate`, `vdom`, `global` top-level). Path: projects/batfish/src/main/antlr4/org/batfish/grammar/fortios/.
 
+Verified on FortiOS 7.6.7: output values are always double-quoted (single-quoted input is normalized), and the escapes are `\'`, `\"`, and `\\`.
+
 ### 1.3 VDOM mode
 | Item | Source |
 |---|---|

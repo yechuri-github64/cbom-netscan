@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -142,7 +143,13 @@ func runFortiOS(ctx context.Context, stdout, stderr io.Writer, in string, o fort
 // regular file is checked by size before reading; anything else (a pipe) is
 // read through a limit. The error never includes file content.
 func readLimited(path string, maxMiB int64) ([]byte, error) {
-	limit := maxMiB << 20
+	// maxMiB << 20 overflows for values above about 8 EiB; such a limit is
+	// larger than any file, so it means no limit. One byte of headroom keeps
+	// the limit+1 below from overflowing too.
+	limit := int64(math.MaxInt64 - 1)
+	if maxMiB <= (math.MaxInt64-1)>>20 {
+		limit = maxMiB << 20
+	}
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err

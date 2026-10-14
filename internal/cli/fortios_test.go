@@ -401,6 +401,13 @@ func TestFortiOS_MaxSize(t *testing.T) {
 	if _, _, err := run(t, "fortios", small, "--max-size", "1"); err != nil {
 		t.Errorf("small backup under --max-size: %v", err)
 	}
+	// Values too large to convert to bytes must not overflow into a limit
+	// that rejects everything.
+	for _, huge := range []string{"9000000000000", "8796093022207", "8796093022208", "9223372036854775807"} {
+		if _, _, err := run(t, "fortios", small, "--max-size", huge); err != nil {
+			t.Errorf("--max-size %s rejected a tiny file: %v", huge, err)
+		}
+	}
 	if _, _, err := run(t, "fortios", small, "--max-size", "0"); err == nil || !strings.Contains(err.Error(), "--max-size must be a positive") {
 		t.Errorf("--max-size 0: err = %v, want a validation error", err)
 	}

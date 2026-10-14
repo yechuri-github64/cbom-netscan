@@ -52,7 +52,7 @@ type Emitter interface {
 type Warning struct {
 	// Code is a machine-readable identifier.
 	// Known values: "default-assumed", "unknown-token", "encrypted-backup",
-	// "secret-redacted", "pem-truncated".
+	// "secret-redacted", "pem-truncated", "vdom-mode-unknown".
 	Code    string
 	Message string
 	Ev      Evidence

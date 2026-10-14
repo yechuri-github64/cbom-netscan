@@ -52,7 +52,8 @@ func TestLexer_Header(t *testing.T) {
 		wantVersion   string
 		wantBuild     string
 		wantBuildDate string
-		wantMultiVDOM bool
+		wantVDOM      lexer.VDOMMode
+		wantWarnings  []string // expected warning codes, in order
 	}{
 		{
 			name:          "FGT80F_7.4.12",
@@ -61,6 +62,7 @@ func TestLexer_Header(t *testing.T) {
 			wantVersion:   "7.4.12",
 			wantBuild:     "0318",
 			wantBuildDate: "220920",
+			wantVDOM:      lexer.VDOMSingle,
 		},
 		{
 			name:          "FGVMK6_7.0.8",
@@ -69,6 +71,7 @@ func TestLexer_Header(t *testing.T) {
 			wantVersion:   "7.0.8",
 			wantBuild:     "0418",
 			wantBuildDate: "220920",
+			wantVDOM:      lexer.VDOMSingle,
 		},
 		{
 			name:          "FGT200F_8.0.1_multi_vdom",
@@ -77,7 +80,7 @@ func TestLexer_Header(t *testing.T) {
 			wantVersion:   "8.0.1",
 			wantBuild:     "1500",
 			wantBuildDate: "260101",
-			wantMultiVDOM: true,
+			wantVDOM:      lexer.VDOMMulti,
 		},
 		{
 			// Field order is not assumed; user= first and opmode= absent.
@@ -87,13 +90,45 @@ func TestLexer_Header(t *testing.T) {
 			wantVersion:   "7.6.7",
 			wantBuild:     "0999",
 			wantBuildDate: "260601",
-			wantMultiVDOM: true,
+			wantVDOM:      lexer.VDOMMulti,
+		},
+		{
+			// No colon fields at all: accepted, VDOM mode left to the tree builder.
+			name:          "minimal_header",
+			input:         "#config-version=FGT60F-7.6.7-FW-build0999-260601\n",
+			wantModel:     "FGT60F",
+			wantVersion:   "7.6.7",
+			wantBuild:     "0999",
+			wantBuildDate: "260601",
+			wantVDOM:      lexer.VDOMUnknown,
+			wantWarnings:  []string{"vdom-mode-unknown"},
+		},
+		{
+			name:          "vdom_not_0_or_1",
+			input:         "#config-version=FGT60F-7.6.7-FW-build0999-260601:opmode=0:vdom=2:user=admin\n",
+			wantModel:     "FGT60F",
+			wantVersion:   "7.6.7",
+			wantBuild:     "0999",
+			wantBuildDate: "260601",
+			wantVDOM:      lexer.VDOMUnknown,
+			wantWarnings:  []string{"vdom-mode-unknown"},
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, hd := tokenize(t, tc.input)
+			l, err := lexer.New(strings.NewReader(tc.input))
+			if err != nil {
+				t.Fatalf("New: %v", err)
+			}
+			hd := l.Header
+			var codes []string
+			for _, w := range l.Warnings {
+				codes = append(codes, w.Code)
+			}
+			if fmt.Sprint(codes) != fmt.Sprint(tc.wantWarnings) {
+				t.Errorf("warning codes = %v, want %v", codes, tc.wantWarnings)
+			}
 			if hd.Model != tc.wantModel {
 				t.Errorf("Model = %q, want %q", hd.Model, tc.wantModel)
 			}
@@ -106,8 +141,8 @@ func TestLexer_Header(t *testing.T) {
 			if hd.BuildDate != tc.wantBuildDate {
 				t.Errorf("BuildDate = %q, want %q", hd.BuildDate, tc.wantBuildDate)
 			}
-			if hd.MultiVDOM != tc.wantMultiVDOM {
-				t.Errorf("MultiVDOM = %v, want %v", hd.MultiVDOM, tc.wantMultiVDOM)
+			if hd.VDOMMode != tc.wantVDOM {
+				t.Errorf("VDOMMode = %v, want %v", hd.VDOMMode, tc.wantVDOM)
 			}
 		})
 	}
@@ -132,7 +167,7 @@ func TestLexer_DeviceHeader(t *testing.T) {
 		Build:       "3704",
 		BuildDate:   "260601",
 		OpMode:      "0",
-		MultiVDOM:   false,
+		VDOMMode:    lexer.VDOMSingle,
 		ConfFileVer: "1234567890123456",
 		BuildNo:     "3704",
 		GlobalVDOM:  "1",
@@ -159,8 +194,8 @@ func TestLexer_DeviceHeader(t *testing.T) {
 // never contain the user= value.
 func TestLexer_HeaderErrorsRedactUser(t *testing.T) {
 	inputs := []string{
-		"#config-version=FGVMH6-7.6.7-FW-build3704:opmode=0:vdom=0:user=alice-secret\n",
-		"#config-version=FGVMH6-7.6.7-FW-build3704-260601:opmode=0:user=alice-secret\n",
+		"#config-version=FGVMH6:opmode=0:vdom=0:user=alice-secret\n",
+		"#config-version=FGVMH6-7.x-FW-build3704-260601:user=alice-secret\n",
 		"#cfg:user=alice-secret\n",
 	}
 	for _, in := range inputs {
@@ -171,6 +206,15 @@ func TestLexer_HeaderErrorsRedactUser(t *testing.T) {
 		if strings.Contains(err.Error(), "alice-secret") {
 			t.Errorf("error leaks user= value: %v", err)
 		}
+	}
+
+	// Accepted headers with warnings must not leak it either.
+	l, err := lexer.New(strings.NewReader("#config-version=FGVMH6-7.6.7-FW-build3704-260601:user=alice-secret\n"))
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if got := fmt.Sprintf("%#v %#v", *l.Header, l.Warnings); strings.Contains(got, "alice-secret") {
+		t.Errorf("header or warnings leak user= value: %s", got)
 	}
 }
 
@@ -201,17 +245,6 @@ func TestLexer_Reject(t *testing.T) {
 			name:    "plain_text",
 			input:   "config system global\n    set hostname fw01\nend\n",
 			wantMsg: "not a FortiOS config backup",
-		},
-		{
-			// Without vdom= the tree layout is unknown, so refuse to guess.
-			name:    "missing_vdom",
-			input:   "#config-version=FGT60F-7.6.7-FW-build0999-260601\n",
-			wantMsg: "no vdom= field",
-		},
-		{
-			name:    "vdom_not_0_or_1",
-			input:   "#config-version=FGT60F-7.6.7-FW-build0999-260601:opmode=0:vdom=2:user=admin\n",
-			wantMsg: `vdom="2", want 0 or 1`,
 		},
 		{
 			name:    "missing_build_date",

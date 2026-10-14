@@ -39,6 +39,8 @@ import (
 	"io"
 	"regexp"
 	"strings"
+
+	"github.com/yechuri-github64/cbom-netscan/pkg/model"
 )
 
 // TokenKind identifies the type of a lexed token.
@@ -74,17 +76,28 @@ type Token struct {
 // Only VDOM mode is interpreted; the other values are kept as raw strings
 // because Fortinet does not document their semantics (research notes §10).
 type ConfigHeader struct {
-	Model     string // FortiGate model identifier, e.g. "FGVMH6"
-	Version   string // firmware version, e.g. "7.6.7"
-	Build     string // build number, e.g. "3704"
-	BuildDate string // build date as YYMMDD, e.g. "260601"
-	OpMode    string // opmode= value, e.g. "0"; empty if absent
-	MultiVDOM bool   // true when vdom=1 (multi-VDOM backup), false when vdom=0
+	Model     string   // FortiGate model identifier, e.g. "FGVMH6"
+	Version   string   // firmware version, e.g. "7.6.7"
+	Build     string   // build number, e.g. "3704"
+	BuildDate string   // build date as YYMMDD, e.g. "260601"
+	OpMode    string   // opmode= value, e.g. "0"; empty if absent
+	VDOMMode  VDOMMode // from vdom=; VDOMUnknown if absent or not 0/1
 
 	ConfFileVer string // #conf_file_ver= value; empty if absent
 	BuildNo     string // #buildno= value; empty if absent
 	GlobalVDOM  string // #global_vdom= value; empty if absent
 }
+
+// VDOMMode is the VDOM layout declared by the vdom= header field.
+type VDOMMode int
+
+const (
+	// VDOMUnknown means vdom= was absent or not 0/1. The tree builder must
+	// detect multi-VDOM itself from a top-level "config vdom" block.
+	VDOMUnknown VDOMMode = iota
+	VDOMSingle           // vdom=0
+	VDOMMulti            // vdom=1
+)
 
 // headerRE matches the first colon-separated field after "#config-version=".
 // Capture groups: (1) model, (2) version, (3) build number, (4) build date.
@@ -110,6 +123,18 @@ type Lexer struct {
 	hasPending  bool
 	// Header is set by New() and holds the parsed #config-version= fields.
 	Header *ConfigHeader
+	// Warnings are non-fatal problems found while reading the header.
+	// Messages never contain secret values.
+	Warnings []model.Warning
+}
+
+// warn records a header warning. Header warnings all refer to line 1.
+func (l *Lexer) warn(code, msg string) {
+	l.Warnings = append(l.Warnings, model.Warning{
+		Code:    code,
+		Message: msg,
+		Ev:      model.Evidence{Line: 1, Symbol: "#config-version"},
+	})
 }
 
 // New creates a Lexer from r and reads the mandatory #config-version= header.
@@ -159,27 +184,26 @@ func (l *Lexer) readHeader() error {
 	}
 	h := &ConfigHeader{Model: m[1], Version: m[2], Build: m[3], BuildDate: m[4]}
 
-	vdomSeen := false
+	vdomRaw, vdomSeen := "", false
 	for _, f := range fields[1:] {
 		k, v, _ := strings.Cut(f, "=")
 		switch k {
 		case "opmode":
 			h.OpMode = v
 		case "vdom":
-			switch v {
-			case "0":
-				h.MultiVDOM = false
-			case "1":
-				h.MultiVDOM = true
-			default:
-				return fmt.Errorf("fortios lexer: #config-version has vdom=%q, want 0 or 1", v)
-			}
-			vdomSeen = true
+			vdomRaw, vdomSeen = v, true
 		}
 		// user= and unknown fields are skipped; user= is never stored.
 	}
-	if !vdomSeen {
-		return fmt.Errorf("fortios lexer: #config-version line has no vdom= field: %q", redactUser(first))
+	switch {
+	case vdomSeen && vdomRaw == "0":
+		h.VDOMMode = VDOMSingle
+	case vdomSeen && vdomRaw == "1":
+		h.VDOMMode = VDOMMulti
+	case vdomSeen:
+		l.warn("vdom-mode-unknown", fmt.Sprintf("#config-version has vdom=%q, not 0 or 1; VDOM mode will be detected from the config tree", vdomRaw))
+	default:
+		l.warn("vdom-mode-unknown", "#config-version has no vdom= field; VDOM mode will be detected from the config tree")
 	}
 
 	l.Header = h

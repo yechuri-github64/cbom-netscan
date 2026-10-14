@@ -31,6 +31,16 @@
 // SSL VPN with a private CA) are not bound by it. It never gives a warning;
 // cabf-applicability says so on each component that carries the flag.
 //
+// Two details of that check. The limit is chosen by the certificate's start
+// date, notBefore: the Baseline Requirements key the limits to the issue
+// date, and notBefore is the date the certificate itself carries (CAs set it
+// to the issue time; a backdated notBefore selects an earlier, longer limit).
+// The validity period is counted as the Baseline Requirements define it,
+// from notBefore through notAfter inclusive with any part of a day counting
+// as a whole day, so a certificate whose notAfter is exactly 365 days after
+// its notBefore has a validity of 366 days (validity-days), and one that is
+// valid for at most 365 days ends one second earlier.
+//
 // In a multi-VDOM backup each VDOM's tables also list the global (factory)
 // certificates by name, with range global and no PEM. Such an entry is a
 // reference to the global certificate of the same name: it adds no component
@@ -333,22 +343,27 @@ func signatureAlgorithm(p *parsed) alg {
 const cabfApplicability = "informational: the CA/Browser Forum limit binds only publicly trusted TLS server certificates; internal VPN certificates are not bound by it"
 
 // cabfMaxDays is the CA/Browser Forum maximum validity for a Subscriber
-// Certificate issued at notBefore (Baseline Requirements §6.3.2).
+// Certificate (Baseline Requirements §6.3.2). The rules are keyed to the issue
+// date; the certificate's notBefore stands in for it, since that is the date
+// the certificate carries.
 func cabfMaxDays(notBefore time.Time) (int, string) {
 	d := func(y int, m time.Month, day int) time.Time { return time.Date(y, m, day, 0, 0, 0, 0, time.UTC) }
 	switch {
 	case !notBefore.Before(d(2029, 3, 15)):
-		return 47, "issued on or after 2029-03-15"
+		return 47, "notBefore on or after 2029-03-15"
 	case !notBefore.Before(d(2027, 3, 15)):
-		return 100, "issued on or after 2027-03-15"
+		return 100, "notBefore on or after 2027-03-15"
 	case !notBefore.Before(d(2026, 3, 15)):
-		return 200, "issued on or after 2026-03-15"
+		return 200, "notBefore on or after 2026-03-15"
 	}
-	return 398, "issued before 2026-03-15"
+	return 398, "notBefore before 2026-03-15"
 }
 
 // validityDays counts the validity period the way the Baseline Requirements
-// do: notBefore through notAfter inclusive, any part of a day as a day.
+// do: notBefore through notAfter inclusive (§1.6.1, "Validity Period"), any
+// part of a day as a day (§6.3.2). The +1 second makes notAfter itself part of the
+// period, so notAfter = notBefore + 365 days is 366 days, and notAfter =
+// notBefore + 365 days - 1 second is 365.
 func validityDays(c *x509.Certificate) int {
 	secs := c.NotAfter.Sub(c.NotBefore).Seconds() + 1
 	return int(math.Ceil(secs / 86400))

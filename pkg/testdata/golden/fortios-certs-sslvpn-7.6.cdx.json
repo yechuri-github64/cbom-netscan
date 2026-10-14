@@ -1640,7 +1640,7 @@
         },
         {
           "name": "cbom-netscan:cert:cabf-max-days",
-          "value": "200 (issued on or after 2026-03-15; Baseline Requirements §6.3.2)"
+          "value": "200 (notBefore on or after 2026-03-15; Baseline Requirements §6.3.2)"
         },
         {
           "name": "cbom-netscan:cert:exceeds-cabf-max",
@@ -1709,7 +1709,7 @@
         },
         {
           "name": "cbom-netscan:cert:cabf-max-days",
-          "value": "200 (issued on or after 2026-03-15; Baseline Requirements §6.3.2)"
+          "value": "200 (notBefore on or after 2026-03-15; Baseline Requirements §6.3.2)"
         },
         {
           "name": "cbom-netscan:cert:exceeds-cabf-max",
@@ -1778,7 +1778,7 @@
         },
         {
           "name": "cbom-netscan:cert:cabf-max-days",
-          "value": "398 (issued before 2026-03-15; Baseline Requirements §6.3.2)"
+          "value": "398 (notBefore before 2026-03-15; Baseline Requirements §6.3.2)"
         },
         {
           "name": "cbom-netscan:cert:exceeds-cabf-max",
@@ -1847,7 +1847,7 @@
         },
         {
           "name": "cbom-netscan:cert:cabf-max-days",
-          "value": "200 (issued on or after 2026-03-15; Baseline Requirements §6.3.2)"
+          "value": "200 (notBefore on or after 2026-03-15; Baseline Requirements §6.3.2)"
         },
         {
           "name": "cbom-netscan:cert:exceeds-cabf-max",
@@ -1924,7 +1924,7 @@
         },
         {
           "name": "cbom-netscan:cert:cabf-max-days",
-          "value": "200 (issued on or after 2026-03-15; Baseline Requirements §6.3.2)"
+          "value": "200 (notBefore on or after 2026-03-15; Baseline Requirements §6.3.2)"
         },
         {
           "name": "cbom-netscan:cert:exceeds-cabf-max",

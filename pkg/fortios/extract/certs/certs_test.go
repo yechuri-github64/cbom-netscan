@@ -159,20 +159,20 @@ func TestExtractCertificates(t *testing.T) {
 			name: local + "vpn-rsa", subject: "CN=vpn.example.com,O=Example Lab",
 			keyAlg: "RSA-2048", keyOID: "1.2.840.113549.1.1.1", keyPrim: "pke", psi: "2048", keySize: 2048,
 			sigAlg: "ECDSA-SHA384", sigOID: "1.2.840.10045.4.3.3",
-			days: "121", cabf: "200 (issued on or after 2026-03-15; Baseline Requirements §6.3.2)", exceeds: "false", expired: "false", isCA: "false",
+			days: "121", cabf: "200 (notBefore on or after 2026-03-15; Baseline Requirements §6.3.2)", exceeds: "false", expired: "false", isCA: "false",
 		},
 		{
 			name: local + "gw-ecdsa", subject: "CN=gw.example.net,O=Example Lab",
 			keyAlg: "ECDSA-P256", keyOID: "1.2.840.10045.2.1", keyPrim: "signature", curve: "secp256r1", keySize: 256,
 			sigAlg: "ECDSA-SHA384", sigOID: "1.2.840.10045.4.3.3",
-			days: "181", cabf: "200 (issued on or after 2026-03-15; Baseline Requirements §6.3.2)", exceeds: "false", expired: "false", isCA: "false",
+			days: "181", cabf: "200 (notBefore on or after 2026-03-15; Baseline Requirements §6.3.2)", exceeds: "false", expired: "false", isCA: "false",
 		},
 		{
 			// 2024 is a leap year: 1 January to 31 December inclusive is 366 days.
 			name: local + "old-expired", subject: "CN=old.example.org,O=Example Lab",
 			keyAlg: "RSA-2048", keyOID: "1.2.840.113549.1.1.1", keyPrim: "pke", psi: "2048", keySize: 2048,
 			sigAlg: "SHA256-RSA", sigOID: "1.2.840.113549.1.1.11", padding: "pkcs1v15",
-			days: "366", cabf: "398 (issued before 2026-03-15; Baseline Requirements §6.3.2)", exceeds: "false", expired: "true", isCA: "false",
+			days: "366", cabf: "398 (notBefore before 2026-03-15; Baseline Requirements §6.3.2)", exceeds: "false", expired: "true", isCA: "false",
 		},
 		{
 			// 2028 and 2032 are leap years: 3652 days apart, 3653 inclusive.
@@ -186,7 +186,7 @@ func TestExtractCertificates(t *testing.T) {
 			name: "FortiOS certificate remote long-lived", subject: "CN=long.example.com,O=Example Lab",
 			keyAlg: "ECDSA-P256", keyOID: "1.2.840.10045.2.1", keyPrim: "signature", curve: "secp256r1", keySize: 256,
 			sigAlg: "ECDSA-SHA384", sigOID: "1.2.840.10045.4.3.3",
-			days: "732", cabf: "200 (issued on or after 2026-03-15; Baseline Requirements §6.3.2)", exceeds: "true", expired: "false", isCA: "false",
+			days: "732", cabf: "200 (notBefore on or after 2026-03-15; Baseline Requirements §6.3.2)", exceeds: "true", expired: "false", isCA: "false",
 		},
 	} {
 		t.Run(w.name, func(t *testing.T) {

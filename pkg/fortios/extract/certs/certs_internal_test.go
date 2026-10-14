@@ -108,3 +108,24 @@ func FuzzScanCertField(f *testing.F) {
 		}
 	})
 }
+
+// TestDocumentedCountingExamples pins the examples in the package
+// documentation: a certificate whose notAfter is exactly 365 days after its
+// notBefore counts as 366 days, one second less as 365; and the limit is
+// chosen by notBefore alone, however late notAfter is.
+func TestDocumentedCountingExamples(t *testing.T) {
+	nb := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	year := 365 * 24 * time.Hour
+	if got := validityDays(&x509.Certificate{NotBefore: nb, NotAfter: nb.Add(year)}); got != 366 {
+		t.Errorf("notAfter = notBefore + 365 days: %d days, want 366", got)
+	}
+	if got := validityDays(&x509.Certificate{NotBefore: nb, NotAfter: nb.Add(year - time.Second)}); got != 365 {
+		t.Errorf("notAfter = notBefore + 365 days - 1s: %d days, want 365", got)
+	}
+	// Started a second before 2026-03-15 and ending years later: still the
+	// 398-day rule, because only notBefore is used.
+	start := time.Date(2026, 3, 14, 23, 59, 59, 0, time.UTC)
+	if max, rule := cabfMaxDays(start); max != 398 || rule != "notBefore before 2026-03-15" {
+		t.Errorf("cabfMaxDays(%s) = %d %q", start, max, rule)
+	}
+}

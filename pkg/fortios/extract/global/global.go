@@ -45,6 +45,14 @@ const (
 // Extract adds admin HTTPS and SSH components from the global scope of t to
 // inv. location is recorded in evidence occurrences, e.g. the backup's path.
 func Extract(t *tree.Tree, location string, inv *model.Inventory) {
+	x := newExtractor(t, location, inv)
+	x.adminHTTPS()
+	x.ssh()
+}
+
+// newExtractor resolves the settings both parts depend on (scope and
+// strong-crypto) up front, so adminHTTPS and ssh can run in either order.
+func newExtractor(t *tree.Tree, location string, inv *model.Inventory) *extractor {
 	x := &extractor{
 		t:     t,
 		inv:   inv,
@@ -57,16 +65,18 @@ func Extract(t *tree.Tree, location string, inv *model.Inventory) {
 	if x.r.Defaults == nil {
 		inv.AddWarning(field.NoDefaultsWarning(t.Header.Version, location))
 	}
-	x.adminHTTPS()
-	x.ssh()
+	x.strongV = x.resolve(sectionGlobal, "strong-crypto", specEnableDis)
+	x.strong = strings.Join(x.strongV.Tokens, " ") == "enable"
+	return x
 }
 
 type extractor struct {
-	t      *tree.Tree
-	inv    *model.Inventory
-	r      *field.Resolver
-	scope  tree.Scope
-	strong bool // strong-crypto resolves to enable (configured or default)
+	t       *tree.Tree
+	inv     *model.Inventory
+	r       *field.Resolver
+	scope   tree.Scope
+	strongV field.Value // strong-crypto, resolved once in newExtractor
+	strong  bool        // strongV is enable (configured or default)
 }
 
 // mayRestrict marks a as something strong-crypto may disable.
@@ -96,10 +106,9 @@ func (x *extractor) adminHTTPS() {
 	versions := x.resolve(sectionGlobal, "admin-https-ssl-versions", specTLSVersions)
 	suites := x.resolve(sectionGlobal, "admin-https-ssl-ciphersuites", specTLS13Suites)
 	banned := x.resolve(sectionGlobal, "admin-https-ssl-banned-ciphers", specBanned)
-	strong := x.resolve(sectionGlobal, "strong-crypto", specEnableDis)
+	strong := x.strongV
 	static := x.resolve(sectionGlobal, "ssl-static-key-ciphers", specEnableDis)
 	cert := x.resolve(sectionGlobal, "admin-server-cert", specCertName)
-	x.strong = strings.Join(strong.Tokens, " ") == "enable"
 
 	newTLS := func(name, version string) *model.Asset {
 		a := &model.Asset{

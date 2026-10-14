@@ -717,3 +717,22 @@ func TestCertificateFieldBlocks(t *testing.T) {
 		})
 	}
 }
+
+// TestCABFInformational: exceeding the CA/B Forum limit is a property that
+// says it is informational, never a warning, since internal VPN certificates
+// are not bound by it. A CA certificate has neither property.
+func TestCABFInformational(t *testing.T) {
+	_, inv := extract(t, config(t), now)
+	long := find(t, inv, "FortiOS certificate remote long-lived")
+	prop(t, long, "cbom-netscan:cert:exceeds-cabf-max", "true")
+	if got := long.Properties["cbom-netscan:cert:cabf-applicability"]; !strings.HasPrefix(got, "informational:") || !strings.Contains(got, "internal VPN certificates are not bound") {
+		t.Errorf("cabf-applicability = %q", got)
+	}
+	prop(t, find(t, inv, local+"vpn-rsa"), "cbom-netscan:cert:cabf-applicability", long.Properties["cbom-netscan:cert:cabf-applicability"])
+	noProp(t, find(t, inv, "FortiOS certificate ca lab-root-ca"), "cbom-netscan:cert:cabf-applicability")
+	for _, w := range inv.Warnings {
+		if strings.Contains(w.Code, "cabf") || strings.Contains(w.Message, "long-lived") {
+			t.Errorf("CA/B limit produced a warning: %+v", w)
+		}
+	}
+}

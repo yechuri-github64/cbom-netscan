@@ -1635,6 +1635,10 @@
       "name": "FortiOS certificate local gw-ecdsa",
       "properties": [
         {
+          "name": "cbom-netscan:cert:cabf-applicability",
+          "value": "informational: the CA/Browser Forum limit binds only publicly trusted TLS server certificates; internal VPN certificates are not bound by it"
+        },
+        {
           "name": "cbom-netscan:cert:cabf-max-days",
           "value": "200 (issued on or after 2026-03-15; Baseline Requirements §6.3.2)"
         },
@@ -1699,6 +1703,10 @@
       "type": "cryptographic-asset",
       "name": "FortiOS certificate local long-lived",
       "properties": [
+        {
+          "name": "cbom-netscan:cert:cabf-applicability",
+          "value": "informational: the CA/Browser Forum limit binds only publicly trusted TLS server certificates; internal VPN certificates are not bound by it"
+        },
         {
           "name": "cbom-netscan:cert:cabf-max-days",
           "value": "200 (issued on or after 2026-03-15; Baseline Requirements §6.3.2)"
@@ -1765,6 +1773,10 @@
       "name": "FortiOS certificate local old-expired",
       "properties": [
         {
+          "name": "cbom-netscan:cert:cabf-applicability",
+          "value": "informational: the CA/Browser Forum limit binds only publicly trusted TLS server certificates; internal VPN certificates are not bound by it"
+        },
+        {
           "name": "cbom-netscan:cert:cabf-max-days",
           "value": "398 (issued before 2026-03-15; Baseline Requirements §6.3.2)"
         },
@@ -1829,6 +1841,10 @@
       "type": "cryptographic-asset",
       "name": "FortiOS certificate local vpn-rsa",
       "properties": [
+        {
+          "name": "cbom-netscan:cert:cabf-applicability",
+          "value": "informational: the CA/Browser Forum limit binds only publicly trusted TLS server certificates; internal VPN certificates are not bound by it"
+        },
         {
           "name": "cbom-netscan:cert:cabf-max-days",
           "value": "200 (issued on or after 2026-03-15; Baseline Requirements §6.3.2)"
@@ -1902,6 +1918,10 @@
       "type": "cryptographic-asset",
       "name": "FortiOS certificate remote peer-gw",
       "properties": [
+        {
+          "name": "cbom-netscan:cert:cabf-applicability",
+          "value": "informational: the CA/Browser Forum limit binds only publicly trusted TLS server certificates; internal VPN certificates are not bound by it"
+        },
         {
           "name": "cbom-netscan:cert:cabf-max-days",
           "value": "200 (issued on or after 2026-03-15; Baseline Requirements §6.3.2)"

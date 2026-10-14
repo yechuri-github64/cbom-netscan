@@ -23,9 +23,13 @@
 // a PEM key's BEGIN line. An unencrypted PEM key is warned about. The
 // password field is never read.
 //
-// Certificates are flagged when expired at the reference time, and when a
-// leaf certificate's validity exceeds the CA/Browser Forum maximum for its
-// issue date (Baseline Requirements §6.3.2; research notes §3.7 note).
+// Certificates are flagged when expired at the reference time (a warning).
+// A leaf certificate whose validity exceeds the CA/Browser Forum maximum for
+// its issue date (Baseline Requirements §6.3.2; research notes §3.7 note) gets
+// exceeds-cabf-max=true, for information only: the limit binds publicly
+// trusted TLS server certificates, and certificates for internal VPNs (IPsec,
+// SSL VPN with a private CA) are not bound by it. It never gives a warning;
+// cabf-applicability says so on each component that carries the flag.
 //
 // In a multi-VDOM backup each VDOM's tables also list the global (factory)
 // certificates by name, with range global and no PEM. Such an entry is a
@@ -325,6 +329,9 @@ func signatureAlgorithm(p *parsed) alg {
 	return alg{name: sa.String(), oid: p.sigOID, a: a}
 }
 
+// cabfApplicability qualifies exceeds-cabf-max on every component that has it.
+const cabfApplicability = "informational: the CA/Browser Forum limit binds only publicly trusted TLS server certificates; internal VPN certificates are not bound by it"
+
 // cabfMaxDays is the CA/Browser Forum maximum validity for a Subscriber
 // Certificate issued at notBefore (Baseline Requirements §6.3.2).
 func cabfMaxDays(notBefore time.Time) (int, string) {
@@ -459,6 +466,7 @@ func addCert(inv *model.Inventory, location string, scope tree.Scope, tb table, 
 		max, rule := cabfMaxDays(nb)
 		c.Properties["cbom-netscan:cert:cabf-max-days"] = fmt.Sprintf("%d (%s; Baseline Requirements §6.3.2)", max, rule)
 		c.Properties["cbom-netscan:cert:exceeds-cabf-max"] = strconv.FormatBool(days > max)
+		c.Properties["cbom-netscan:cert:cabf-applicability"] = cabfApplicability
 	}
 	if now.IsZero() {
 		c.Properties["cbom-netscan:cert:expired"] = "not evaluated"

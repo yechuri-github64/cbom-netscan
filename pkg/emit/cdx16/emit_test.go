@@ -358,51 +358,69 @@ func TestReproducibleSerial(t *testing.T) {
 }
 
 // TestEmit_ESN checks that ikev2TransformTypes.esn is omitted when the model
-// does not know it, and kept as written when it does.
+// does not know it and kept as written when it does. The ESN edit works by
+// position, so each scenario mixes known and unknown in a different order.
 func TestEmit_ESN(t *testing.T) {
 	no, yes := false, true
-	inv := model.NewInventory()
-	alg := inv.Add(&model.Asset{Type: model.AssetTypeAlgorithm, Name: "AES-256-GCM", Alg: &model.Algorithm{Primitive: "ae"}})
-	for name, esn := range map[string]*bool{"a-unknown": nil, "b-off": &no, "c-on": &yes} {
-		inv.Add(&model.Asset{
-			Type:  model.AssetTypeProtocol,
-			Name:  name,
-			Proto: &model.Protocol{Type: "ipsec", IKEEncr: []string{alg.ID}, ESN: esn},
+	scenarios := []struct {
+		name   string
+		protos map[string]*bool // component name → model ESN; output is sorted by name
+	}{
+		{"unknown_then_known", map[string]*bool{"a-unknown": nil, "b-off": &no, "c-on": &yes}},
+		{"known_then_unknown", map[string]*bool{"a-on": &yes, "b-unknown": nil}},
+		{"only_second_known", map[string]*bool{"a-unknown": nil, "b-on": &yes}},
+		{"all_unknown", map[string]*bool{"a-unknown": nil, "b-unknown": nil}},
+	}
+	for _, sc := range scenarios {
+		t.Run(sc.name, func(t *testing.T) {
+			inv := model.NewInventory()
+			alg := inv.Add(&model.Asset{Type: model.AssetTypeAlgorithm, Name: "AES-256-GCM", Alg: &model.Algorithm{Primitive: "ae"}})
+			for name, esn := range sc.protos {
+				inv.Add(&model.Asset{
+					Type:  model.AssetTypeProtocol,
+					Name:  name,
+					Proto: &model.Protocol{Type: "ipsec", IKEEncr: []string{alg.ID}, ESN: esn},
+				})
+			}
+			var buf bytes.Buffer
+			if err := (cdx16.Emitter{}).Emit(context.Background(), &buf, inv, model.Meta{}); err != nil {
+				t.Fatalf("Emit: %v", err)
+			}
+			var bom struct {
+				Components []struct {
+					Name             string
+					CryptoProperties struct {
+						ProtocolProperties struct {
+							IKEv2TransformTypes map[string]any `json:"ikev2TransformTypes"`
+						} `json:"protocolProperties"`
+					} `json:"cryptoProperties"`
+				} `json:"components"`
+			}
+			if err := json.Unmarshal(buf.Bytes(), &bom); err != nil {
+				t.Fatalf("output is not valid JSON: %v", err)
+			}
+			checked := 0
+			for _, c := range bom.Components {
+				esn, ok := sc.protos[c.Name]
+				if !ok {
+					continue
+				}
+				checked++
+				got, present := c.CryptoProperties.ProtocolProperties.IKEv2TransformTypes["esn"]
+				switch {
+				case esn == nil && present:
+					t.Errorf("%s: esn = %v, want omitted", c.Name, got)
+				case esn != nil && got != *esn:
+					t.Errorf("%s: esn = %v, want %v", c.Name, got, *esn)
+				}
+				if _, ok := c.CryptoProperties.ProtocolProperties.IKEv2TransformTypes["encr"]; !ok {
+					t.Errorf("%s: encr lost while editing esn", c.Name)
+				}
+			}
+			if checked != len(sc.protos) {
+				t.Errorf("checked %d protocol components, want %d", checked, len(sc.protos))
+			}
 		})
-	}
-	var buf bytes.Buffer
-	if err := (cdx16.Emitter{}).Emit(context.Background(), &buf, inv, model.Meta{}); err != nil {
-		t.Fatalf("Emit: %v", err)
-	}
-	var bom struct {
-		Components []struct {
-			Name             string
-			CryptoProperties struct {
-				ProtocolProperties struct {
-					IKEv2TransformTypes map[string]any `json:"ikev2TransformTypes"`
-				} `json:"protocolProperties"`
-			} `json:"cryptoProperties"`
-		} `json:"components"`
-	}
-	if err := json.Unmarshal(buf.Bytes(), &bom); err != nil {
-		t.Fatalf("output is not valid JSON: %v", err)
-	}
-	want := map[string]any{"a-unknown": nil, "b-off": false, "c-on": true}
-	for _, c := range bom.Components {
-		w, ok := want[c.Name]
-		if !ok {
-			continue
-		}
-		got, present := c.CryptoProperties.ProtocolProperties.IKEv2TransformTypes["esn"]
-		switch {
-		case w == nil && present:
-			t.Errorf("%s: esn = %v, want omitted", c.Name, got)
-		case w != nil && got != w:
-			t.Errorf("%s: esn = %v, want %v", c.Name, got, w)
-		}
-		if _, ok := c.CryptoProperties.ProtocolProperties.IKEv2TransformTypes["encr"]; !ok {
-			t.Errorf("%s: encr lost while editing esn", c.Name)
-		}
 	}
 }
 

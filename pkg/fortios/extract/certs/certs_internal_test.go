@@ -152,6 +152,7 @@ func TestPEMLabel(t *testing.T) {
 		"-----END PRIVATE KEY-----":              "",
 		"c3ludGhldGlj":                           "",
 		"-----BEGIN ENCRYPTED PRIVATE KEY-----z": "ENCRYPTED PRIVATE KEY",
+		"\uFEFF-----BEGIN PRIVATE KEY-----":      "PRIVATE KEY",
 	} {
 		if got := pemLabel(line); got != want {
 			t.Errorf("pemLabel(%q) = %q, want %q", line, got, want)

@@ -628,6 +628,10 @@ func TestPrivateKeyForms(t *testing.T) {
 		{`"-----BEGIN RSA PRIVATE KEY-----` + body + "Proc-Type: 4,ENCRYPTED\n" + `-----END RSA PRIVATE KEY-----"`, "plaintext-pem", "is an unencrypted PEM key"},
 		// OpenSSH keys record their cipher inside the body, which is not read.
 		{`"-----BEGIN OPENSSH PRIVATE KEY-----` + body + `-----END OPENSSH PRIVATE KEY-----"`, "pem-encryption-unknown", "OpenSSH-format"},
+		// A UTF-8 byte order mark before the BEGIN line does not hide the key.
+		{`"` + "\uFEFF" + `-----BEGIN PRIVATE KEY-----` + body + `-----END PRIVATE KEY-----"`, "plaintext-pem", "is an unencrypted PEM key"},
+		{`"` + "\n\uFEFF\uFEFF " + `-----BEGIN RSA PRIVATE KEY-----` + body + `-----END RSA PRIVATE KEY-----"`, "plaintext-pem", "is an unencrypted PEM key"},
+		{`"` + "\uFEFF\r\n\n" + `-----BEGIN PRIVATE KEY-----` + body + `-----END PRIVATE KEY-----"`, "plaintext-pem", "is an unencrypted PEM key"},
 		// Text after the BEGIN line's closing dashes does not hide the key.
 		{`"-----BEGIN PRIVATE KEY----- trailing` + body + `-----END PRIVATE KEY-----"`, "plaintext-pem", "is an unencrypted PEM key"},
 		// Leading blank lines and spaces are skipped before the BEGIN line.
@@ -692,6 +696,8 @@ func TestCertificateFieldBlocks(t *testing.T) {
 		// BEGIN and END lines with trailing text are still recognised: the
 		// key is counted and the certificate after it is parsed.
 		{"trailing_text_on_key_lines", "-----BEGIN PRIVATE KEY-----junk\nc3ludGhldGlj\n-----END PRIVATE KEY----- junk\n" + gw, "CN=gw.example.net,O=Example Lab", "1", "", ""},
+		// A byte order mark before a key block or the certificate hides neither.
+		{"bom_before_key_and_cert", "\uFEFF" + key + "\n\uFEFF" + gw, "CN=gw.example.net,O=Example Lab", "1", "", ""},
 		// A key pasted inside the CERTIFICATE block: the key is counted, the
 		// block is not decoded, and a later certificate is still parsed.
 		{"key_inside_cert_block", certWithKeyInside(gw, key), "", "1", "", ""},

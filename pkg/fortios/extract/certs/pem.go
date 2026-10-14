@@ -11,7 +11,7 @@ import "strings"
 // ignored, so trailing characters do not hide a key. Only that one line is
 // looked at; the base64 body that follows is never read here.
 func pemLabel(line string) string {
-	rest, ok := strings.CutPrefix(strings.TrimSpace(line), "-----BEGIN ")
+	rest, ok := strings.CutPrefix(strings.TrimSpace(trimLeading(line)), "-----BEGIN ")
 	if !ok {
 		return ""
 	}
@@ -20,6 +20,12 @@ func pemLabel(line string) string {
 		return ""
 	}
 	return label
+}
+
+// trimLeading drops leading whitespace and UTF-8 byte order marks (U+FEFF),
+// which an editor may put before a pasted PEM value; neither may hide a key.
+func trimLeading(s string) string {
+	return strings.TrimLeft(s, " \t\r\n\uFEFF")
 }
 
 // isEndLine reports whether line ends a block with this label; like
@@ -60,8 +66,8 @@ func privateKeyForm(values []string) (form string, warn bool) {
 	case "FortinetPasswordMask":
 		return formMasked, false
 	}
-	// Leading blank lines or spaces do not hide a PEM key.
-	lines := strings.SplitN(strings.TrimLeft(values[0], " \t\r\n"), "\n", 3)
+	// Leading blank lines, spaces, or a byte order mark do not hide a PEM key.
+	lines := strings.SplitN(trimLeading(values[0]), "\n", 3)
 	label := pemLabel(lines[0])
 	switch {
 	case label == "ENCRYPTED PRIVATE KEY":
@@ -151,7 +157,8 @@ func scanCertField(text string) certField {
 		case end < 0:
 			// An unterminated certificate block is not a certificate.
 		case f.cert == "":
-			f.cert = strings.Join(lines[i:end+1], "\n")
+			// pem.Decode does not skip a byte order mark, so trim it here.
+			f.cert = trimLeading(strings.Join(lines[i:end+1], "\n"))
 		default:
 			f.extraCerts++
 		}

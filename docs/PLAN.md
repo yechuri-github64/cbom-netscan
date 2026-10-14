@@ -158,7 +158,7 @@ Conventions: Conventional Commits, every commit signed off with `git commit -s` 
 **Commits:** `feat(assess): CERT-In Table 9 completeness profile` · `feat(assess): PQC key-exchange/authentication classification` · `feat(assess): certificate lifetime and automation readiness` · `feat(cli): assess`
 **Tag:** `v0.2.0-alpha.1`
 
-**Post:** null chapter plus LinkedIn. Draft topic: "Ran a CERT-In Table 9 completeness check on a synthetic FortiGate: 7 of 30 elements are impossible to fill from config alone. Here's which ones and why."
+**Post:** null chapter plus LinkedIn. Draft topic: "19 of 30 CERT-In Table 9 elements fully, and 5 more partially, from a FortiGate backup alone."
 
 ### Week 7 · 23–29 Nov · Upstream decision point · ~12 h
 **Branch on the theia answer to §3.1:**

@@ -2,6 +2,8 @@ module github.com/yechuri-github64/cbom-netscan
 
 go 1.26
 
+toolchain go1.26.9
+
 require (
 	github.com/CycloneDX/cyclonedx-go v0.12.0
 	github.com/spf13/cobra v1.10.2

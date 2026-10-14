@@ -168,6 +168,19 @@ func TestExtract(t *testing.T) {
 					t.Errorf("ML-KEM-768 alg = %+v", mlkem.Alg)
 				}
 				eq(t, "ML-KEM-768 occurrences", occurrences(mlkem), []string{"37 ", "58 "})
+				levels := map[string]string{}
+				for _, n := range []string{"DH group 20 (ECP-384)", "DH group 21 (ECP-521)", "KYBER-768", "AES-256-GCM", "HMAC-SHA256"} {
+					levels[n] = "unset"
+					if l := find(t, inv, n).Alg.NISTQuantumLevel; l != nil {
+						levels[n] = fmt.Sprint(*l)
+					}
+				}
+				if fmt.Sprint(levels) != fmt.Sprint(map[string]string{
+					"DH group 20 (ECP-384)": "0", "DH group 21 (ECP-521)": "0", // classical key agreement
+					"KYBER-768": "unset", "AES-256-GCM": "unset", "HMAC-SHA256": "unset",
+				}) {
+					t.Errorf("nistQuantumSecurityLevel = %v", levels)
+				}
 
 				n := 0
 				for _, a := range inv.Assets {

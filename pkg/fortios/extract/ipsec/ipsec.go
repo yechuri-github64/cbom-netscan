@@ -30,6 +30,7 @@ import (
 	"strings"
 
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/defaults"
+	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/internal/algo"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/internal/field"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/tree"
 	"github.com/yechuri-github64/cbom-netscan/pkg/model"
@@ -136,6 +137,7 @@ func (r *refs) apply(p *model.Protocol, ikev2 bool) {
 // configured value adds an evidence occurrence; a default adds none.
 func (x *extractor) algorithm(a alg, v field.Value) string {
 	alg := a.a
+	algo.MarkQuantumVulnerable(&alg)
 	asset := &model.Asset{
 		ID:         model.BOMRef(model.AssetTypeAlgorithm, a.name, x.r.Loc),
 		Type:       model.AssetTypeAlgorithm,

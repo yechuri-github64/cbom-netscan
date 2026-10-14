@@ -805,7 +805,8 @@
         "assetType": "algorithm",
         "algorithmProperties": {
           "primitive": "key-agree",
-          "curve": "secp384r1"
+          "curve": "secp384r1",
+          "nistQuantumSecurityLevel": 0
         }
       }
     },
@@ -831,7 +832,8 @@
         "assetType": "algorithm",
         "algorithmProperties": {
           "primitive": "key-agree",
-          "curve": "secp521r1"
+          "curve": "secp521r1",
+          "nistQuantumSecurityLevel": 0
         }
       }
     },

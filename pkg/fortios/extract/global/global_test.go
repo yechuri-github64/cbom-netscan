@@ -134,6 +134,16 @@ func TestExtract(t *testing.T) {
 				if n := len(find(inv, ssh).Proto.Refs); n != 20 {
 					t.Errorf("SSH refs = %d, want 20", n)
 				}
+				for name, want := range map[string]int{"ecdh-sha2-nistp384": 0, "curve25519-sha256@libssh.org": 0, "ssh-ed25519": 0, "rsa-sha2-512": 0} {
+					if l := find(inv, name).Alg.NISTQuantumLevel; l == nil || *l != want {
+						t.Errorf("%s: nistQuantumSecurityLevel = %v, want %d (classical public-key)", name, l, want)
+					}
+				}
+				for _, name := range []string{"aes256-ctr", "hmac-sha2-256"} {
+					if l := find(inv, name).Alg.NISTQuantumLevel; l != nil {
+						t.Errorf("%s: nistQuantumSecurityLevel = %d, want unset (symmetric)", name, *l)
+					}
+				}
 				if ev := find(inv, "aes256-ctr").Evidence; len(ev) != 0 {
 					t.Errorf("default-sourced component has evidence %v", ev)
 				}

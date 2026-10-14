@@ -397,7 +397,8 @@
         "assetType": "algorithm",
         "algorithmProperties": {
           "primitive": "key-agree",
-          "parameterSetIdentifier": "2048"
+          "parameterSetIdentifier": "2048",
+          "nistQuantumSecurityLevel": 0
         }
       }
     },
@@ -409,7 +410,8 @@
         "assetType": "algorithm",
         "algorithmProperties": {
           "primitive": "key-agree",
-          "curve": "secp384r1"
+          "curve": "secp384r1",
+          "nistQuantumSecurityLevel": 0
         }
       }
     },

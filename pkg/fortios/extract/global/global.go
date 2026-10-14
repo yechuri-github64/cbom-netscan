@@ -22,6 +22,7 @@ package global
 
 import (
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/defaults"
+	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/internal/algo"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/internal/field"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/lexer"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/tree"
@@ -150,6 +151,7 @@ func (x *extractor) ssh() {
 			if !ok {
 				alg = model.Algorithm{Primitive: "unknown"}
 			}
+			algo.MarkQuantumVulnerable(&alg)
 			a := &model.Asset{
 				Type:       model.AssetTypeAlgorithm,
 				Name:       tok,
@@ -163,6 +165,7 @@ func (x *extractor) ssh() {
 			var parts []string
 			for _, hp := range hybridParts[tok] {
 				pa := hp.alg
+				algo.MarkQuantumVulnerable(&pa)
 				c := &model.Asset{
 					ID:         model.BOMRef(model.AssetTypeAlgorithm, hp.name, x.r.Loc),
 					Type:       model.AssetTypeAlgorithm,

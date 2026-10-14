@@ -51,16 +51,28 @@ func TestAdd_DedupesEvidence(t *testing.T) {
 func TestAdd_MergeIsOrderIndependent(t *testing.T) {
 	x := map[string]string{"cbom-netscan:a": "1", "cbom-netscan:conflict": "zeta"}
 	y := map[string]string{"cbom-netscan:b": "2", "cbom-netscan:conflict": "alpha"}
-	result := func(first, second map[string]string) string {
+	result := func(first, second map[string]string) (string, []model.Warning) {
 		inv := model.NewInventory()
 		inv.Add(asset(clone(first)))
 		inv.Add(asset(clone(second)))
-		return fmt.Sprint(inv.Assets[0].Properties)
+		return fmt.Sprint(inv.Assets[0].Properties), inv.Warnings
 	}
-	xy, yx := result(x, y), result(y, x)
+	xy, wxy := result(x, y)
+	yx, wyx := result(y, x)
 	want := fmt.Sprint(map[string]string{"cbom-netscan:a": "1", "cbom-netscan:b": "2", "cbom-netscan:conflict": "alpha"})
 	if xy != want || yx != want {
 		t.Errorf("x then y = %s, y then x = %s, want %s for both", xy, yx, want)
+	}
+	// The conflict is reported, with the same text in either order.
+	wantMsg := `component "AES-256-GCM": property cbom-netscan:conflict was set to "alpha" and to "zeta"; kept "alpha"`
+	for _, ws := range [][]model.Warning{wxy, wyx} {
+		if len(ws) != 1 || ws[0].Code != "merge-conflict" || ws[0].Message != wantMsg {
+			t.Errorf("warnings = %+v, want one merge-conflict: %s", ws, wantMsg)
+		}
+	}
+	// Equal values are not a conflict.
+	if _, ws := result(map[string]string{"k": "v"}, map[string]string{"k": "v"}); len(ws) != 0 {
+		t.Errorf("equal values produced warnings %+v", ws)
 	}
 
 	inv := model.NewInventory()
@@ -77,4 +89,20 @@ func clone(m map[string]string) map[string]string {
 		out[k] = v
 	}
 	return out
+}
+
+// TestAdd_DetailConflictWarns: duplicates with different algorithm details
+// keep the first and report a merge-conflict.
+func TestAdd_DetailConflictWarns(t *testing.T) {
+	inv := model.NewInventory()
+	inv.Add(asset(nil))
+	other := asset(nil)
+	other.Alg = &model.Algorithm{Primitive: "block-cipher"}
+	inv.Add(other)
+	if got := inv.Assets[0].Alg.Primitive; got != "ae" {
+		t.Errorf("primitive = %s, want the first copy's ae", got)
+	}
+	if len(inv.Warnings) != 1 || inv.Warnings[0].Code != "merge-conflict" {
+		t.Errorf("warnings = %+v, want one merge-conflict", inv.Warnings)
+	}
 }

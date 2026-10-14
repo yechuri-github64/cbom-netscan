@@ -4,7 +4,11 @@
 
 package model
 
-import "slices"
+import (
+	"fmt"
+	"reflect"
+	"slices"
+)
 
 // NewInventory creates an empty Inventory with the dedupe map initialised.
 // Always use this constructor; the zero value of Inventory has a nil map
@@ -37,7 +41,7 @@ func (inv *Inventory) Add(a *Asset) *Asset {
 
 	key := string(a.Type) + "\x00" + a.Name + "\x00" + a.OID
 	if existing, ok := inv.byKey[key]; ok {
-		existing.merge(a)
+		inv.merge(existing, a)
 		return existing
 	}
 
@@ -50,13 +54,16 @@ func (inv *Inventory) Add(a *Asset) *Asset {
 // depend on which extractor added the asset first:
 //   - evidence occurrences are added unless an identical one is already there
 //     (the same proposal line naming one algorithm twice gives one occurrence);
-//   - properties are combined; if both set a key to different values, the
-//     smaller value is kept, so the outcome is the same in either order.
+//   - properties are combined. If both set a key to different values, the
+//     smaller value is kept, so the outcome is the same in either order, and
+//     a merge-conflict warning names both values, because a real conflict
+//     means two extractors disagree about the same component.
 //
 // The algorithm, protocol, certificate, or material details of the stored
-// asset are kept. Extractors that share components must define them
-// identically; extract/shared_test.go checks that.
-func (existing *Asset) merge(a *Asset) {
+// asset are kept; if the duplicate's details differ, that is also reported
+// as a merge-conflict. extract/shared_test.go checks that the extractors
+// define shared components identically.
+func (inv *Inventory) merge(existing, a *Asset) {
 	for _, ev := range a.Evidence {
 		if !slices.Contains(existing.Evidence, ev) {
 			existing.Evidence = append(existing.Evidence, ev)
@@ -65,11 +72,35 @@ func (existing *Asset) merge(a *Asset) {
 	if len(a.Properties) > 0 && existing.Properties == nil {
 		existing.Properties = map[string]string{}
 	}
-	for k, v := range a.Properties {
-		if old, ok := existing.Properties[k]; !ok || v < old {
+	keys := make([]string, 0, len(a.Properties))
+	for k := range a.Properties {
+		keys = append(keys, k)
+	}
+	slices.Sort(keys)
+	for _, k := range keys {
+		v := a.Properties[k]
+		old, ok := existing.Properties[k]
+		switch {
+		case !ok:
 			existing.Properties[k] = v
+		case v != old:
+			lo, hi := min(v, old), max(v, old)
+			existing.Properties[k] = lo
+			inv.conflict(existing, fmt.Sprintf("property %s was set to %q and to %q; kept %q", k, lo, hi, lo))
 		}
 	}
+	if !reflect.DeepEqual(existing.Alg, a.Alg) || !reflect.DeepEqual(existing.Proto, a.Proto) ||
+		!reflect.DeepEqual(existing.Cert, a.Cert) || !reflect.DeepEqual(existing.Mat, a.Mat) {
+		inv.conflict(existing, "two copies have different algorithm, protocol, certificate, or material details; kept the first")
+	}
+}
+
+func (inv *Inventory) conflict(a *Asset, detail string) {
+	inv.AddWarning(Warning{
+		Code:    "merge-conflict",
+		Message: fmt.Sprintf("component %q: %s", a.Name, detail),
+		Ev:      Evidence{Symbol: a.Name},
+	})
 }
 
 // AddWarning appends a warning to the inventory.

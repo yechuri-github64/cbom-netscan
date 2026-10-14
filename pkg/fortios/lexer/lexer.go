@@ -25,6 +25,8 @@
 //     Double-quoted strings resolve the escapes \", \', \\, and "\ " (backslash-
 //     space) per AG-8.0.1 §"Special characters".
 //     Single-quoted strings have NO escape processing (Batfish grammar, §1.2).
+//   - Bare words decode the same backslash escapes as double-quoted strings,
+//     so a\ b\ c is one TokWord with value "a b c".
 //   - Multi-line quoted strings (e.g. PEM certificate values) are handled
 //     transparently; embedded newlines appear as \n in the TokString value.
 //   - CRLF line endings are normalised to LF. No line-length limit.
@@ -251,9 +253,14 @@ func (l *Lexer) readToEOL() (string, error) {
 // readWord reads a bare (unquoted) token beginning with first.
 // It stops at whitespace, single or double quotes, or end of input.
 // Newlines are pushed back so the caller's loop can handle them.
+//
+// Backslash escapes \ (space), \', \", and \\ are decoded so that input like
+// a\ b\ c yields the single word "a b c" (verified on FortiOS 7.6.7). Any other
+// backslash is kept literally and the following rune is processed normally,
+// so a stray \ before a newline cannot swallow the line break.
 func (l *Lexer) readWord(first rune) (string, error) {
 	var b strings.Builder
-	b.WriteRune(first)
+	l.back(first)
 	for {
 		r, err := l.next()
 		if err == io.EOF {
@@ -261,6 +268,24 @@ func (l *Lexer) readWord(first rune) (string, error) {
 		}
 		if err != nil {
 			return "", fmt.Errorf("fortios lexer line %d: %w", l.line, err)
+		}
+		if r == '\\' {
+			esc, err := l.next()
+			if err == io.EOF {
+				b.WriteRune('\\')
+				break
+			}
+			if err != nil {
+				return "", fmt.Errorf("fortios lexer line %d: %w", l.line, err)
+			}
+			switch esc {
+			case ' ', '\'', '"', '\\':
+				b.WriteRune(esc)
+			default:
+				b.WriteRune('\\')
+				l.back(esc)
+			}
+			continue
 		}
 		if r == ' ' || r == '\t' || r == '\n' || r == '"' || r == '\'' {
 			l.back(r)

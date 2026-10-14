@@ -406,6 +406,42 @@ func TestLexer_DeviceVerifiedEscapes(t *testing.T) {
 	}
 }
 
+// TestLexer_BareWordEscapes covers backslash escapes in unquoted values.
+// The a\ b\ c case is verified on FortiOS 7.6.7 build 3704: the device stores
+// and shows it as set comment "a b c".
+func TestLexer_BareWordEscapes(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		want []string // values of the tokens after "set comment"
+	}{
+		{"backslash_space_device_verified", `a\ b\ c`, []string{"a b c"}},
+		{"escaped_quotes_and_backslash", `it\'s\ \"x\"\ \\`, []string{`it's "x" \`}},
+		{"unknown_escape_kept_literal", `C:\temp`, []string{`C:\temp`}},
+		{"trailing_backslash_at_eof", `abc\`, []string{`abc\`}},
+		{"backslash_before_newline_keeps_line_break", "abc\\\nend", []string{`abc\`, "end"}},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			toks, _ := tokenize(t, hdr+"set comment "+tc.in)
+			if len(toks) != 2+len(tc.want) {
+				t.Fatalf("got %d tokens, want %d: %v", len(toks), 2+len(tc.want), toks)
+			}
+			for i, w := range tc.want {
+				if got := toks[2+i].Value; got != w {
+					t.Errorf("token[%d] value = %q, want %q", 2+i, got, w)
+				}
+			}
+		})
+	}
+
+	toks, _ := tokenize(t, hdr+"set comment a\\ b\\ c\nend\n")
+	if toks[2].Kind != lexer.TokWord || toks[3].Kind != lexer.TokEnd || toks[3].Line != 3 {
+		t.Errorf("after a\\ b\\ c: got %v, want TokWord then TokEnd on line 3", toks[2:])
+	}
+}
+
 // TestLexer_UnterminatedQuote verifies that a quoted string that reaches EOF
 // without a closing delimiter returns a clear error with the opening line
 // number, and never hangs or panics.

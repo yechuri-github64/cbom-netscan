@@ -1,0 +1,103 @@
+# SPDX-FileCopyrightText: 2026 contributors to cbom-netscan
+#
+# SPDX-License-Identifier: Apache-2.0
+
+# GoReleaser v2 configuration, used by .github/workflows/release.yml on a
+# v* tag. It builds static binaries for Linux, macOS, and Windows on amd64
+# and arm64, packs them with the license and docs, writes checksums.txt and
+# a CycloneDX SBOM per archive, and signs checksums.txt with Sigstore keyless
+# signing. The release is created as a draft, to be published by hand.
+#
+# Check locally without publishing or signing:
+#   go run github.com/goreleaser/goreleaser/v2@v2.18.3 release --snapshot --clean --skip=sign
+# (needs syft on PATH for the SBOMs; goreleaser v2.18 itself needs Go 1.27,
+# which go run fetches as a toolchain)
+
+version: 2
+
+project_name: cbom-netscan
+
+before:
+  hooks:
+    - go mod verify
+
+builds:
+  - id: cbom-netscan
+    main: ./cmd/cbom-netscan
+    binary: cbom-netscan
+    env:
+      - CGO_ENABLED=0 # static binaries, no C toolchain needed
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath # no local paths in the binary
+    ldflags:
+      # main.version/commit/date are printed by "cbom-netscan version".
+      - -s -w -X main.version={{ .Version }} -X main.commit={{ .Commit }} -X main.date={{ .CommitDate }}
+    # The commit time, not the build time, so rebuilding a tag gives the
+    # same binaries.
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: cbom-netscan
+    ids: [cbom-netscan]
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    # e.g. cbom-netscan_0.1.0_linux_amd64.tar.gz, as README.md shows.
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    # Fixed owner and the commit time on every file, so the archives do not
+    # carry the build machine's user name and rebuilding a tag gives the
+    # same bytes.
+    builds_info: &fileinfo
+      owner: root
+      group: root
+      mtime: "{{ .CommitDate }}"
+    files:
+      - src: LICENSE
+        info: *fileinfo
+      - src: NOTICE
+        info: *fileinfo
+      - src: README.md
+        info: *fileinfo
+      - src: CHANGELOG.md
+        info: *fileinfo
+      - src: MAPPING.md
+        info: *fileinfo
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+# One SBOM per archive, written by syft next to it as
+# <archive>.sbom.json. CycloneDX instead of goreleaser's SPDX default, and
+# without syft's --enrich, which looks things up online.
+sboms:
+  - id: archive-sbom
+    artifacts: archive
+    documents:
+      - "{{ .ArtifactName }}.sbom.json"
+    args: ["$artifact", "--output", "cyclonedx-json=$document"]
+
+# Sigstore keyless signing of checksums.txt with cosign v3: the workflow's
+# GitHub OIDC identity gets a short-lived certificate, and the signature and
+# certificate go into one bundle, checksums.txt.sigstore.json. Verifying the
+# checksums file covers every archive and SBOM listed in it.
+signs:
+  - cmd: cosign
+    signature: "${artifact}.sigstore.json"
+    args: ["sign-blob", "--bundle=${signature}", "${artifact}", "--yes"]
+    artifacts: checksum
+
+release:
+  github:
+    owner: yechuri-github64
+    name: cbom-netscan
+  draft: true
+
+# Release notes come from CHANGELOG.md (see release.yml), not from commit
+# subjects: a commit's type does not always describe it (CHANGELOG.md notes
+# a6e40e8).
+changelog:
+  disable: true

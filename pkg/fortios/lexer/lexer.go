@@ -79,7 +79,7 @@ type ConfigHeader struct {
 	Model     string   // FortiGate model identifier, e.g. "FGVMH6"
 	Version   string   // firmware version, e.g. "7.6.7"
 	Build     string   // build number, e.g. "3704"
-	BuildDate string   // build date as YYMMDD, e.g. "260601"
+	BuildDate string   // build date as YYMMDD, e.g. "260601"; empty if missing or not 6 digits
 	OpMode    string   // opmode= value, e.g. "0"; empty if absent
 	VDOMMode  VDOMMode // from vdom=; VDOMUnknown if absent or not 0/1
 
@@ -100,8 +100,11 @@ const (
 )
 
 // headerRE matches the first colon-separated field after "#config-version=".
-// Capture groups: (1) model, (2) version, (3) build number, (4) build date.
-var headerRE = regexp.MustCompile(`^([^-]+)-(\d+\.\d+\.\d+)-FW-build(\d+)-(\d{6})$`)
+// Capture groups: (1) model, (2) version, (3) build number, (4) whatever
+// follows the build number, which is the build date when it is 6 digits.
+var headerRE = regexp.MustCompile(`^([^-]+)-(\d+\.\d+\.\d+)-FW-build(\d+)(?:-(.*))?$`)
+
+var buildDateRE = regexp.MustCompile(`^\d{6}$`)
 
 var userFieldRE = regexp.MustCompile(`(?i)(user=)[^:]*`)
 
@@ -182,7 +185,10 @@ func (l *Lexer) readHeader() error {
 	if m == nil {
 		return fmt.Errorf("fortios lexer: malformed #config-version line: %q", redactUser(first))
 	}
-	h := &ConfigHeader{Model: m[1], Version: m[2], Build: m[3], BuildDate: m[4]}
+	h := &ConfigHeader{Model: m[1], Version: m[2], Build: m[3]}
+	if buildDateRE.MatchString(m[4]) {
+		h.BuildDate = m[4]
+	}
 
 	vdomRaw, vdomSeen := "", false
 	for _, f := range fields[1:] {

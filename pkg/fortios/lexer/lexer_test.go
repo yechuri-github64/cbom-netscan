@@ -104,6 +104,30 @@ func TestLexer_Header(t *testing.T) {
 			wantWarnings:  []string{"vdom-mode-unknown"},
 		},
 		{
+			name:        "missing_build_date",
+			input:       "#config-version=FGT80F-7.4.12-FW-build0318:opmode=0:vdom=0:user=admin\n",
+			wantModel:   "FGT80F",
+			wantVersion: "7.4.12",
+			wantBuild:   "0318",
+			wantVDOM:    lexer.VDOMSingle,
+		},
+		{
+			name:        "build_date_not_6_digits",
+			input:       "#config-version=FGT80F-7.4.12-FW-build0318-2606:opmode=0:vdom=0:user=admin\n",
+			wantModel:   "FGT80F",
+			wantVersion: "7.4.12",
+			wantBuild:   "0318",
+			wantVDOM:    lexer.VDOMSingle,
+		},
+		{
+			name:        "build_date_with_trailing_text",
+			input:       "#config-version=FGT80F-7.4.12-FW-build0318-260601-beta:opmode=0:vdom=0:user=admin\n",
+			wantModel:   "FGT80F",
+			wantVersion: "7.4.12",
+			wantBuild:   "0318",
+			wantVDOM:    lexer.VDOMSingle,
+		},
+		{
 			name:          "vdom_not_0_or_1",
 			input:         "#config-version=FGT60F-7.6.7-FW-build0999-260601:opmode=0:vdom=2:user=admin\n",
 			wantModel:     "FGT60F",
@@ -245,11 +269,6 @@ func TestLexer_Reject(t *testing.T) {
 			name:    "plain_text",
 			input:   "config system global\n    set hostname fw01\nend\n",
 			wantMsg: "not a FortiOS config backup",
-		},
-		{
-			name:    "missing_build_date",
-			input:   "#config-version=FGT80F-7.4.12-FW-build0318:opmode=0:vdom=0:user=admin\n",
-			wantMsg: "malformed #config-version line",
 		},
 	}
 

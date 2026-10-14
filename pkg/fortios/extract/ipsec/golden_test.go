@@ -11,6 +11,7 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -34,6 +35,8 @@ func TestGolden(t *testing.T) {
 		"testdata/ipsec-7.6.conf":           "fortios-ipsec-7.6.cdx.json",
 		"testdata/ipsec-multivdom-7.6.conf": "fortios-ipsec-multivdom-7.6.cdx.json",
 	} {
+		// branch-ikev1 in ipsec-7.6.conf has a plaintext PSK on purpose.
+		wantWarnings := map[string][]string{"testdata/ipsec-7.6.conf": {"plaintext-psk"}}[fixture]
 		t.Run(golden, func(t *testing.T) {
 			path := filepath.Join("..", "..", "..", "testdata", "golden", golden)
 			data, err := os.ReadFile(fixture)
@@ -46,8 +49,12 @@ func TestGolden(t *testing.T) {
 			}
 			inv := model.NewInventory()
 			ipsec.Extract(tr, filepath.Base(fixture), inv)
-			if len(inv.Warnings) != 0 {
-				t.Errorf("unexpected warnings: %+v", inv.Warnings)
+			var codes []string
+			for _, w := range inv.Warnings {
+				codes = append(codes, w.Code)
+			}
+			if !slices.Equal(codes, wantWarnings) {
+				t.Errorf("warnings = %v, want %v", codes, wantWarnings)
 			}
 
 			var buf bytes.Buffer

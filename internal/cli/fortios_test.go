@@ -306,8 +306,12 @@ func TestFortiOS_IPsecWired(t *testing.T) {
 			if err != nil {
 				t.Fatalf("fortios: %v", err)
 			}
-			if stderr != "" {
-				t.Errorf("unexpected warnings:\n%s", stderr)
+			// ipsec-7.6.conf has one plaintext PSK on purpose (line 30).
+			wantStderr := map[string]string{
+				"ipsec-7.6.conf": "ipsec-7.6.conf:30: warning: FortiOS IPsec phase1-interface branch-ikev1 has a plaintext pre-shared key in the backup (value not shown); take backups with secrets encrypted [plaintext-psk]\n",
+			}[fixtureName]
+			if stderr != wantStderr {
+				t.Errorf("stderr = %q, want %q", stderr, wantStderr)
 			}
 			want, err := os.ReadFile("../../pkg/testdata/golden/" + goldenName)
 			if err != nil {

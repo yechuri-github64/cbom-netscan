@@ -195,7 +195,7 @@ func TestExtract(t *testing.T) {
 				eq(t, "pqc-p2 ke", names(inv, pqp2.Proto.IKEKE), []string{"DH group 20 (ECP-384)", "ML-KEM-768"})
 				prop(t, pqp2, "dhgrp:source", "default")
 
-				eq(t, "warnings", warnCodes(inv), []string{})
+				eq(t, "warnings", warnCodes(inv), []string{"plaintext-psk"})
 			},
 		},
 		{
@@ -333,6 +333,25 @@ end
 				eq(t, "AES-256-CBC occurrences", occurrences(find(t, inv, "AES-256-CBC")), []string{"21 vdom root", "28 vdom root", "37 vdom branch"})
 				eq(t, "root phase2 dependsOn", names(inv, find(t, inv, p2+"to-dc-p2 (vdom root)").DependsOn), []string{p1 + "to-dc (vdom root)"})
 				eq(t, "warnings", warnCodes(inv), []string{})
+			},
+		},
+		{
+			// A leftover plaintext PSK on a signature tunnel is still reported
+			// (presence, form, warning), but is not part of the auth transform.
+			name: "leftover_psk_on_signature_tunnel",
+			cfg:  hdr767 + "config vpn ipsec phase1-interface\n    edit \"sig\"\n        set ike-version 2\n        set proposal aes256gcm-prfsha384\n        set authmethod signature\n        set psksecret c3ludGhldGljLWxlZnRvdmVy\n    next\nend\n",
+			check: func(t *testing.T, inv *model.Inventory) {
+				tn := find(t, inv, p1+"sig")
+				prop(t, tn, "psksecret", "present")
+				prop(t, tn, "psksecret:unused", "authmethod is signature")
+				if len(tn.Proto.IKEAuth) != 0 {
+					t.Errorf("unused PSK put in the auth transform: %v", names(inv, tn.Proto.IKEAuth))
+				}
+				prop(t, find(t, inv, p1+"sig pre-shared key"), "psksecret:form", "plaintext")
+				eq(t, "warnings", warnCodes(inv), []string{"plaintext-psk"})
+				if w := inv.Warnings[0]; w.Ev.Line != 7 || strings.Contains(w.Message, "c3lu") {
+					t.Errorf("plaintext-psk warning = %+v; want line 7 and no value", w)
+				}
 			},
 		},
 		{

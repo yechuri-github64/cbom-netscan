@@ -290,10 +290,10 @@ func (x *extractor) phase1(scope tree.Scope, section string, e *tree.Entry) *mod
 	if cert := x.resolve(en, "certificate", specCertName); cert.Source == field.Configured {
 		x.r.Record(a, cert, true)
 	}
-	if method == "psk" {
-		if id := x.psk(en, a); id != "" {
-			rs.add(&rs.auth, id)
-		}
+	// A PSK is reported whenever one is set, even if the tunnel authenticates
+	// with signatures; it is part of the auth transform only for psk.
+	if id := x.psk(en, a, method); id != "" && method == "psk" {
+		rs.add(&rs.auth, id)
 	}
 
 	rs.apply(a.Proto, a.Proto.Version == "2")
@@ -304,10 +304,17 @@ func (x *extractor) phase1(scope tree.Scope, section string, e *tree.Entry) *mod
 // the bom-ref of a presence-only secret-key component, or "" if none is set.
 // The key value is never stored: only its first token is inspected, to tell
 // an ENC blob or the FortinetPasswordMask placeholder from plaintext.
-func (x *extractor) psk(en entry, tunnel *model.Asset) string {
+//
+// A plaintext key is a finding in itself (the backup was taken without
+// encrypting secrets), so it also produces a plaintext-psk warning, still
+// without the value. A key on a tunnel whose authmethod is not psk is marked
+// unused, since it is left over rather than in effect.
+func (x *extractor) psk(en entry, tunnel *model.Asset, method string) string {
 	attr := en.e.Attr("psksecret")
 	if attr == nil || attr.Unset || len(attr.Values) == 0 {
-		tunnel.Properties[field.Prefix+"psksecret"] = "absent"
+		if method == "psk" {
+			tunnel.Properties[field.Prefix+"psksecret"] = "absent"
+		}
 		return ""
 	}
 	form := "plaintext"
@@ -318,6 +325,16 @@ func (x *extractor) psk(en entry, tunnel *model.Asset) string {
 		form = "masked"
 	}
 	tunnel.Properties[field.Prefix+"psksecret"] = "present"
+	if method != "psk" {
+		tunnel.Properties[field.Prefix+"psksecret:unused"] = "authmethod is " + method
+	}
+	if form == "plaintext" {
+		x.inv.AddWarning(model.Warning{
+			Code:    "plaintext-psk",
+			Message: en.label + " has a plaintext pre-shared key in the backup (value not shown); take backups with secrets encrypted",
+			Ev:      model.Evidence{Location: x.r.Loc, Line: attr.Line, Symbol: en.section + "/" + en.e.Name + "/psksecret", Context: en.ctx},
+		})
+	}
 
 	v := field.Value{Field: "psksecret", Symbol: en.section + "/" + en.e.Name + "/psksecret", Context: en.ctx, Line: attr.Line}
 	m := &model.Asset{

@@ -1,0 +1,394 @@
+// Copyright 2026 contributors to cbom-netscan
+//
+// SPDX-License-Identifier: Apache-2.0
+
+// Package certs extracts certificates from "config vpn certificate local",
+// "ca", and "remote" (and the same tables under "config certificate", which
+// 7.6.7 and 8.0.1 also have), per research notes §3.8.
+//
+// Only the public certificate PEM is parsed, with crypto/x509. For each
+// certificate it emits:
+//
+//	certificate component   subject, issuer, validity, format, fingerprint, serial
+//	  → public key          related-crypto-material, key size, SPKI fingerprint as id
+//	      → key algorithm   e.g. RSA-2048 (pke), ECDSA-P256 (signature)
+//	  → signature algorithm e.g. ECDSA-SHA384, SHA256-RSA
+//	private key             related-crypto-material, presence only
+//
+// The private-key value is never parsed, decoded, or emitted: the code only
+// checks whether the field is set. The password field is never read.
+//
+// Certificates are flagged when expired at the reference time, and when a
+// leaf certificate's validity exceeds the CA/Browser Forum maximum for its
+// issue date (Baseline Requirements §6.3.2; research notes §3.7 note).
+//
+// Ref lets other extractors (IPsec, SSL VPN) reference a local certificate by
+// name. It computes the same bom-refs Extract uses, so extractor order does
+// not matter.
+package certs
+
+import (
+	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/rsa"
+	"crypto/sha256"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/asn1"
+	"encoding/hex"
+	"encoding/pem"
+	"fmt"
+	"math"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/internal/algo"
+	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/internal/field"
+	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/tree"
+	"github.com/yechuri-github64/cbom-netscan/pkg/model"
+)
+
+// table is one certificate table and the field holding its PEM.
+type table struct {
+	path     string // config path
+	pemField string
+	kind     string // local | ca | remote
+}
+
+// tables lists the certificate tables (research notes §3.8). The
+// "certificate ..." paths hold the same fields as "vpn certificate ...".
+var tables = []table{
+	{"vpn certificate local", "certificate", "local"},
+	{"vpn certificate ca", "ca", "ca"},
+	{"vpn certificate remote", "remote", "remote"},
+	{"certificate local", "certificate", "local"},
+	{"certificate ca", "ca", "ca"},
+	{"certificate remote", "remote", "remote"},
+}
+
+// Values recorded as properties when configured; anything else is ignored.
+var (
+	knownSource = map[string]bool{"factory": true, "user": true, "bundle": true}
+	knownRange  = map[string]bool{"global": true, "vdom": true}
+)
+
+// Extract adds certificate components for every certificate in every scope
+// of t. now is the reference time for the expiry check; if it is zero, expiry
+// is recorded as not evaluated.
+func Extract(t *tree.Tree, location string, inv *model.Inventory, now time.Time) {
+	for _, scope := range t.Scopes() {
+		for _, tb := range tables {
+			for _, e := range t.Get(scope, tb.path) {
+				addCert(inv, location, scope, tb, e, now)
+			}
+		}
+	}
+}
+
+// Refs are the bom-refs another component needs to point at a certificate.
+type Refs struct {
+	Cert    string // certificate component
+	KeyAlg  string // the certificate key's algorithm component; empty if the PEM does not parse
+	Missing bool   // no local certificate with that name in the backup
+}
+
+// Ref finds the local certificate name for a component in scope, looking in
+// scope first and then in the global scope (multi-VDOM backups keep shared
+// certificates there). It returns the bom-refs Extract gives that
+// certificate, without adding anything to an inventory.
+func Ref(t *tree.Tree, location string, scope tree.Scope, name string) Refs {
+	scopes := []tree.Scope{scope}
+	if scope.Kind == tree.KindVDOM {
+		scopes = append(scopes, tree.ScopeGlobal)
+	}
+	for _, s := range scopes {
+		for _, tb := range tables {
+			if tb.kind != "local" {
+				continue
+			}
+			for _, e := range t.Get(s, tb.path) {
+				if e.Name != name {
+					continue
+				}
+				r := Refs{Cert: model.BOMRef(model.AssetTypeCertificate, certName(s, tb, e), location)}
+				if p, err := parsePEM(e.Attr(tb.pemField)); err == nil {
+					r.KeyAlg = model.BOMRef(model.AssetTypeAlgorithm, keyAlgorithm(p).name, location)
+				}
+				return r
+			}
+		}
+	}
+	return Refs{Missing: true}
+}
+
+// certName is the component name: table kind, entry name, and scope.
+func certName(scope tree.Scope, tb table, e *tree.Entry) string {
+	n := "FortiOS certificate " + tb.kind + " " + e.Name
+	switch scope.Kind {
+	case tree.KindVDOM:
+		n += " (vdom " + scope.Name + ")"
+	case tree.KindGlobal:
+		n += " (global)"
+	}
+	return n
+}
+
+func scopeContext(scope tree.Scope) string {
+	switch scope.Kind {
+	case tree.KindVDOM:
+		return "vdom " + scope.Name
+	case tree.KindGlobal:
+		return "global"
+	}
+	return ""
+}
+
+// parsed is a certificate plus the algorithm OIDs read from its ASN.1, so
+// algorithms crypto/x509 does not know still get an OID.
+type parsed struct {
+	cert   *x509.Certificate
+	sigOID string
+	keyOID string
+}
+
+func parsePEM(attr *tree.Attr) (*parsed, error) {
+	if attr == nil || attr.Unset || len(attr.Values) == 0 {
+		return nil, fmt.Errorf("no certificate PEM")
+	}
+	block, _ := pem.Decode([]byte(strings.Join(attr.Values, " ")))
+	if block == nil || block.Type != "CERTIFICATE" {
+		return nil, fmt.Errorf("not a PEM CERTIFICATE block")
+	}
+	c, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("X.509 parse failed")
+	}
+	p := &parsed{cert: c}
+	var outer struct {
+		TBS    asn1.RawValue
+		SigAlg pkix.AlgorithmIdentifier
+		Sig    asn1.BitString
+	}
+	if _, err := asn1.Unmarshal(c.Raw, &outer); err == nil {
+		p.sigOID = outer.SigAlg.Algorithm.String()
+	}
+	var spki struct {
+		Alg pkix.AlgorithmIdentifier
+		Key asn1.BitString
+	}
+	if _, err := asn1.Unmarshal(c.RawSubjectPublicKeyInfo, &spki); err == nil {
+		p.keyOID = spki.Alg.Algorithm.String()
+	}
+	return p, nil
+}
+
+// alg is an algorithm component definition.
+type alg struct {
+	name string
+	oid  string
+	a    model.Algorithm
+	bits int // key size, for the public and private key components
+}
+
+var curveNames = map[string]string{"P-224": "secp224r1", "P-256": "secp256r1", "P-384": "secp384r1", "P-521": "secp521r1"}
+
+// keyAlgorithm names the certificate key's algorithm. RSA keys are pke (they
+// can encrypt as well as sign); EC and Ed25519 keys are signature keys.
+func keyAlgorithm(p *parsed) alg {
+	switch k := p.cert.PublicKey.(type) {
+	case *rsa.PublicKey:
+		bits := k.N.BitLen()
+		return alg{name: "RSA-" + strconv.Itoa(bits), oid: p.keyOID, bits: bits,
+			a: model.Algorithm{Primitive: "pke", ParameterSetIdentifier: strconv.Itoa(bits)}}
+	case *ecdsa.PublicKey:
+		params := k.Curve.Params()
+		return alg{name: "ECDSA-" + strings.ReplaceAll(params.Name, "-", ""), oid: p.keyOID, bits: params.BitSize,
+			a: model.Algorithm{Primitive: "signature", Curve: curveNames[params.Name]}}
+	case ed25519.PublicKey:
+		return alg{name: "Ed25519", oid: p.keyOID, bits: 256, a: model.Algorithm{Primitive: "signature", Curve: "ed25519"}}
+	}
+	return alg{name: "OID " + p.keyOID, oid: p.keyOID, a: model.Algorithm{Primitive: "unknown"}}
+}
+
+func signatureAlgorithm(p *parsed) alg {
+	sa := p.cert.SignatureAlgorithm
+	if sa == x509.UnknownSignatureAlgorithm {
+		return alg{name: "OID " + p.sigOID, oid: p.sigOID, a: model.Algorithm{Primitive: "unknown"}}
+	}
+	a := model.Algorithm{Primitive: "signature"}
+	switch sa {
+	case x509.SHA1WithRSA, x509.SHA256WithRSA, x509.SHA384WithRSA, x509.SHA512WithRSA, x509.MD5WithRSA:
+		a.Padding = "pkcs1v15"
+	case x509.SHA256WithRSAPSS, x509.SHA384WithRSAPSS, x509.SHA512WithRSAPSS:
+		a.Padding = "other" // CycloneDX 1.6 has no PSS value
+	}
+	return alg{name: sa.String(), oid: p.sigOID, a: a}
+}
+
+// cabfMaxDays is the CA/Browser Forum maximum validity for a Subscriber
+// Certificate issued at notBefore (Baseline Requirements §6.3.2).
+func cabfMaxDays(notBefore time.Time) (int, string) {
+	d := func(y int, m time.Month, day int) time.Time { return time.Date(y, m, day, 0, 0, 0, 0, time.UTC) }
+	switch {
+	case !notBefore.Before(d(2029, 3, 15)):
+		return 47, "issued on or after 2029-03-15"
+	case !notBefore.Before(d(2027, 3, 15)):
+		return 100, "issued on or after 2027-03-15"
+	case !notBefore.Before(d(2026, 3, 15)):
+		return 200, "issued on or after 2026-03-15"
+	}
+	return 398, "issued before 2026-03-15"
+}
+
+// validityDays counts the validity period the way the Baseline Requirements
+// do: notBefore through notAfter inclusive, any part of a day as a day.
+func validityDays(c *x509.Certificate) int {
+	secs := c.NotAfter.Sub(c.NotBefore).Seconds() + 1
+	return int(math.Ceil(secs / 86400))
+}
+
+func addCert(inv *model.Inventory, location string, scope tree.Scope, tb table, e *tree.Entry, now time.Time) {
+	name := certName(scope, tb, e)
+	ctx := scopeContext(scope)
+	pemAttr := e.Attr(tb.pemField)
+	sym := tb.path + "/" + e.Name + "/" + tb.pemField
+
+	c := &model.Asset{
+		ID:         model.BOMRef(model.AssetTypeCertificate, name, location),
+		Type:       model.AssetTypeCertificate,
+		Name:       name,
+		Cert:       &model.Cert{Format: "X.509", Extension: "pem"},
+		Properties: map[string]string{field.Prefix + "certificate-kind": tb.kind},
+	}
+	var ev []model.Evidence
+	if pemAttr != nil {
+		ev = []model.Evidence{{Location: location, Line: pemAttr.Line, Symbol: sym, Context: ctx}}
+	}
+	c.Evidence = ev
+	for _, f := range []struct {
+		key   string
+		known map[string]bool
+	}{{"source", knownSource}, {"range", knownRange}} {
+		if a := e.Attr(f.key); a != nil && !a.Unset && len(a.Values) == 1 && f.known[a.Values[0]] {
+			c.Properties[field.Prefix+f.key+":value"] = a.Values[0]
+			c.Properties[field.Prefix+f.key+":line"] = strconv.Itoa(a.Line)
+		}
+	}
+
+	p, err := parsePEM(pemAttr)
+	if err != nil {
+		c.Properties["cbom-netscan:cert:parse"] = "failed"
+		line := 0
+		if pemAttr != nil {
+			line = pemAttr.Line
+		}
+		inv.AddWarning(model.Warning{
+			Code:    "cert-unparseable",
+			Message: fmt.Sprintf("%s: %v; reported without certificate details", name, err),
+			Ev:      model.Evidence{Location: location, Line: line, Symbol: sym, Context: ctx},
+		})
+		inv.Add(c)
+		addPrivateKey(inv, location, ctx, tb, e, name, nil, "")
+		return
+	}
+	cert := p.cert
+
+	key, sig := keyAlgorithm(p), signatureAlgorithm(p)
+	keyID := addAlgorithm(inv, location, key, ev)
+	sigID := addAlgorithm(inv, location, sig, ev)
+
+	spki := sha256.Sum256(cert.RawSubjectPublicKeyInfo)
+	pub := &model.Asset{
+		ID:   model.BOMRef(model.AssetTypeRelatedMaterial, name+" public key", location),
+		Type: model.AssetTypeRelatedMaterial,
+		Name: name + " public key",
+		Mat: &model.Material{
+			Type: "public-key", ID: "spki-sha256:" + hex.EncodeToString(spki[:]), AlgorithmRef: keyID,
+			Size: sizePtr(key.bits),
+		},
+		Evidence: ev,
+	}
+	inv.Add(pub)
+
+	nb, na := cert.NotBefore.UTC(), cert.NotAfter.UTC()
+	fp := sha256.Sum256(cert.Raw)
+	c.Cert.SubjectName = cert.Subject.String()
+	c.Cert.IssuerName = cert.Issuer.String()
+	c.Cert.NotValidBefore, c.Cert.NotValidAfter = &nb, &na
+	c.Cert.SignatureAlgorithmRef = sigID
+	c.Cert.SubjectPublicKeyRef = pub.ID
+	c.Cert.SHA256 = hex.EncodeToString(fp[:])
+	c.Cert.Serial = cert.SerialNumber.Text(16)
+
+	days := validityDays(cert)
+	c.Properties["cbom-netscan:cert:is-ca"] = strconv.FormatBool(cert.IsCA)
+	c.Properties["cbom-netscan:cert:validity-days"] = strconv.Itoa(days)
+	if cert.IsCA {
+		c.Properties["cbom-netscan:cert:cabf-max-days"] = "not applicable: CA certificate"
+	} else {
+		max, rule := cabfMaxDays(nb)
+		c.Properties["cbom-netscan:cert:cabf-max-days"] = fmt.Sprintf("%d (%s; Baseline Requirements §6.3.2)", max, rule)
+		c.Properties["cbom-netscan:cert:exceeds-cabf-max"] = strconv.FormatBool(days > max)
+	}
+	if now.IsZero() {
+		c.Properties["cbom-netscan:cert:expired"] = "not evaluated"
+	} else {
+		expired := now.After(na)
+		c.Properties["cbom-netscan:cert:expired"] = strconv.FormatBool(expired)
+		c.Properties["cbom-netscan:cert:expiry-checked-at"] = now.UTC().Format(time.RFC3339)
+		if expired {
+			inv.AddWarning(model.Warning{
+				Code:    "cert-expired",
+				Message: fmt.Sprintf("%s expired on %s", name, na.Format("2006-01-02")),
+				Ev:      model.Evidence{Location: location, Line: pemAttr.Line, Symbol: sym, Context: ctx},
+			})
+		}
+	}
+	inv.Add(c)
+	addPrivateKey(inv, location, ctx, tb, e, name, &key, keyID)
+}
+
+// addPrivateKey records a private key's presence. Only whether the field is
+// set is checked; its value is never read.
+func addPrivateKey(inv *model.Inventory, location, ctx string, tb table, e *tree.Entry, certName string, key *alg, keyID string) {
+	if tb.kind != "local" {
+		return
+	}
+	a := e.Attr("private-key")
+	if a == nil || a.Unset || len(a.Values) == 0 {
+		return
+	}
+	m := &model.Material{Type: "private-key"}
+	if key != nil {
+		m.AlgorithmRef, m.Size = keyID, sizePtr(key.bits)
+	}
+	inv.Add(&model.Asset{
+		ID:         model.BOMRef(model.AssetTypeRelatedMaterial, certName+" private key", location),
+		Type:       model.AssetTypeRelatedMaterial,
+		Name:       certName + " private key",
+		Mat:        m,
+		Properties: map[string]string{field.Prefix + "private-key": "present"},
+		Evidence:   []model.Evidence{{Location: location, Line: a.Line, Symbol: tb.path + "/" + e.Name + "/private-key", Context: ctx}},
+	})
+}
+
+func addAlgorithm(inv *model.Inventory, location string, a alg, ev []model.Evidence) string {
+	def := a.a
+	algo.MarkQuantumVulnerable(&def)
+	return inv.Add(&model.Asset{
+		ID:       model.BOMRef(model.AssetTypeAlgorithm, a.name, location),
+		Type:     model.AssetTypeAlgorithm,
+		Name:     a.name,
+		OID:      a.oid,
+		Alg:      &def,
+		Evidence: ev,
+	}).ID
+}
+
+func sizePtr(bits int) *int {
+	if bits == 0 {
+		return nil
+	}
+	return &bits
+}

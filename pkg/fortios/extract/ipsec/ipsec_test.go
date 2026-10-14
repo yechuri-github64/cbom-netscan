@@ -176,6 +176,9 @@ func TestExtract(t *testing.T) {
 				if _, ok := mlkem.Properties["cbom-netscan:fortios:ike-transform-id:private-use"]; ok {
 					t.Errorf("ML-KEM-768 marked private-use")
 				}
+				prop(t, mlkem, "ike-transform-id", "36")
+				prop(t, find(t, inv, "ECP-384"), "ike-transform-id", "20")
+				prop(t, find(t, inv, "ECP-521"), "ike-transform-id", "21")
 				levels := map[string]string{}
 				for _, n := range []string{"ECP-384", "ECP-521", "KYBER-768", "AES-256-GCM", "HMAC-SHA256"} {
 					levels[n] = "unset"

@@ -120,6 +120,14 @@ func TestX25519CountedOnce(t *testing.T) {
 	if !slices.Contains(ssh.Proto.Refs, id) || !slices.Contains(tunnel.Proto.IKEKE, id) {
 		t.Errorf("X25519 not referenced by both the SSH hybrid and IKE group 31")
 	}
+	for _, a := range inv.Assets {
+		if a.Name == "X25519" && a.Properties["cbom-netscan:fortios:ike-transform-id"] != "31" {
+			t.Errorf("shared X25519 lost its IKE transform ID: %v", a.Properties)
+		}
+	}
+	if len(inv.Warnings) != 0 {
+		t.Errorf("sharing components produced warnings: %+v", inv.Warnings)
+	}
 }
 
 // TestExtractorOrderIndependent: running the extractors in either order gives

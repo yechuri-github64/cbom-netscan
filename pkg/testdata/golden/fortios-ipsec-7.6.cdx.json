@@ -821,6 +821,12 @@
       "bom-ref": "crypto/8e3fa1409b3b78a2",
       "type": "cryptographic-asset",
       "name": "ECP-384",
+      "properties": [
+        {
+          "name": "cbom-netscan:fortios:ike-transform-id",
+          "value": "20"
+        }
+      ],
       "evidence": {
         "occurrences": [
           {
@@ -848,6 +854,12 @@
       "bom-ref": "crypto/3f80bdd194979088",
       "type": "cryptographic-asset",
       "name": "ECP-521",
+      "properties": [
+        {
+          "name": "cbom-netscan:fortios:ike-transform-id",
+          "value": "21"
+        }
+      ],
       "evidence": {
         "occurrences": [
           {
@@ -982,6 +994,12 @@
       "bom-ref": "crypto/0dfe508521cabe86",
       "type": "cryptographic-asset",
       "name": "ML-KEM-768",
+      "properties": [
+        {
+          "name": "cbom-netscan:fortios:ike-transform-id",
+          "value": "36"
+        }
+      ],
       "evidence": {
         "occurrences": [
           {

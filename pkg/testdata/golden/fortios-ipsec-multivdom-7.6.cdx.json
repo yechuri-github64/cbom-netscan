@@ -401,6 +401,12 @@
       "bom-ref": "crypto/c9465c587d430197",
       "type": "cryptographic-asset",
       "name": "ECP-384",
+      "properties": [
+        {
+          "name": "cbom-netscan:fortios:ike-transform-id",
+          "value": "20"
+        }
+      ],
       "cryptoProperties": {
         "assetType": "algorithm",
         "algorithmProperties": {
@@ -447,6 +453,12 @@
       "bom-ref": "crypto/a50a0b35fe4af72a",
       "type": "cryptographic-asset",
       "name": "MODP-2048",
+      "properties": [
+        {
+          "name": "cbom-netscan:fortios:ike-transform-id",
+          "value": "14"
+        }
+      ],
       "evidence": {
         "occurrences": [
           {

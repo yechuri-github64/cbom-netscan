@@ -145,8 +145,10 @@ func (x *extractor) algorithm(a alg, v field.Value) string {
 		Alg:        &alg,
 		Properties: map[string]string{},
 	}
-	for k, v := range addkeProps[a.name] {
-		asset.Properties[k] = v
+	for _, props := range []map[string]string{addkeProps[a.name], dhProps[a.name]} {
+		for k, v := range props {
+			asset.Properties[k] = v
+		}
 	}
 	if v.Source == field.Configured {
 		asset.Evidence = []model.Evidence{x.r.Evidence(v)}

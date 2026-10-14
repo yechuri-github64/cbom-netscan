@@ -228,6 +228,10 @@ server, port, id, peer, certificate. → props + certificate ref. Present 7.4.12
 | ssl-client-renegotiation | enable/disable | disable | props |
 | remote-https-cert-check | no-check warn-on-error reject-on-error | — / warn-on-error (7.6.5+) / same | props |
 | dtls-min-proto-ver / dtls-max-proto-ver / dtls-tunnel | dtls1-0 dtls1-2 / enable | dtls1-0 / dtls1-2 / enable — **7.4.12 only** | protocol `tls` (DTLS) version |
+Verified 2026-10-14 against the CLI HTML pages 114404382/config-vpn-ssl-settings for 7.4.12, 7.6.7, and 8.0.0. algorithm, banned-cipher, ciphersuite, ssl-min-proto-ver, ssl-max-proto-ver, and servercert match the rows above in all three. tls-groups options (7.6.7, 8.0.0): `P-521 P-384 P-256 ML-KEM512 ML-KEM768 ML-KEM1024 P-384-MLKEM1024 P-256-MLKEM768 X25519-MLKEM768 X448 X25519 FFDHE2048 FFDHE3072 FFDHE4096 FFDHE6144 FFDHE8192`, default as in the row above; the field was not in the fetched part of the 7.4.12 page. 7.4.12 has dtls-tunnel (default enable) and dtls-min/max-proto-ver (`dtls1-0 dtls1-2`, defaults dtls1-0 / dtls1-2). The 7.6+ pages describe the section as Agentless VPN.
+
+Certificate validity limit (CA/Browser Forum Baseline Requirements §6.3.2, cabforum/servercert docs/BR.md, read 2026-10-14): a Subscriber Certificate MUST NOT have a validity period longer than 398 days if issued before 2026-03-15, 200 days if issued on or after 2026-03-15, 100 days on or after 2027-03-15, and 47 days on or after 2029-03-15. The validity period runs from notBefore to notAfter inclusive, and any part of a day counts as a day. It applies to publicly-trusted TLS server certificates, not to CA certificates.
+
 "No option" for PQC on FIPS-CC: PQC groups unavailable in FIPS-CC mode (NF-7.6.0 p611–612. AG-8.0.1 https://docs.fortinet.com/document/fortigate/8.0.1/administration-guide/43632/post-quantum-cryptography-for-agentless-vpn).
 
 ### 3.8 Certificates

@@ -489,10 +489,11 @@ would mean decoding the key body, which cbom-netscan does not do.
 ### 8.1 Detecting whether an OpenSSH-format key is encrypted
 
 An `-----BEGIN OPENSSH PRIVATE KEY-----` value records its encryption inside
-the base64 body: the key format (OpenSSH `PROTOCOL.key`) starts with the
-magic `openssh-key-v1`, then `ciphername` and `kdfname`, which are `none`
-for an unencrypted key, before the public keys and the encrypted private
-section. Today such a key is `pem-encryption-unknown` with a warning that it
+the base64 body. The key format (OpenSSH `PROTOCOL.key`) is: the magic
+`openssh-key-v1`, `ciphername`, `kdfname`, `kdfoptions`, the number of keys
+N, N public keys, and the encrypted, padded list of private keys. For an
+unencrypted key `ciphername` and `kdfname` are `none` and `kdfoptions` is
+empty. Today such a key is `pem-encryption-unknown` with a warning that it
 *may* be unencrypted. Options:
 
 1. Keep it as is: never decode any of a key's body. Simple and consistent

@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
@@ -202,6 +203,33 @@ func TestEmit_Builders(t *testing.T) {
 
 	if len(bom.Dependencies) != 1 {
 		t.Errorf("dependencies = %v, want the TLS → certificate edge", bom.Dependencies)
+	}
+}
+
+// TestEmit_DependencyOrder: dependencies are sorted by ref, whatever order
+// the assets were added in.
+func TestEmit_DependencyOrder(t *testing.T) {
+	inv := model.NewInventory()
+	target := inv.Add(&model.Asset{Type: model.AssetTypeAlgorithm, Name: "AES-256-GCM", Alg: &model.Algorithm{Primitive: "ae"}}).ID
+	for _, n := range []string{"zz", "mm", "aa", "qq"} {
+		inv.Add(&model.Asset{Type: model.AssetTypeProtocol, Name: n, Proto: &model.Protocol{Type: "ipsec"}, DependsOn: []string{target}})
+	}
+	var buf bytes.Buffer
+	if err := (cdx16.Emitter{}).Emit(context.Background(), &buf, inv, model.Meta{}); err != nil {
+		t.Fatal(err)
+	}
+	var bom struct {
+		Dependencies []struct{ Ref string } `json:"dependencies"`
+	}
+	if err := json.Unmarshal(buf.Bytes(), &bom); err != nil {
+		t.Fatal(err)
+	}
+	var refs []string
+	for _, d := range bom.Dependencies {
+		refs = append(refs, d.Ref)
+	}
+	if len(refs) != 4 || !slices.IsSorted(refs) {
+		t.Errorf("dependency refs = %v, want 4 sorted refs", refs)
 	}
 }
 

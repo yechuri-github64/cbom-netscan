@@ -203,10 +203,7 @@ func buildComponents(assets []*model.Asset) ([]cdx.Component, []cdx.Dependency) 
 		// Usage edges become CycloneDX dependencies[].
 		// Dependency.Ref and Dependencies are plain strings (not BOMReference).
 		if len(a.DependsOn) > 0 {
-			refs := make([]string, len(a.DependsOn))
-			for i, ref := range a.DependsOn {
-				refs[i] = ref
-			}
+			refs := append([]string(nil), a.DependsOn...)
 			deps = append(deps, cdx.Dependency{
 				Ref:          a.ID,
 				Dependencies: &refs,
@@ -224,6 +221,10 @@ func buildComponents(assets []*model.Asset) ([]cdx.Component, []cdx.Dependency) 
 		}
 		return a.BOMRef < b.BOMRef
 	})
+
+	// Dependencies follow the same rule: sorted by ref, so the order does
+	// not depend on the order extractors added assets.
+	sort.Slice(deps, func(i, j int) bool { return deps[i].Ref < deps[j].Ref })
 
 	return components, deps
 }

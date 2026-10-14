@@ -9,7 +9,7 @@ version = 1
 # Test fixtures and IANA registry data are dedicated to the public domain.
 # Nobody has to worry about licence compliance when writing tests.
 [[annotations]]
-path = ["testdata/**", "LICENSES/**"]
+path = ["**/testdata/**", "LICENSES/**"]
 SPDX-FileCopyrightText = "2026 contributors to cbom-netscan"
 SPDX-License-Identifier = "CC0-1.0"
 

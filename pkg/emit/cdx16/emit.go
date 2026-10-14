@@ -73,9 +73,10 @@ func (Emitter) Emit(_ context.Context, w io.Writer, inv *model.Inventory, meta m
 	if err != nil {
 		return err
 	}
-	compact, err = dropUnknownESN(compact, unknownESN(components, inv.Assets))
-	if err != nil {
-		return err
+	if unknown := unknownESN(components, inv.Assets); len(unknown) > 0 {
+		if compact, err = omitESN(compact, unknown); err != nil {
+			return err
+		}
 	}
 	var out bytes.Buffer
 	if err := json.Indent(&out, compact, "", "  "); err != nil {
@@ -86,68 +87,153 @@ func (Emitter) Emit(_ context.Context, w io.Writer, inv *model.Inventory, meta m
 	return err
 }
 
-// unknownESN lists, for each component that has ikev2TransformTypes, in
-// output order, whether its ESN is unknown (model ESN nil).
-func unknownESN(components []cdx.Component, assets []*model.Asset) []bool {
+// unknownESN returns the bom-refs of components that have
+// ikev2TransformTypes but whose model ESN is nil (unknown).
+func unknownESN(components []cdx.Component, assets []*model.Asset) map[string]bool {
 	known := map[string]bool{}
 	for _, a := range assets {
 		if a.Proto != nil && a.Proto.ESN != nil {
 			known[a.ID] = true
 		}
 	}
-	var out []bool
+	out := map[string]bool{}
 	for _, c := range components {
 		cp := c.CryptoProperties
-		if cp != nil && cp.ProtocolProperties != nil && cp.ProtocolProperties.IKEv2TransformTypes != nil {
-			out = append(out, !known[c.BOMRef])
+		if cp != nil && cp.ProtocolProperties != nil && cp.ProtocolProperties.IKEv2TransformTypes != nil && !known[c.BOMRef] {
+			out[c.BOMRef] = true
 		}
 	}
 	return out
 }
 
-// dropUnknownESN removes "esn":false from the i-th ikev2TransformTypes object
-// when drop[i] is set. cyclonedx-go v0.12.0 declares ESN as a bool without
-// omitempty, so it always writes "esn":false, which would claim ESN is off
-// when the config does not say. CycloneDX 1.6 can only express "unknown" by
+// omitESN removes ikev2TransformTypes.esn from the components whose bom-refs
+// are in unknown. cyclonedx-go v0.12.0 declares ESN as a bool without
+// omitempty, so it always writes "esn": false, which would claim ESN is off
+// when the config does not say; CycloneDX 1.6 can only express "unknown" by
 // omitting the field.
 //
-// Matching on raw bytes is safe here: quotes inside JSON strings are escaped,
-// so `"ikev2TransformTypes":{` and `"esn":false` only occur as real keys.
-func dropUnknownESN(b []byte, drop []bool) ([]byte, error) {
-	key, esn := []byte(`"ikev2TransformTypes":{`), []byte(`"esn":false`)
-	var out []byte
-	rest := b
-	for i := 0; ; i++ {
-		j := bytes.Index(rest, key)
-		if j < 0 {
-			if i != len(drop) {
-				return nil, fmt.Errorf("cdx16: found %d ikev2TransformTypes objects, expected %d", i, len(drop))
-			}
-			return append(out, rest...), nil
-		}
-		if i >= len(drop) {
-			return nil, fmt.Errorf("cdx16: more ikev2TransformTypes objects than expected (%d)", len(drop))
-		}
-		start := j + len(key)
-		out = append(out, rest[:start]...)
-		rest = rest[start:]
-		if !drop[i] {
-			continue
-		}
-		k := bytes.Index(rest, esn)
-		if k < 0 {
-			return nil, fmt.Errorf("cdx16: ikev2TransformTypes object %d has no esn field", i)
-		}
-		before, after := rest[:k], rest[k+len(esn):]
-		switch {
-		case len(before) > 0 && before[len(before)-1] == ',':
-			before = before[:len(before)-1]
-		case len(after) > 0 && after[0] == ',':
-			after = after[1:]
-		}
-		out = append(out, before...)
-		rest = after
+// It scans the compact JSON once, tracking the object path, and removes the
+// "esn" member of components[].cryptoProperties.protocolProperties.
+// ikev2TransformTypes for each listed bom-ref. The match is by bom-ref and by
+// path, so it depends neither on cyclonedx-go's field order nor on component
+// order, and every other byte is kept. No tree is built, so large BOMs cost
+// one linear pass.
+func omitESN(b []byte, unknown map[string]bool) ([]byte, error) {
+	type frame struct {
+		object    bool
+		key       string // key this container sits under in its parent
+		expectKey bool   // object frames: next string is a key
+		member    string // object frames: key of the member being read
 	}
+	// unquote decodes a JSON string; escapes are rare in keys, so the common
+	// case is a plain slice conversion.
+	unquote := func(raw []byte) (string, error) {
+		if bytes.IndexByte(raw, '\\') < 0 {
+			return string(raw[1 : len(raw)-1]), nil
+		}
+		var s string
+		err := json.Unmarshal(raw, &s)
+		return s, err
+	}
+	type span struct{ from, to int }
+	var (
+		stack    []frame
+		dels     []span
+		compRef  string
+		compESN  *span
+		compSeen bool
+	)
+	// path reports whether the stack is root{} → "components"[] → {} → the given keys.
+	path := func(keys ...string) bool {
+		if len(stack) != 3+len(keys) || !stack[0].object || stack[1].object || stack[1].key != "components" || !stack[2].object {
+			return false
+		}
+		for i, k := range keys {
+			if !stack[3+i].object || stack[3+i].key != k {
+				return false
+			}
+		}
+		return true
+	}
+	for i := 0; i < len(b); i++ {
+		switch c := b[i]; c {
+		case '"':
+			j := i + 1
+			for ; j < len(b) && b[j] != '"'; j++ {
+				if b[j] == '\\' {
+					j++
+				}
+			}
+			if j >= len(b) {
+				return nil, fmt.Errorf("cdx16: unterminated string in BOM JSON")
+			}
+			raw := b[i : j+1]
+			if top := len(stack) - 1; top >= 0 && stack[top].object && stack[top].expectKey {
+				key, err := unquote(raw)
+				if err != nil {
+					return nil, err
+				}
+				stack[top].member = key
+				stack[top].expectKey = false
+				if key == "esn" && path("cryptoProperties", "protocolProperties", "ikev2TransformTypes") {
+					// The member is "esn":<literal>; find where the literal ends.
+					end := j + 2
+					for end < len(b) && b[end] != ',' && b[end] != '}' {
+						end++
+					}
+					sp := span{i, end}
+					switch {
+					case b[i-1] == ',':
+						sp.from--
+					case end < len(b) && b[end] == ',':
+						sp.to++
+					}
+					compESN = &sp
+				}
+			} else if top >= 0 && stack[top].object && stack[top].member == "bom-ref" && path() {
+				ref, err := unquote(raw)
+				if err != nil {
+					return nil, err
+				}
+				compRef = ref
+			}
+			i = j
+		case '{', '[':
+			key := ""
+			if top := len(stack) - 1; top >= 0 && stack[top].object {
+				key = stack[top].member
+			}
+			stack = append(stack, frame{object: c == '{', key: key, expectKey: c == '{'})
+			if path() {
+				compRef, compESN, compSeen = "", nil, true
+			}
+		case '}', ']':
+			if path() && compSeen {
+				if compESN != nil && unknown[compRef] {
+					dels = append(dels, *compESN)
+				}
+				compSeen = false
+			}
+			if len(stack) == 0 {
+				return nil, fmt.Errorf("cdx16: unbalanced BOM JSON")
+			}
+			stack = stack[:len(stack)-1]
+		case ',':
+			if top := len(stack) - 1; top >= 0 && stack[top].object {
+				stack[top].expectKey = true
+			}
+		}
+	}
+	if len(dels) == 0 {
+		return b, nil
+	}
+	out := make([]byte, 0, len(b))
+	prev := 0
+	for _, d := range dels {
+		out = append(out, b[prev:d.from]...)
+		prev = d.to
+	}
+	return append(out, b[prev:]...), nil
 }
 
 // ── metadata ────────────────────────────────────────────────────────────────

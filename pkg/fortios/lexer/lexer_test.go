@@ -384,6 +384,28 @@ func TestLexer_Tokens(t *testing.T) {
 	}
 }
 
+// TestLexer_DeviceVerifiedEscapes uses a line verified on FortiOS 7.6.7
+// build 3704, where the device writes every value double-quoted and escapes
+// ', ", and \ with a backslash.
+func TestLexer_DeviceVerifiedEscapes(t *testing.T) {
+	const line = `set comment "it\'s a \"quoted\" comment with a \\ backslash"`
+	const want = `it's a "quoted" comment with a \ backslash`
+
+	toks, _ := tokenize(t, hdr+line+"\n")
+	if len(toks) != 3 {
+		t.Fatalf("got %d tokens, want 3: %v", len(toks), toks)
+	}
+	if toks[0].Kind != lexer.TokSet || toks[1].Value != "comment" {
+		t.Fatalf("unexpected leading tokens: %v", toks[:2])
+	}
+	if toks[2].Kind != lexer.TokString {
+		t.Fatalf("value kind = %v, want TokString", toks[2].Kind)
+	}
+	if toks[2].Value != want {
+		t.Errorf("decoded value = %q, want %q", toks[2].Value, want)
+	}
+}
+
 // TestLexer_UnterminatedQuote verifies that a quoted string that reaches EOF
 // without a closing delimiter returns a clear error with the opening line
 // number, and never hangs or panics.

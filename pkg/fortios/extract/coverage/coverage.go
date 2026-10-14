@@ -23,6 +23,7 @@ var Inventoried = []string{
 	"vpn ipsec phase1-interface",
 	"vpn ipsec phase2",
 	"vpn ipsec phase2-interface",
+	"vpn ssl settings",
 	"vpn certificate local", "vpn certificate ca", "vpn certificate remote",
 	"certificate local", "certificate ca", "certificate remote",
 }
@@ -32,10 +33,9 @@ var Inventoried = []string{
 // Their presence means the CBOM is missing certificates, keys, or protocols,
 // so it is warned about.
 var NotInventoried = []string{
-	// §3.5 manual keys, §3.6 QKD, §3.7 agentless/SSL VPN
+	// §3.5 manual keys, §3.6 QKD
 	"vpn ipsec manualkey", "vpn ipsec manualkey-interface",
 	"vpn qkd",
-	"vpn ssl settings",
 	// §3.8 certificates and SSH keys not yet read
 	"vpn certificate crl", "vpn certificate ocsp-server", "vpn certificate hsm-local", "vpn certificate setting",
 	"certificate crl",

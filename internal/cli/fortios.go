@@ -25,6 +25,7 @@ import (
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/coverage"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/global"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/ipsec"
+	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/sslvpn"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/tree"
 	"github.com/yechuri-github64/cbom-netscan/pkg/model"
 )
@@ -121,6 +122,7 @@ func runFortiOS(ctx context.Context, stdout, stderr io.Writer, in string, o fort
 	global.Extract(tr, name, inv)
 	certs.Extract(tr, name, inv, now)
 	ipsec.Extract(tr, name, inv)
+	sslvpn.Extract(tr, name, inv)
 	cov := coverage.Check(tr)
 	if w := cov.Warning(name); w != nil {
 		inv.AddWarning(*w)

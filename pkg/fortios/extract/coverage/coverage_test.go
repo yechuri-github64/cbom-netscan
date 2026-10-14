@@ -35,8 +35,8 @@ func TestCheck(t *testing.T) {
 		{
 			name:        "uncovered_sections_sorted",
 			cfg:         hdr + "config vpn qkd\nend\nconfig vpn certificate crl\nend\nconfig vpn ssl settings\nend\nconfig system global\nend\n",
-			inventoried: []string{"system global"},
-			uncov:       []string{"vpn certificate crl", "vpn qkd", "vpn ssl settings"},
+			inventoried: []string{"system global", "vpn ssl settings"},
+			uncov:       []string{"vpn certificate crl", "vpn qkd"},
 		},
 		{
 			// Settings-only sections are recorded but not warned about.

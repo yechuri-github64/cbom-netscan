@@ -437,7 +437,8 @@ var cliSecretFragments = []string{"c3ludGhldGlj", "PRIVATE KEY", "BEGIN CERTIFIC
 
 // TestFortiOS_CertsSSLVPNGolden runs the whole pipeline (global, certificates,
 // IPsec, SSL VPN) on the certificate fixtures and compares the CBOM with the
-// golden files and the warnings with the expected list. Neither may contain
+// golden files and the warnings with the expected list (none for the VDOM
+// reference fixture). Neither may contain
 // a secret.
 func TestFortiOS_CertsSSLVPNGolden(t *testing.T) {
 	t.Setenv("SOURCE_DATE_EPOCH", "1791676800") // 2026-10-11T00:00:00Z
@@ -445,6 +446,12 @@ func TestFortiOS_CertsSSLVPNGolden(t *testing.T) {
 		fixture, golden string
 		stderr          []string
 	}{
+		{
+			// Each VDOM lists the global factory certificates by name only
+			// (range global, no PEM); they link to the global components.
+			fixture: "../../certs/testdata/vdom-global-refs-7.6.conf",
+			golden:  "fortios-certs-vdom-refs-7.6.cdx.json",
+		},
 		{
 			fixture: "certs-sslvpn-7.6.conf",
 			golden:  "fortios-certs-sslvpn-7.6.cdx.json",
@@ -464,13 +471,17 @@ func TestFortiOS_CertsSSLVPNGolden(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.fixture, func(t *testing.T) {
+		t.Run(filepath.Base(tc.fixture), func(t *testing.T) {
 			out, stderr, err := run(t, "fortios", sslvpnFixtures+tc.fixture, "--reproducible")
 			if err != nil {
 				t.Fatalf("fortios: %v", err)
 			}
-			if want := strings.Join(tc.stderr, "\n") + "\n"; stderr != want {
-				t.Errorf("stderr =\n%s\nwant\n%s", stderr, want)
+			wantStderr := ""
+			if len(tc.stderr) > 0 {
+				wantStderr = strings.Join(tc.stderr, "\n") + "\n"
+			}
+			if stderr != wantStderr {
+				t.Errorf("stderr =\n%s\nwant\n%s", stderr, wantStderr)
 			}
 			for _, s := range cliSecretFragments {
 				if strings.Contains(out, s) || strings.Contains(stderr, s) {

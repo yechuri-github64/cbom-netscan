@@ -17,6 +17,7 @@ import (
 	"encoding/pem"
 	"math/big"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -452,5 +453,107 @@ func TestCABFBoundary(t *testing.T) {
 		c := find(t, inv, local+"edge")
 		prop(t, c, "cbom-netscan:cert:validity-days", tc.days)
 		prop(t, c, "cbom-netscan:cert:exceeds-cabf-max", tc.exceeds)
+	}
+}
+
+// TestVDOMGlobalReferences: in a multi-VDOM backup each VDOM lists the global
+// factory certificates with range global and no PEM. Those entries link to
+// the global certificate instead of becoming components of their own, and
+// produce no warnings.
+func TestVDOMGlobalReferences(t *testing.T) {
+	data, err := os.ReadFile("testdata/vdom-global-refs-7.6.conf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tr, inv := extract(t, string(data), now)
+	if len(inv.Warnings) != 0 {
+		t.Errorf("warnings = %+v, want none", inv.Warnings)
+	}
+	var certNames []string
+	for _, a := range inv.Assets {
+		if a.Type == model.AssetTypeCertificate {
+			certNames = append(certNames, a.Name)
+		}
+	}
+	want := []string{
+		"FortiOS certificate ca Fortinet_CA (global)",
+		"FortiOS certificate local Fortinet_Factory (global)",
+		"FortiOS certificate local Fortinet_SSL_ECDSA256 (global)",
+	}
+	slices.Sort(certNames)
+	if !slices.Equal(certNames, want) {
+		t.Errorf("certificates = %q, want %q (no per-VDOM copies)", certNames, want)
+	}
+	for _, name := range want {
+		c := find(t, inv, name)
+		prop(t, c, "cbom-netscan:fortios:referenced-from", "vdom branch, vdom root")
+		var ctx []string
+		for _, ev := range c.Evidence {
+			ctx = append(ctx, ev.Context)
+		}
+		slices.Sort(ctx)
+		if !slices.Equal(ctx, []string{"global", "vdom branch", "vdom root"}) {
+			t.Errorf("%s: evidence contexts = %q", name, ctx)
+		}
+	}
+	global := find(t, inv, "FortiOS certificate local Fortinet_Factory (global)")
+	for _, vdom := range []string{"root", "branch"} {
+		r := certs.Ref(tr, "fw.conf", tree.VDOM(vdom), "Fortinet_Factory")
+		if r.Missing || r.Cert != global.ID || byID(t, inv, r.KeyAlg).Name != "RSA-2048" {
+			t.Errorf("Ref from vdom %s = %+v, want the global certificate", vdom, r)
+		}
+	}
+}
+
+// TestNoPEMEntries: only a VDOM entry with range global and no PEM is a
+// reference. A VDOM entry without range global, or a global entry, with no
+// PEM still warns; a reference whose global certificate is missing gets its
+// own warning; a VDOM entry with range global and a PEM is a certificate.
+func TestNoPEMEntries(t *testing.T) {
+	cfg := strings.Replace(hdr, "vdom=0", "vdom=1", 1) + `config vdom
+edit root
+next
+end
+config global
+config vpn certificate local
+    edit "global-empty"
+        set range global
+    next
+end
+end
+config vdom
+edit root
+config vpn certificate local
+    edit "vdom-empty"
+        set source user
+    next
+    edit "dangling"
+        set range global
+        set source factory
+    next
+    edit "own-global"
+        set range global
+        set certificate "` + pemFile(t, "gw-ecdsa.pem") + `"
+    next
+end
+end
+`
+	tr, inv := extract(t, cfg, now)
+	var got []string
+	for _, w := range inv.Warnings {
+		got = append(got, w.Code+" "+w.Ev.Context)
+	}
+	slices.Sort(got)
+	if want := []string{"cert-reference-missing vdom root", "cert-unparseable global", "cert-unparseable vdom root"}; !slices.Equal(got, want) {
+		t.Errorf("warnings = %q, want %q", got, want)
+	}
+	find(t, inv, local+"own-global (vdom root)")
+	for _, a := range inv.Assets {
+		if strings.Contains(a.Name, "dangling") {
+			t.Errorf("dangling reference became component %s", a.Name)
+		}
+	}
+	if r := certs.Ref(tr, "fw.conf", tree.VDOM("root"), "dangling"); !r.Missing {
+		t.Errorf("Ref(dangling) = %+v, want missing", r)
 	}
 }

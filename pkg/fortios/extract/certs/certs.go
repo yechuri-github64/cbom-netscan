@@ -22,6 +22,12 @@
 // leaf certificate's validity exceeds the CA/Browser Forum maximum for its
 // issue date (Baseline Requirements §6.3.2; research notes §3.7 note).
 //
+// In a multi-VDOM backup each VDOM's tables also list the global (factory)
+// certificates by name, with range global and no PEM. Such an entry is a
+// reference to the global certificate of the same name: it adds no component
+// of its own, and the global certificate gets an evidence occurrence and a
+// referenced-from property for each VDOM that lists it.
+//
 // Ref lets other extractors (IPsec, SSL VPN) reference a local certificate by
 // name. It computes the same bom-refs Extract uses, so extractor order does
 // not matter.
@@ -39,6 +45,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -77,13 +84,71 @@ var (
 // of t. now is the reference time for the expiry check; if it is zero, expiry
 // is recorded as not evaluated.
 func Extract(t *tree.Tree, location string, inv *model.Inventory, now time.Time) {
+	// First pass: VDOM entries that point at a global certificate. Their
+	// occurrences go on the global component, keyed by table kind and name.
+	refs := map[string][]model.Evidence{}
 	for _, scope := range t.Scopes() {
 		for _, tb := range tables {
 			for _, e := range t.Get(scope, tb.path) {
-				addCert(inv, location, scope, tb, e, now)
+				if !globalRef(scope, tb, e) {
+					continue
+				}
+				ev := model.Evidence{Location: location, Line: e.Attr("range").Line, Symbol: tb.path + "/" + e.Name + "/range", Context: scopeContext(scope)}
+				if findGlobal(t, tb.kind, e.Name) == nil {
+					inv.AddWarning(model.Warning{
+						Code:    "cert-reference-missing",
+						Message: fmt.Sprintf("vpn certificate %s %q in %s has range global, but the backup has no global certificate of that name", tb.kind, e.Name, ev.Context),
+						Ev:      ev,
+					})
+					continue
+				}
+				k := tb.kind + "\x00" + e.Name
+				refs[k] = append(refs[k], ev)
 			}
 		}
 	}
+	for _, scope := range t.Scopes() {
+		for _, tb := range tables {
+			for _, e := range t.Get(scope, tb.path) {
+				if globalRef(scope, tb, e) {
+					continue
+				}
+				var from []model.Evidence
+				if scope.Kind == tree.KindGlobal {
+					from = refs[tb.kind+"\x00"+e.Name]
+				}
+				addCert(inv, location, scope, tb, e, now, from)
+			}
+		}
+	}
+}
+
+// globalRef reports whether e, in a VDOM, only refers to the global
+// certificate of the same name: range global and no PEM.
+func globalRef(scope tree.Scope, tb table, e *tree.Entry) bool {
+	if scope.Kind != tree.KindVDOM {
+		return false
+	}
+	if a := e.Attr(tb.pemField); a != nil && !a.Unset && len(a.Values) > 0 {
+		return false
+	}
+	r := e.Attr("range")
+	return r != nil && !r.Unset && len(r.Values) == 1 && r.Values[0] == "global"
+}
+
+// findGlobal returns the global entry of the given kind and name, or nil.
+func findGlobal(t *tree.Tree, kind, name string) *tree.Entry {
+	for _, tb := range tables {
+		if tb.kind != kind {
+			continue
+		}
+		for _, e := range t.Get(tree.ScopeGlobal, tb.path) {
+			if e.Name == name {
+				return e
+			}
+		}
+	}
+	return nil
 }
 
 // Refs are the bom-refs another component needs to point at a certificate.
@@ -95,7 +160,8 @@ type Refs struct {
 
 // Ref finds the local certificate name for a component in scope, looking in
 // scope first and then in the global scope (multi-VDOM backups keep shared
-// certificates there). It returns the bom-refs Extract gives that
+// certificates there). A VDOM entry that only refers to the global
+// certificate (range global, no PEM) resolves to the global one. It returns the bom-refs Extract gives that
 // certificate, without adding anything to an inventory.
 func Ref(t *tree.Tree, location string, scope tree.Scope, name string) Refs {
 	scopes := []tree.Scope{scope}
@@ -108,7 +174,7 @@ func Ref(t *tree.Tree, location string, scope tree.Scope, name string) Refs {
 				continue
 			}
 			for _, e := range t.Get(s, tb.path) {
-				if e.Name != name {
+				if e.Name != name || globalRef(s, tb, e) {
 					continue
 				}
 				r := Refs{Cert: model.BOMRef(model.AssetTypeCertificate, certName(s, tb, e), location)}
@@ -248,7 +314,9 @@ func validityDays(c *x509.Certificate) int {
 	return int(math.Ceil(secs / 86400))
 }
 
-func addCert(inv *model.Inventory, location string, scope tree.Scope, tb table, e *tree.Entry, now time.Time) {
+// addCert adds the components for one certificate entry. from holds the
+// occurrences of VDOM entries that refer to this (global) certificate.
+func addCert(inv *model.Inventory, location string, scope tree.Scope, tb table, e *tree.Entry, now time.Time, from []model.Evidence) {
 	name := certName(scope, tb, e)
 	ctx := scopeContext(scope)
 	pemAttr := e.Attr(tb.pemField)
@@ -265,7 +333,15 @@ func addCert(inv *model.Inventory, location string, scope tree.Scope, tb table, 
 	if pemAttr != nil {
 		ev = []model.Evidence{{Location: location, Line: pemAttr.Line, Symbol: sym, Context: ctx}}
 	}
-	c.Evidence = ev
+	c.Evidence = append(slices.Clone(ev), from...)
+	if len(from) > 0 {
+		var ctx []string
+		for _, f := range from {
+			ctx = append(ctx, f.Context)
+		}
+		slices.Sort(ctx)
+		c.Properties[field.Prefix+"referenced-from"] = strings.Join(slices.Compact(ctx), ", ")
+	}
 	for _, f := range []struct {
 		key   string
 		known map[string]bool

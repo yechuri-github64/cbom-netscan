@@ -19,7 +19,13 @@
           "version": "test"
         }
       ]
-    }
+    },
+    "properties": [
+      {
+        "name": "cbom-netscan:fortios:sections-inventoried",
+        "value": "system global, vpn ipsec phase1-interface, vpn ipsec phase2-interface"
+      }
+    ]
   },
   "components": [
     {

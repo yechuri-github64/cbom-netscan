@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/yechuri-github64/cbom-netscan/pkg/emit/cdx16"
+	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/coverage"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/ipsec"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/tree"
 	"github.com/yechuri-github64/cbom-netscan/pkg/model"
@@ -63,6 +64,8 @@ func TestGolden(t *testing.T) {
 				Lifecycle:    "operations",
 				Created:      time.Unix(1791676800, 0),
 				SerialNumber: cdx16.ReproducibleSerial(sha256.Sum256(data), "test"),
+				// The same coverage properties the CLI records.
+				Properties: coverage.Check(tr).Properties(),
 			}
 			if err := (cdx16.Emitter{}).Emit(context.Background(), &buf, inv, meta); err != nil {
 				t.Fatalf("Emit: %v", err)

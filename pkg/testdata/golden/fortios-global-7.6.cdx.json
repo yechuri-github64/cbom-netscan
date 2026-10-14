@@ -19,7 +19,17 @@
           "version": "test"
         }
       ]
-    }
+    },
+    "properties": [
+      {
+        "name": "cbom-netscan:fortios:sections-inventoried",
+        "value": "system global, system ssh-config"
+      },
+      {
+        "name": "cbom-netscan:fortios:sections-not-inventoried",
+        "value": "system admin"
+      }
+    ]
   },
   "components": [
     {

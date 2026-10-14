@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/yechuri-github64/cbom-netscan/pkg/emit/cdx16"
+	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/coverage"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/global"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/tree"
 	"github.com/yechuri-github64/cbom-netscan/pkg/model"
@@ -58,6 +59,9 @@ func TestGolden_Global76(t *testing.T) {
 		Lifecycle:    "operations",
 		Created:      time.Unix(1791676800, 0),
 		SerialNumber: cdx16.ReproducibleSerial(sha256.Sum256(data), "test"),
+		// The same coverage properties the CLI records, so the golden file
+		// matches CLI output.
+		Properties: coverage.Check(tr).Properties(),
 	}
 	if err := (cdx16.Emitter{}).Emit(context.Background(), &buf, inv, meta); err != nil {
 		t.Fatalf("Emit: %v", err)

@@ -177,6 +177,7 @@ func buildMetadata(meta model.Meta) *cdx.Metadata {
 		}
 	}
 
+	md.Properties = buildProperties(meta.Properties)
 	return md
 }
 

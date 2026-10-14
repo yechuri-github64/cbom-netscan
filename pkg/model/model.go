@@ -186,4 +186,7 @@ type Meta struct {
 	// SerialNumber is the BOM serial ("urn:uuid:…"). If empty, the emitter
 	// generates a random UUIDv4, as CycloneDX expects for each new BOM.
 	SerialNumber string
+	// Properties go to metadata.properties, e.g. which config sections were
+	// inventoried. Keys follow "cbom-netscan:<area>:<key>".
+	Properties map[string]string
 }

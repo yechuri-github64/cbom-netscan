@@ -20,6 +20,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/yechuri-github64/cbom-netscan/pkg/emit/cdx16"
+	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/coverage"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/global"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/ipsec"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/tree"
@@ -97,6 +98,11 @@ func runFortiOS(ctx context.Context, stdout, stderr io.Writer, in, out string, f
 	inv := model.NewInventory()
 	global.Extract(tr, name, inv)
 	ipsec.Extract(tr, name, inv)
+	cov := coverage.Check(tr)
+	if w := cov.Warning(name); w != nil {
+		inv.AddWarning(*w)
+	}
+	meta.Properties = cov.Properties()
 
 	// Extractors share some warnings (e.g. no defaults table); print each once.
 	printed := map[model.Warning]bool{}

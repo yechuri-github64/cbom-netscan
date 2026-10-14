@@ -54,7 +54,7 @@ type Warning struct {
 	// Known values: "default-assumed", "unknown-token", "encrypted-backup",
 	// "secret-redacted", "pem-truncated", "vdom-mode-unknown", "opaque-secrets",
 	// "vdom-mode-conflict", "unexpected-content", "implied-next", "no-default-table",
-	// "unknown-phase1", "addke-not-ikev2", "plaintext-psk".
+	// "unknown-phase1", "addke-not-ikev2", "plaintext-psk", "section-not-inventoried".
 	Code    string
 	Message string
 	Ev      Evidence

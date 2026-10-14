@@ -1,0 +1,2250 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:ff7dfb9c-6297-5c9d-bf5d-53e8b0d30b7f",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-10-11T00:00:00Z",
+    "lifecycles": [
+      {
+        "phase": "operations"
+      }
+    ],
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "name": "cbom-netscan",
+          "version": "test"
+        }
+      ]
+    },
+    "properties": [
+      {
+        "name": "cbom-netscan:fortios:sections-inventoried",
+        "value": "system global, vpn certificate ca, vpn certificate local, vpn certificate remote, vpn ipsec phase1-interface, vpn ssl settings"
+      }
+    ]
+  },
+  "components": [
+    {
+      "bom-ref": "crypto/e3530219dab88918",
+      "type": "cryptographic-asset",
+      "name": "FortiOS IPsec phase1-interface dc-sig",
+      "properties": [
+        {
+          "name": "cbom-netscan:fortios:addke1:line",
+          "value": "135"
+        },
+        {
+          "name": "cbom-netscan:fortios:addke1:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:addke1:value",
+          "value": "ml-kem-768"
+        },
+        {
+          "name": "cbom-netscan:fortios:authmethod:line",
+          "value": "136"
+        },
+        {
+          "name": "cbom-netscan:fortios:authmethod:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:authmethod:value",
+          "value": "signature"
+        },
+        {
+          "name": "cbom-netscan:fortios:certificate:line",
+          "value": "137"
+        },
+        {
+          "name": "cbom-netscan:fortios:certificate:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:certificate:value",
+          "value": "vpn-rsa"
+        },
+        {
+          "name": "cbom-netscan:fortios:defaults-table",
+          "value": "7.6"
+        },
+        {
+          "name": "cbom-netscan:fortios:dhgrp:line",
+          "value": "134"
+        },
+        {
+          "name": "cbom-netscan:fortios:dhgrp:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:dhgrp:value",
+          "value": "20"
+        },
+        {
+          "name": "cbom-netscan:fortios:ike-version:line",
+          "value": "132"
+        },
+        {
+          "name": "cbom-netscan:fortios:ike-version:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:ike-version:value",
+          "value": "2"
+        },
+        {
+          "name": "cbom-netscan:fortios:proposal:line",
+          "value": "133"
+        },
+        {
+          "name": "cbom-netscan:fortios:proposal:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:proposal:value",
+          "value": "aes256gcm-prfsha384"
+        },
+        {
+          "name": "cbom-netscan:fortios:signature-hash-alg:default-source",
+          "value": "CLI-7.6.7 p2286–2318 via research notes §3.3"
+        },
+        {
+          "name": "cbom-netscan:fortios:signature-hash-alg:source",
+          "value": "default"
+        },
+        {
+          "name": "cbom-netscan:fortios:signature-hash-alg:value",
+          "value": "sha2-512"
+        },
+        {
+          "name": "cbom-netscan:fortios:view",
+          "value": "configured"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 132,
+            "symbol": "vpn ipsec phase1-interface/dc-sig/ike-version"
+          },
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 133,
+            "symbol": "vpn ipsec phase1-interface/dc-sig/proposal"
+          },
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 134,
+            "symbol": "vpn ipsec phase1-interface/dc-sig/dhgrp"
+          },
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 135,
+            "symbol": "vpn ipsec phase1-interface/dc-sig/addke1"
+          },
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 136,
+            "symbol": "vpn ipsec phase1-interface/dc-sig/authmethod"
+          },
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 137,
+            "symbol": "vpn ipsec phase1-interface/dc-sig/certificate"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "protocol",
+        "protocolProperties": {
+          "type": "ike",
+          "version": "2",
+          "ikev2TransformTypes": {
+            "encr": [
+              "crypto/312fcb758b25ec2e"
+            ],
+            "prf": [
+              "crypto/66ff12a9ee422288"
+            ],
+            "ke": [
+              "crypto/1ed7e39161d995b5",
+              "crypto/c34ed1555201c112"
+            ],
+            "auth": [
+              "crypto/ec2f0c1d3090358f"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/a17927cd77e8a259",
+      "type": "cryptographic-asset",
+      "name": "FortiOS IPsec phase1-interface partner-sig",
+      "properties": [
+        {
+          "name": "cbom-netscan:fortios:addke:source",
+          "value": "default"
+        },
+        {
+          "name": "cbom-netscan:fortios:authmethod:line",
+          "value": "145"
+        },
+        {
+          "name": "cbom-netscan:fortios:authmethod:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:authmethod:value",
+          "value": "signature"
+        },
+        {
+          "name": "cbom-netscan:fortios:certificate:line",
+          "value": "146"
+        },
+        {
+          "name": "cbom-netscan:fortios:certificate:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:certificate:value",
+          "value": "Fortinet_Factory"
+        },
+        {
+          "name": "cbom-netscan:fortios:defaults-table",
+          "value": "7.6"
+        },
+        {
+          "name": "cbom-netscan:fortios:dhgrp:line",
+          "value": "144"
+        },
+        {
+          "name": "cbom-netscan:fortios:dhgrp:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:dhgrp:value",
+          "value": "21"
+        },
+        {
+          "name": "cbom-netscan:fortios:ike-version:line",
+          "value": "142"
+        },
+        {
+          "name": "cbom-netscan:fortios:ike-version:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:ike-version:value",
+          "value": "2"
+        },
+        {
+          "name": "cbom-netscan:fortios:proposal:line",
+          "value": "143"
+        },
+        {
+          "name": "cbom-netscan:fortios:proposal:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:proposal:value",
+          "value": "aes256-sha256"
+        },
+        {
+          "name": "cbom-netscan:fortios:signature-hash-alg:default-source",
+          "value": "CLI-7.6.7 p2286–2318 via research notes §3.3"
+        },
+        {
+          "name": "cbom-netscan:fortios:signature-hash-alg:source",
+          "value": "default"
+        },
+        {
+          "name": "cbom-netscan:fortios:signature-hash-alg:value",
+          "value": "sha2-512"
+        },
+        {
+          "name": "cbom-netscan:fortios:view",
+          "value": "configured"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 142,
+            "symbol": "vpn ipsec phase1-interface/partner-sig/ike-version"
+          },
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 143,
+            "symbol": "vpn ipsec phase1-interface/partner-sig/proposal"
+          },
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 144,
+            "symbol": "vpn ipsec phase1-interface/partner-sig/dhgrp"
+          },
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 145,
+            "symbol": "vpn ipsec phase1-interface/partner-sig/authmethod"
+          },
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 146,
+            "symbol": "vpn ipsec phase1-interface/partner-sig/certificate"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "protocol",
+        "protocolProperties": {
+          "type": "ike",
+          "version": "2",
+          "ikev2TransformTypes": {
+            "encr": [
+              "crypto/290365973635bced"
+            ],
+            "prf": [
+              "crypto/bef9ba26ff12f051"
+            ],
+            "integ": [
+              "crypto/ae2de6fb373d1788"
+            ],
+            "ke": [
+              "crypto/0511d27b389247ed"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/0861ee24add47643",
+      "type": "cryptographic-asset",
+      "name": "FortiOS SSL VPN TLS 1.2",
+      "properties": [
+        {
+          "name": "cbom-netscan:fortios:algorithm:line",
+          "value": "154"
+        },
+        {
+          "name": "cbom-netscan:fortios:algorithm:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:algorithm:value",
+          "value": "high"
+        },
+        {
+          "name": "cbom-netscan:fortios:banned-cipher:line",
+          "value": "155"
+        },
+        {
+          "name": "cbom-netscan:fortios:banned-cipher:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:banned-cipher:value",
+          "value": "SHA1 RSA"
+        },
+        {
+          "name": "cbom-netscan:fortios:cipher-suites",
+          "value": "unknown"
+        },
+        {
+          "name": "cbom-netscan:fortios:servercert:line",
+          "value": "151"
+        },
+        {
+          "name": "cbom-netscan:fortios:servercert:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:servercert:value",
+          "value": "gw-ecdsa"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssl-max-proto-ver:line",
+          "value": "153"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssl-max-proto-ver:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssl-max-proto-ver:value",
+          "value": "tls1-3"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssl-min-proto-ver:line",
+          "value": "152"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssl-min-proto-ver:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssl-min-proto-ver:value",
+          "value": "tls1-2"
+        },
+        {
+          "name": "cbom-netscan:fortios:tls-groups:line",
+          "value": "157"
+        },
+        {
+          "name": "cbom-netscan:fortios:tls-groups:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:tls-groups:tls13-only",
+          "value": "X25519-MLKEM768 P-384-MLKEM1024 ML-KEM768"
+        },
+        {
+          "name": "cbom-netscan:fortios:tls-groups:value",
+          "value": "X25519-MLKEM768 P-384-MLKEM1024 ML-KEM768 X25519 P-384 FFDHE4096"
+        },
+        {
+          "name": "cbom-netscan:fortios:view",
+          "value": "configured"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 151,
+            "symbol": "vpn ssl settings/servercert"
+          },
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 152,
+            "symbol": "vpn ssl settings/ssl-min-proto-ver"
+          },
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 153,
+            "symbol": "vpn ssl settings/ssl-max-proto-ver"
+          },
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 154,
+            "symbol": "vpn ssl settings/algorithm"
+          },
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 155,
+            "symbol": "vpn ssl settings/banned-cipher"
+          },
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 157,
+            "symbol": "vpn ssl settings/tls-groups"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "protocol",
+        "protocolProperties": {
+          "type": "tls",
+          "version": "1.2",
+          "cryptoRefArray": [
+            "crypto/cbf1f62ce5cca40f",
+            "crypto/1ed7e39161d995b5",
+            "crypto/61f36d43ee57f016",
+            "crypto/cb02569de6f4d551"
+          ]
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/b695d20c5d96fbb5",
+      "type": "cryptographic-asset",
+      "name": "FortiOS SSL VPN TLS 1.3",
+      "properties": [
+        {
+          "name": "cbom-netscan:fortios:algorithm:line",
+          "value": "154"
+        },
+        {
+          "name": "cbom-netscan:fortios:algorithm:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:algorithm:value",
+          "value": "high"
+        },
+        {
+          "name": "cbom-netscan:fortios:ciphersuite:line",
+          "value": "156"
+        },
+        {
+          "name": "cbom-netscan:fortios:ciphersuite:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:ciphersuite:value",
+          "value": "TLS-AES-256-GCM-SHA384 TLS-CHACHA20-POLY1305-SHA256"
+        },
+        {
+          "name": "cbom-netscan:fortios:servercert:line",
+          "value": "151"
+        },
+        {
+          "name": "cbom-netscan:fortios:servercert:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:servercert:value",
+          "value": "gw-ecdsa"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssl-max-proto-ver:line",
+          "value": "153"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssl-max-proto-ver:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssl-max-proto-ver:value",
+          "value": "tls1-3"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssl-min-proto-ver:line",
+          "value": "152"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssl-min-proto-ver:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssl-min-proto-ver:value",
+          "value": "tls1-2"
+        },
+        {
+          "name": "cbom-netscan:fortios:tls-groups:line",
+          "value": "157"
+        },
+        {
+          "name": "cbom-netscan:fortios:tls-groups:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:tls-groups:value",
+          "value": "X25519-MLKEM768 P-384-MLKEM1024 ML-KEM768 X25519 P-384 FFDHE4096"
+        },
+        {
+          "name": "cbom-netscan:fortios:view",
+          "value": "configured"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 151,
+            "symbol": "vpn ssl settings/servercert"
+          },
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 152,
+            "symbol": "vpn ssl settings/ssl-min-proto-ver"
+          },
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 153,
+            "symbol": "vpn ssl settings/ssl-max-proto-ver"
+          },
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 154,
+            "symbol": "vpn ssl settings/algorithm"
+          },
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 156,
+            "symbol": "vpn ssl settings/ciphersuite"
+          },
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 157,
+            "symbol": "vpn ssl settings/tls-groups"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "protocol",
+        "protocolProperties": {
+          "type": "tls",
+          "version": "1.3",
+          "cipherSuites": [
+            {
+              "name": "TLS-AES-256-GCM-SHA384"
+            },
+            {
+              "name": "TLS-CHACHA20-POLY1305-SHA256"
+            }
+          ],
+          "cryptoRefArray": [
+            "crypto/11e6bc1915a0f04e",
+            "crypto/c34ed1555201c112",
+            "crypto/cbf1f62ce5cca40f",
+            "crypto/f81be85ab02fc409",
+            "crypto/7c4b91bfb5a9c4e9",
+            "crypto/1ed7e39161d995b5",
+            "crypto/61f36d43ee57f016",
+            "crypto/cb02569de6f4d551"
+          ]
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/b157d5fedfaf352c",
+      "type": "cryptographic-asset",
+      "name": "FortiOS admin HTTPS TLS 1.2",
+      "properties": [
+        {
+          "name": "cbom-netscan:fortios:admin-https-ssl-banned-ciphers:default-source",
+          "value": "CLI HTML 7.6.7 339914554/config-system-global, verified 2026-10-14; research notes §3.1 (no default listed)"
+        },
+        {
+          "name": "cbom-netscan:fortios:admin-https-ssl-banned-ciphers:source",
+          "value": "default"
+        },
+        {
+          "name": "cbom-netscan:fortios:admin-https-ssl-banned-ciphers:value",
+          "value": ""
+        },
+        {
+          "name": "cbom-netscan:fortios:admin-https-ssl-versions:default-source",
+          "value": "CLI HTML 7.6.7 339914554/config-system-global, verified 2026-10-14; research notes §3.1"
+        },
+        {
+          "name": "cbom-netscan:fortios:admin-https-ssl-versions:source",
+          "value": "default"
+        },
+        {
+          "name": "cbom-netscan:fortios:admin-server-cert:default-source",
+          "value": "CLI HTML 7.6.7 339914554/config-system-global, verified 2026-10-14; research notes §3.1"
+        },
+        {
+          "name": "cbom-netscan:fortios:admin-server-cert:source",
+          "value": "default"
+        },
+        {
+          "name": "cbom-netscan:fortios:admin-server-cert:value",
+          "value": "Fortinet_GUI_Server"
+        },
+        {
+          "name": "cbom-netscan:fortios:cipher-suites",
+          "value": "unknown"
+        },
+        {
+          "name": "cbom-netscan:fortios:defaults-table",
+          "value": "7.6"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssl-static-key-ciphers:default-source",
+          "value": "CLI-7.6.7 p1549–1592 (system global), via research notes §3.1"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssl-static-key-ciphers:source",
+          "value": "default"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssl-static-key-ciphers:value",
+          "value": "enable"
+        },
+        {
+          "name": "cbom-netscan:fortios:strong-crypto:line",
+          "value": "7"
+        },
+        {
+          "name": "cbom-netscan:fortios:strong-crypto:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:strong-crypto:value",
+          "value": "enable"
+        },
+        {
+          "name": "cbom-netscan:fortios:view",
+          "value": "configured"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 7,
+            "symbol": "system global/strong-crypto"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "protocol",
+        "protocolProperties": {
+          "type": "tls",
+          "version": "1.2"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/c4e600cff444a2b0",
+      "type": "cryptographic-asset",
+      "name": "FortiOS admin HTTPS TLS 1.3",
+      "properties": [
+        {
+          "name": "cbom-netscan:fortios:admin-https-ssl-ciphersuites:default-source",
+          "value": "CLI HTML 7.6.7 339914554/config-system-global, verified 2026-10-14; research notes §3.1"
+        },
+        {
+          "name": "cbom-netscan:fortios:admin-https-ssl-ciphersuites:source",
+          "value": "default"
+        },
+        {
+          "name": "cbom-netscan:fortios:admin-https-ssl-versions:default-source",
+          "value": "CLI HTML 7.6.7 339914554/config-system-global, verified 2026-10-14; research notes §3.1"
+        },
+        {
+          "name": "cbom-netscan:fortios:admin-https-ssl-versions:source",
+          "value": "default"
+        },
+        {
+          "name": "cbom-netscan:fortios:admin-server-cert:default-source",
+          "value": "CLI HTML 7.6.7 339914554/config-system-global, verified 2026-10-14; research notes §3.1"
+        },
+        {
+          "name": "cbom-netscan:fortios:admin-server-cert:source",
+          "value": "default"
+        },
+        {
+          "name": "cbom-netscan:fortios:admin-server-cert:value",
+          "value": "Fortinet_GUI_Server"
+        },
+        {
+          "name": "cbom-netscan:fortios:defaults-table",
+          "value": "7.6"
+        },
+        {
+          "name": "cbom-netscan:fortios:strong-crypto:line",
+          "value": "7"
+        },
+        {
+          "name": "cbom-netscan:fortios:strong-crypto:source",
+          "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:strong-crypto:value",
+          "value": "enable"
+        },
+        {
+          "name": "cbom-netscan:fortios:view",
+          "value": "configured"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 7,
+            "symbol": "system global/strong-crypto"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "protocol",
+        "protocolProperties": {
+          "type": "tls",
+          "version": "1.3",
+          "cipherSuites": [
+            {
+              "name": "TLS-AES-128-GCM-SHA256"
+            },
+            {
+              "name": "TLS-AES-256-GCM-SHA384"
+            },
+            {
+              "name": "TLS-CHACHA20-POLY1305-SHA256"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/24e79c79ac241292",
+      "type": "cryptographic-asset",
+      "name": "FortiOS admin SSH",
+      "properties": [
+        {
+          "name": "cbom-netscan:fortios:defaults-table",
+          "value": "7.6"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssh-enc-algo:default-source",
+          "value": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssh-enc-algo:source",
+          "value": "default"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssh-enc-algo:value",
+          "value": "aes256-ctr aes256-gcm@openssh.com"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssh-hsk-algo:default-source",
+          "value": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssh-hsk-algo:source",
+          "value": "default"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssh-hsk-algo:value",
+          "value": "ecdsa-sha2-nistp521 ecdsa-sha2-nistp384 ecdsa-sha2-nistp256 rsa-sha2-256 rsa-sha2-512 ssh-ed25519"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssh-kex-algo:default-source",
+          "value": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssh-kex-algo:source",
+          "value": "default"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssh-kex-algo:value",
+          "value": "diffie-hellman-group14-sha256 diffie-hellman-group16-sha512 diffie-hellman-group18-sha512 diffie-hellman-group-exchange-sha256 curve25519-sha256@libssh.org ecdh-sha2-nistp256 ecdh-sha2-nistp384 ecdh-sha2-nistp521"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssh-mac-algo:default-source",
+          "value": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssh-mac-algo:source",
+          "value": "default"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssh-mac-algo:value",
+          "value": "hmac-sha2-256 hmac-sha2-256-etm@openssh.com hmac-sha2-512 hmac-sha2-512-etm@openssh.com"
+        },
+        {
+          "name": "cbom-netscan:fortios:view",
+          "value": "configured"
+        }
+      ],
+      "cryptoProperties": {
+        "assetType": "protocol",
+        "protocolProperties": {
+          "type": "ssh",
+          "cryptoRefArray": [
+            "crypto/12a8f76615b81d2f",
+            "crypto/c20dd6abaaccef06",
+            "crypto/782764568afeee3f",
+            "crypto/f7855120f55ac51f",
+            "crypto/00f4a3c8b25bf135",
+            "crypto/689dcc3ca54fe4b8",
+            "crypto/30fd106246588685",
+            "crypto/fa6577c797efe516",
+            "crypto/6ed5b49ac72f6743",
+            "crypto/312fcb758b25ec2e",
+            "crypto/ae2de6fb373d1788",
+            "crypto/df59ddf5dce75d47",
+            "crypto/0f064f9ec8f515e3",
+            "crypto/093b8be1b873b9ff",
+            "crypto/5173cd179d1a1a95",
+            "crypto/5ff6650650e85078",
+            "crypto/d31b117e4a51cd2a",
+            "crypto/bad96b331c9ea3b8"
+          ]
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/290365973635bced",
+      "type": "cryptographic-asset",
+      "name": "AES-256-CBC",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 143,
+            "symbol": "vpn ipsec phase1-interface/partner-sig/proposal"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "block-cipher",
+          "parameterSetIdentifier": "256",
+          "mode": "cbc"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/6ed5b49ac72f6743",
+      "type": "cryptographic-asset",
+      "name": "AES-256-CTR",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "block-cipher",
+          "parameterSetIdentifier": "256",
+          "mode": "ctr"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/312fcb758b25ec2e",
+      "type": "cryptographic-asset",
+      "name": "AES-256-GCM",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 133,
+            "symbol": "vpn ipsec phase1-interface/dc-sig/proposal"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "ae",
+          "parameterSetIdentifier": "256",
+          "mode": "gcm"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/f2b69e69689326bd",
+      "type": "cryptographic-asset",
+      "name": "ECDSA-P256",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 36,
+            "symbol": "vpn certificate local/gw-ecdsa/certificate"
+          },
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 74,
+            "symbol": "vpn certificate local/long-lived/certificate"
+          },
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 114,
+            "symbol": "vpn certificate remote/peer-gw/remote"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "signature",
+          "curve": "secp256r1",
+          "nistQuantumSecurityLevel": 0
+        },
+        "oid": "1.2.840.10045.2.1"
+      }
+    },
+    {
+      "bom-ref": "crypto/38dc5437e7b3fd81",
+      "type": "cryptographic-asset",
+      "name": "ECDSA-P384",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 96,
+            "symbol": "vpn certificate ca/lab-root-ca/ca"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "signature",
+          "curve": "secp384r1",
+          "nistQuantumSecurityLevel": 0
+        },
+        "oid": "1.2.840.10045.2.1"
+      }
+    },
+    {
+      "bom-ref": "crypto/7ca389debf4e9721",
+      "type": "cryptographic-asset",
+      "name": "ECDSA-SHA384",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 15,
+            "symbol": "vpn certificate local/vpn-rsa/certificate"
+          },
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 36,
+            "symbol": "vpn certificate local/gw-ecdsa/certificate"
+          },
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 74,
+            "symbol": "vpn certificate local/long-lived/certificate"
+          },
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 96,
+            "symbol": "vpn certificate ca/lab-root-ca/ca"
+          },
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 114,
+            "symbol": "vpn certificate remote/peer-gw/remote"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "signature",
+          "nistQuantumSecurityLevel": 0
+        },
+        "oid": "1.2.840.10045.4.3.3"
+      }
+    },
+    {
+      "bom-ref": "crypto/1ed7e39161d995b5",
+      "type": "cryptographic-asset",
+      "name": "ECP-384",
+      "properties": [
+        {
+          "name": "cbom-netscan:fortios:ike-transform-id",
+          "value": "20"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 134,
+            "symbol": "vpn ipsec phase1-interface/dc-sig/dhgrp"
+          },
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 157,
+            "symbol": "vpn ssl settings/tls-groups"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "key-agree",
+          "curve": "secp384r1",
+          "nistQuantumSecurityLevel": 0
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/0511d27b389247ed",
+      "type": "cryptographic-asset",
+      "name": "ECP-521",
+      "properties": [
+        {
+          "name": "cbom-netscan:fortios:ike-transform-id",
+          "value": "21"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 144,
+            "symbol": "vpn ipsec phase1-interface/partner-sig/dhgrp"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "key-agree",
+          "curve": "secp521r1",
+          "nistQuantumSecurityLevel": 0
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/61f36d43ee57f016",
+      "type": "cryptographic-asset",
+      "name": "FFDHE-4096",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 157,
+            "symbol": "vpn ssl settings/tls-groups"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "key-agree",
+          "parameterSetIdentifier": "4096",
+          "nistQuantumSecurityLevel": 0
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/ae2de6fb373d1788",
+      "type": "cryptographic-asset",
+      "name": "HMAC-SHA256",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 143,
+            "symbol": "vpn ipsec phase1-interface/partner-sig/proposal"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "mac"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/df59ddf5dce75d47",
+      "type": "cryptographic-asset",
+      "name": "HMAC-SHA512",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "mac"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/7c4b91bfb5a9c4e9",
+      "type": "cryptographic-asset",
+      "name": "ML-KEM-1024",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 157,
+            "symbol": "vpn ssl settings/tls-groups"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "kem",
+          "parameterSetIdentifier": "1024",
+          "nistQuantumSecurityLevel": 5
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/c34ed1555201c112",
+      "type": "cryptographic-asset",
+      "name": "ML-KEM-768",
+      "properties": [
+        {
+          "name": "cbom-netscan:fortios:ike-transform-id",
+          "value": "36"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 135,
+            "symbol": "vpn ipsec phase1-interface/dc-sig/addke1"
+          },
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 157,
+            "symbol": "vpn ssl settings/tls-groups"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "kem",
+          "parameterSetIdentifier": "768",
+          "nistQuantumSecurityLevel": 3
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/bef9ba26ff12f051",
+      "type": "cryptographic-asset",
+      "name": "PRF-HMAC-SHA256",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 143,
+            "symbol": "vpn ipsec phase1-interface/partner-sig/proposal"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "kdf"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/66ff12a9ee422288",
+      "type": "cryptographic-asset",
+      "name": "PRF-HMAC-SHA384",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 133,
+            "symbol": "vpn ipsec phase1-interface/dc-sig/proposal"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "kdf"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/ec2f0c1d3090358f",
+      "type": "cryptographic-asset",
+      "name": "RSA-2048",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 15,
+            "symbol": "vpn certificate local/vpn-rsa/certificate"
+          },
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 52,
+            "symbol": "vpn certificate local/old-expired/certificate"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "pke",
+          "parameterSetIdentifier": "2048",
+          "nistQuantumSecurityLevel": 0
+        },
+        "oid": "1.2.840.113549.1.1.1"
+      }
+    },
+    {
+      "bom-ref": "crypto/3ff1d62fd6d2f336",
+      "type": "cryptographic-asset",
+      "name": "SHA256-RSA",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 52,
+            "symbol": "vpn certificate local/old-expired/certificate"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "signature",
+          "padding": "pkcs1v15",
+          "nistQuantumSecurityLevel": 0
+        },
+        "oid": "1.2.840.113549.1.1.11"
+      }
+    },
+    {
+      "bom-ref": "crypto/f81be85ab02fc409",
+      "type": "cryptographic-asset",
+      "name": "SecP384r1MLKEM1024",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 157,
+            "symbol": "vpn ssl settings/tls-groups"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "combiner"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/cbf1f62ce5cca40f",
+      "type": "cryptographic-asset",
+      "name": "X25519",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 157,
+            "symbol": "vpn ssl settings/tls-groups"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "key-agree",
+          "curve": "x25519",
+          "nistQuantumSecurityLevel": 0
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/11e6bc1915a0f04e",
+      "type": "cryptographic-asset",
+      "name": "X25519MLKEM768",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 157,
+            "symbol": "vpn ssl settings/tls-groups"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "combiner"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/00f4a3c8b25bf135",
+      "type": "cryptographic-asset",
+      "name": "curve25519-sha256@libssh.org",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "key-agree",
+          "curve": "x25519",
+          "nistQuantumSecurityLevel": 0
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/f7855120f55ac51f",
+      "type": "cryptographic-asset",
+      "name": "diffie-hellman-group-exchange-sha256",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "key-agree",
+          "nistQuantumSecurityLevel": 0
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/12a8f76615b81d2f",
+      "type": "cryptographic-asset",
+      "name": "diffie-hellman-group14-sha256",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "key-agree",
+          "parameterSetIdentifier": "2048",
+          "nistQuantumSecurityLevel": 0
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/c20dd6abaaccef06",
+      "type": "cryptographic-asset",
+      "name": "diffie-hellman-group16-sha512",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "key-agree",
+          "parameterSetIdentifier": "4096",
+          "nistQuantumSecurityLevel": 0
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/782764568afeee3f",
+      "type": "cryptographic-asset",
+      "name": "diffie-hellman-group18-sha512",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "key-agree",
+          "parameterSetIdentifier": "8192",
+          "nistQuantumSecurityLevel": 0
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/689dcc3ca54fe4b8",
+      "type": "cryptographic-asset",
+      "name": "ecdh-sha2-nistp256",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "key-agree",
+          "curve": "secp256r1",
+          "nistQuantumSecurityLevel": 0
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/30fd106246588685",
+      "type": "cryptographic-asset",
+      "name": "ecdh-sha2-nistp384",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "key-agree",
+          "curve": "secp384r1",
+          "nistQuantumSecurityLevel": 0
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/fa6577c797efe516",
+      "type": "cryptographic-asset",
+      "name": "ecdh-sha2-nistp521",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "key-agree",
+          "curve": "secp521r1",
+          "nistQuantumSecurityLevel": 0
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/5173cd179d1a1a95",
+      "type": "cryptographic-asset",
+      "name": "ecdsa-sha2-nistp256",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "signature",
+          "curve": "secp256r1",
+          "nistQuantumSecurityLevel": 0
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/093b8be1b873b9ff",
+      "type": "cryptographic-asset",
+      "name": "ecdsa-sha2-nistp384",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "signature",
+          "curve": "secp384r1",
+          "nistQuantumSecurityLevel": 0
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/0f064f9ec8f515e3",
+      "type": "cryptographic-asset",
+      "name": "ecdsa-sha2-nistp521",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "signature",
+          "curve": "secp521r1",
+          "nistQuantumSecurityLevel": 0
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/5ff6650650e85078",
+      "type": "cryptographic-asset",
+      "name": "rsa-sha2-256",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "signature",
+          "nistQuantumSecurityLevel": 0
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/d31b117e4a51cd2a",
+      "type": "cryptographic-asset",
+      "name": "rsa-sha2-512",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "signature",
+          "nistQuantumSecurityLevel": 0
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/bad96b331c9ea3b8",
+      "type": "cryptographic-asset",
+      "name": "ssh-ed25519",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "signature",
+          "nistQuantumSecurityLevel": 0
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/430cedcb81ae1fe1",
+      "type": "cryptographic-asset",
+      "name": "FortiOS certificate ca lab-root-ca",
+      "properties": [
+        {
+          "name": "cbom-netscan:cert:cabf-max-days",
+          "value": "not applicable: CA certificate"
+        },
+        {
+          "name": "cbom-netscan:cert:expired",
+          "value": "false"
+        },
+        {
+          "name": "cbom-netscan:cert:expiry-checked-at",
+          "value": "2026-10-11T00:00:00Z"
+        },
+        {
+          "name": "cbom-netscan:cert:is-ca",
+          "value": "true"
+        },
+        {
+          "name": "cbom-netscan:cert:serial",
+          "value": "1"
+        },
+        {
+          "name": "cbom-netscan:cert:sha256",
+          "value": "0e0326fd042bf629e74f717566a8cdd32507b801f4b72455033cd2a8da4db5a5"
+        },
+        {
+          "name": "cbom-netscan:cert:validity-days",
+          "value": "3653"
+        },
+        {
+          "name": "cbom-netscan:fortios:certificate-kind",
+          "value": "ca"
+        },
+        {
+          "name": "cbom-netscan:fortios:range:line",
+          "value": "108"
+        },
+        {
+          "name": "cbom-netscan:fortios:range:value",
+          "value": "global"
+        },
+        {
+          "name": "cbom-netscan:fortios:source:line",
+          "value": "109"
+        },
+        {
+          "name": "cbom-netscan:fortios:source:value",
+          "value": "user"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 96,
+            "symbol": "vpn certificate ca/lab-root-ca/ca"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "certificate",
+        "certificateProperties": {
+          "subjectName": "CN=Example Lab Root CA,O=Example Lab",
+          "issuerName": "CN=Example Lab Root CA,O=Example Lab",
+          "notValidBefore": "2025-01-01T00:00:00Z",
+          "notValidAfter": "2035-01-01T00:00:00Z",
+          "signatureAlgorithmRef": "crypto/7ca389debf4e9721",
+          "subjectPublicKeyRef": "crypto/c2013a7198140f49",
+          "certificateFormat": "X.509",
+          "certificateExtension": "pem"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/7a54679855519420",
+      "type": "cryptographic-asset",
+      "name": "FortiOS certificate local broken",
+      "properties": [
+        {
+          "name": "cbom-netscan:cert:parse",
+          "value": "failed"
+        },
+        {
+          "name": "cbom-netscan:fortios:certificate-kind",
+          "value": "local"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 89,
+            "symbol": "vpn certificate local/broken/certificate"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "certificate",
+        "certificateProperties": {
+          "certificateFormat": "X.509",
+          "certificateExtension": "pem"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/cb02569de6f4d551",
+      "type": "cryptographic-asset",
+      "name": "FortiOS certificate local gw-ecdsa",
+      "properties": [
+        {
+          "name": "cbom-netscan:cert:cabf-max-days",
+          "value": "200 (issued on or after 2026-03-15; Baseline Requirements §6.3.2)"
+        },
+        {
+          "name": "cbom-netscan:cert:exceeds-cabf-max",
+          "value": "false"
+        },
+        {
+          "name": "cbom-netscan:cert:expired",
+          "value": "false"
+        },
+        {
+          "name": "cbom-netscan:cert:expiry-checked-at",
+          "value": "2026-10-11T00:00:00Z"
+        },
+        {
+          "name": "cbom-netscan:cert:is-ca",
+          "value": "false"
+        },
+        {
+          "name": "cbom-netscan:cert:serial",
+          "value": "3"
+        },
+        {
+          "name": "cbom-netscan:cert:sha256",
+          "value": "fe8ac1bdb260244c6b76e8d8531ff89a4881cbd3cd89b3f0bb22d76d5cae8fc3"
+        },
+        {
+          "name": "cbom-netscan:cert:validity-days",
+          "value": "181"
+        },
+        {
+          "name": "cbom-netscan:fortios:certificate-kind",
+          "value": "local"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 36,
+            "symbol": "vpn certificate local/gw-ecdsa/certificate"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "certificate",
+        "certificateProperties": {
+          "subjectName": "CN=gw.example.net,O=Example Lab",
+          "issuerName": "CN=Example Lab Root CA,O=Example Lab",
+          "notValidBefore": "2026-09-15T00:00:00Z",
+          "notValidAfter": "2027-03-14T00:00:00Z",
+          "signatureAlgorithmRef": "crypto/7ca389debf4e9721",
+          "subjectPublicKeyRef": "crypto/93473820b63ef923",
+          "certificateFormat": "X.509",
+          "certificateExtension": "pem"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/2439900834e54cad",
+      "type": "cryptographic-asset",
+      "name": "FortiOS certificate local long-lived",
+      "properties": [
+        {
+          "name": "cbom-netscan:cert:cabf-max-days",
+          "value": "200 (issued on or after 2026-03-15; Baseline Requirements §6.3.2)"
+        },
+        {
+          "name": "cbom-netscan:cert:exceeds-cabf-max",
+          "value": "true"
+        },
+        {
+          "name": "cbom-netscan:cert:expired",
+          "value": "false"
+        },
+        {
+          "name": "cbom-netscan:cert:expiry-checked-at",
+          "value": "2026-10-11T00:00:00Z"
+        },
+        {
+          "name": "cbom-netscan:cert:is-ca",
+          "value": "false"
+        },
+        {
+          "name": "cbom-netscan:cert:serial",
+          "value": "5"
+        },
+        {
+          "name": "cbom-netscan:cert:sha256",
+          "value": "7ba98ebf5f035ff905e8bec83ef00a77402ac4acb6cce52b6596f6eb389825da"
+        },
+        {
+          "name": "cbom-netscan:cert:validity-days",
+          "value": "732"
+        },
+        {
+          "name": "cbom-netscan:fortios:certificate-kind",
+          "value": "local"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 74,
+            "symbol": "vpn certificate local/long-lived/certificate"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "certificate",
+        "certificateProperties": {
+          "subjectName": "CN=long.example.com,O=Example Lab",
+          "issuerName": "CN=Example Lab Root CA,O=Example Lab",
+          "notValidBefore": "2026-05-01T00:00:00Z",
+          "notValidAfter": "2028-05-01T00:00:00Z",
+          "signatureAlgorithmRef": "crypto/7ca389debf4e9721",
+          "subjectPublicKeyRef": "crypto/cd014fb5cb175e16",
+          "certificateFormat": "X.509",
+          "certificateExtension": "pem"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/559e175b0ed68663",
+      "type": "cryptographic-asset",
+      "name": "FortiOS certificate local old-expired",
+      "properties": [
+        {
+          "name": "cbom-netscan:cert:cabf-max-days",
+          "value": "398 (issued before 2026-03-15; Baseline Requirements §6.3.2)"
+        },
+        {
+          "name": "cbom-netscan:cert:exceeds-cabf-max",
+          "value": "false"
+        },
+        {
+          "name": "cbom-netscan:cert:expired",
+          "value": "true"
+        },
+        {
+          "name": "cbom-netscan:cert:expiry-checked-at",
+          "value": "2026-10-11T00:00:00Z"
+        },
+        {
+          "name": "cbom-netscan:cert:is-ca",
+          "value": "false"
+        },
+        {
+          "name": "cbom-netscan:cert:serial",
+          "value": "4"
+        },
+        {
+          "name": "cbom-netscan:cert:sha256",
+          "value": "6006d1fa63abaf50f274a02f8ac0b8ffdedac0fe7c39a2da4c96d1b6ca3d2ddb"
+        },
+        {
+          "name": "cbom-netscan:cert:validity-days",
+          "value": "366"
+        },
+        {
+          "name": "cbom-netscan:fortios:certificate-kind",
+          "value": "local"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 52,
+            "symbol": "vpn certificate local/old-expired/certificate"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "certificate",
+        "certificateProperties": {
+          "subjectName": "CN=old.example.org,O=Example Lab",
+          "issuerName": "CN=old.example.org,O=Example Lab",
+          "notValidBefore": "2024-01-01T00:00:00Z",
+          "notValidAfter": "2024-12-31T00:00:00Z",
+          "signatureAlgorithmRef": "crypto/3ff1d62fd6d2f336",
+          "subjectPublicKeyRef": "crypto/d7c569b681c15932",
+          "certificateFormat": "X.509",
+          "certificateExtension": "pem"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/8baa8664680139ee",
+      "type": "cryptographic-asset",
+      "name": "FortiOS certificate local vpn-rsa",
+      "properties": [
+        {
+          "name": "cbom-netscan:cert:cabf-max-days",
+          "value": "200 (issued on or after 2026-03-15; Baseline Requirements §6.3.2)"
+        },
+        {
+          "name": "cbom-netscan:cert:exceeds-cabf-max",
+          "value": "false"
+        },
+        {
+          "name": "cbom-netscan:cert:expired",
+          "value": "false"
+        },
+        {
+          "name": "cbom-netscan:cert:expiry-checked-at",
+          "value": "2026-10-11T00:00:00Z"
+        },
+        {
+          "name": "cbom-netscan:cert:is-ca",
+          "value": "false"
+        },
+        {
+          "name": "cbom-netscan:cert:serial",
+          "value": "2"
+        },
+        {
+          "name": "cbom-netscan:cert:sha256",
+          "value": "1a5e45f4330587f4a342d1e2b6c3464c518bde307da67f30ebb308190c780652"
+        },
+        {
+          "name": "cbom-netscan:cert:validity-days",
+          "value": "121"
+        },
+        {
+          "name": "cbom-netscan:fortios:certificate-kind",
+          "value": "local"
+        },
+        {
+          "name": "cbom-netscan:fortios:source:line",
+          "value": "32"
+        },
+        {
+          "name": "cbom-netscan:fortios:source:value",
+          "value": "user"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 15,
+            "symbol": "vpn certificate local/vpn-rsa/certificate"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "certificate",
+        "certificateProperties": {
+          "subjectName": "CN=vpn.example.com,O=Example Lab",
+          "issuerName": "CN=Example Lab Root CA,O=Example Lab",
+          "notValidBefore": "2026-10-01T00:00:00Z",
+          "notValidAfter": "2027-01-29T00:00:00Z",
+          "signatureAlgorithmRef": "crypto/7ca389debf4e9721",
+          "subjectPublicKeyRef": "crypto/8e459ca881245c20",
+          "certificateFormat": "X.509",
+          "certificateExtension": "pem"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/9a809e94ea74b476",
+      "type": "cryptographic-asset",
+      "name": "FortiOS certificate remote peer-gw",
+      "properties": [
+        {
+          "name": "cbom-netscan:cert:cabf-max-days",
+          "value": "200 (issued on or after 2026-03-15; Baseline Requirements §6.3.2)"
+        },
+        {
+          "name": "cbom-netscan:cert:exceeds-cabf-max",
+          "value": "false"
+        },
+        {
+          "name": "cbom-netscan:cert:expired",
+          "value": "false"
+        },
+        {
+          "name": "cbom-netscan:cert:expiry-checked-at",
+          "value": "2026-10-11T00:00:00Z"
+        },
+        {
+          "name": "cbom-netscan:cert:is-ca",
+          "value": "false"
+        },
+        {
+          "name": "cbom-netscan:cert:serial",
+          "value": "3"
+        },
+        {
+          "name": "cbom-netscan:cert:sha256",
+          "value": "fe8ac1bdb260244c6b76e8d8531ff89a4881cbd3cd89b3f0bb22d76d5cae8fc3"
+        },
+        {
+          "name": "cbom-netscan:cert:validity-days",
+          "value": "181"
+        },
+        {
+          "name": "cbom-netscan:fortios:certificate-kind",
+          "value": "remote"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 114,
+            "symbol": "vpn certificate remote/peer-gw/remote"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "certificate",
+        "certificateProperties": {
+          "subjectName": "CN=gw.example.net,O=Example Lab",
+          "issuerName": "CN=Example Lab Root CA,O=Example Lab",
+          "notValidBefore": "2026-09-15T00:00:00Z",
+          "notValidAfter": "2027-03-14T00:00:00Z",
+          "signatureAlgorithmRef": "crypto/7ca389debf4e9721",
+          "subjectPublicKeyRef": "crypto/30899612daf95cb8",
+          "certificateFormat": "X.509",
+          "certificateExtension": "pem"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/c2013a7198140f49",
+      "type": "cryptographic-asset",
+      "name": "FortiOS certificate ca lab-root-ca public key",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 96,
+            "symbol": "vpn certificate ca/lab-root-ca/ca"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "related-crypto-material",
+        "relatedCryptoMaterialProperties": {
+          "type": "public-key",
+          "id": "spki-sha256:828eab5347527dd5fa26f4ea7f2ae7df1ebd6a3eeba951a4630598368b987ce4",
+          "algorithmRef": "crypto/38dc5437e7b3fd81",
+          "size": 384
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/a187c0dc79192dac",
+      "type": "cryptographic-asset",
+      "name": "FortiOS certificate local gw-ecdsa private key",
+      "properties": [
+        {
+          "name": "cbom-netscan:fortios:private-key",
+          "value": "present"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 35,
+            "symbol": "vpn certificate local/gw-ecdsa/private-key"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "related-crypto-material",
+        "relatedCryptoMaterialProperties": {
+          "type": "private-key",
+          "algorithmRef": "crypto/f2b69e69689326bd",
+          "size": 256
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/93473820b63ef923",
+      "type": "cryptographic-asset",
+      "name": "FortiOS certificate local gw-ecdsa public key",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 36,
+            "symbol": "vpn certificate local/gw-ecdsa/certificate"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "related-crypto-material",
+        "relatedCryptoMaterialProperties": {
+          "type": "public-key",
+          "id": "spki-sha256:ce7f303b9e07539e46183f90c16461178e2192c85fe076345851aa77b24c1968",
+          "algorithmRef": "crypto/f2b69e69689326bd",
+          "size": 256
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/2630faafbab5d9cf",
+      "type": "cryptographic-asset",
+      "name": "FortiOS certificate local long-lived private key",
+      "properties": [
+        {
+          "name": "cbom-netscan:fortios:private-key",
+          "value": "present"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 73,
+            "symbol": "vpn certificate local/long-lived/private-key"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "related-crypto-material",
+        "relatedCryptoMaterialProperties": {
+          "type": "private-key",
+          "algorithmRef": "crypto/f2b69e69689326bd",
+          "size": 256
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/cd014fb5cb175e16",
+      "type": "cryptographic-asset",
+      "name": "FortiOS certificate local long-lived public key",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 74,
+            "symbol": "vpn certificate local/long-lived/certificate"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "related-crypto-material",
+        "relatedCryptoMaterialProperties": {
+          "type": "public-key",
+          "id": "spki-sha256:e9078425bbe03f017ce432bb506b164b11ac2e69e54348b0d93729dc4b2d460e",
+          "algorithmRef": "crypto/f2b69e69689326bd",
+          "size": 256
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/0a11ea4538ef7592",
+      "type": "cryptographic-asset",
+      "name": "FortiOS certificate local old-expired private key",
+      "properties": [
+        {
+          "name": "cbom-netscan:fortios:private-key",
+          "value": "present"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 51,
+            "symbol": "vpn certificate local/old-expired/private-key"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "related-crypto-material",
+        "relatedCryptoMaterialProperties": {
+          "type": "private-key",
+          "algorithmRef": "crypto/ec2f0c1d3090358f",
+          "size": 2048
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/d7c569b681c15932",
+      "type": "cryptographic-asset",
+      "name": "FortiOS certificate local old-expired public key",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 52,
+            "symbol": "vpn certificate local/old-expired/certificate"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "related-crypto-material",
+        "relatedCryptoMaterialProperties": {
+          "type": "public-key",
+          "id": "spki-sha256:2c765ba3914c341d8d0939d8bd22b6af233112e5314a7f4f23e67f4decb9bd16",
+          "algorithmRef": "crypto/ec2f0c1d3090358f",
+          "size": 2048
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/49f1252f34975894",
+      "type": "cryptographic-asset",
+      "name": "FortiOS certificate local vpn-rsa private key",
+      "properties": [
+        {
+          "name": "cbom-netscan:fortios:private-key",
+          "value": "present"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 12,
+            "symbol": "vpn certificate local/vpn-rsa/private-key"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "related-crypto-material",
+        "relatedCryptoMaterialProperties": {
+          "type": "private-key",
+          "algorithmRef": "crypto/ec2f0c1d3090358f",
+          "size": 2048
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/8e459ca881245c20",
+      "type": "cryptographic-asset",
+      "name": "FortiOS certificate local vpn-rsa public key",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 15,
+            "symbol": "vpn certificate local/vpn-rsa/certificate"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "related-crypto-material",
+        "relatedCryptoMaterialProperties": {
+          "type": "public-key",
+          "id": "spki-sha256:a81101e3af74af177bb2ba0a7e9282d68abff31941a72a7d58615c46c37e948f",
+          "algorithmRef": "crypto/ec2f0c1d3090358f",
+          "size": 2048
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/30899612daf95cb8",
+      "type": "cryptographic-asset",
+      "name": "FortiOS certificate remote peer-gw public key",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "certs-sslvpn-7.6.conf",
+            "line": 114,
+            "symbol": "vpn certificate remote/peer-gw/remote"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "related-crypto-material",
+        "relatedCryptoMaterialProperties": {
+          "type": "public-key",
+          "id": "spki-sha256:ce7f303b9e07539e46183f90c16461178e2192c85fe076345851aa77b24c1968",
+          "algorithmRef": "crypto/f2b69e69689326bd",
+          "size": 256
+        }
+      }
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "crypto/0861ee24add47643",
+      "dependsOn": [
+        "crypto/cb02569de6f4d551"
+      ]
+    },
+    {
+      "ref": "crypto/11e6bc1915a0f04e",
+      "dependsOn": [
+        "crypto/c34ed1555201c112",
+        "crypto/cbf1f62ce5cca40f"
+      ]
+    },
+    {
+      "ref": "crypto/b695d20c5d96fbb5",
+      "dependsOn": [
+        "crypto/cb02569de6f4d551"
+      ]
+    },
+    {
+      "ref": "crypto/e3530219dab88918",
+      "dependsOn": [
+        "crypto/8baa8664680139ee"
+      ]
+    },
+    {
+      "ref": "crypto/f81be85ab02fc409",
+      "dependsOn": [
+        "crypto/7c4b91bfb5a9c4e9",
+        "crypto/1ed7e39161d995b5"
+      ]
+    }
+  ]
+}

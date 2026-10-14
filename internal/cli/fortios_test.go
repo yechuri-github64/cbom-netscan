@@ -9,6 +9,7 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"os"
 	"path/filepath"
 	"strings"
@@ -423,5 +424,94 @@ func TestRootHelp_OnlyExistingFeatures(t *testing.T) {
 		if !strings.Contains(stdout, want) {
 			t.Errorf("root help missing %q", want)
 		}
+	}
+}
+
+var update = flag.Bool("update", false, "rewrite the golden files written by the CLI tests")
+
+const sslvpnFixtures = "../../pkg/fortios/extract/sslvpn/testdata/"
+
+// cliSecretFragments occur only in the fixtures' secret values (private keys,
+// passwords) and PEM armour.
+var cliSecretFragments = []string{"c3ludGhldGlj", "PRIVATE KEY", "BEGIN CERTIFICATE", "ENC ", "FortinetPasswordMask"}
+
+// TestFortiOS_CertsSSLVPNGolden runs the whole pipeline (global, certificates,
+// IPsec, SSL VPN) on the certificate fixtures and compares the CBOM with the
+// golden files and the warnings with the expected list. Neither may contain
+// a secret.
+func TestFortiOS_CertsSSLVPNGolden(t *testing.T) {
+	t.Setenv("SOURCE_DATE_EPOCH", "1791676800") // 2026-10-11T00:00:00Z
+	for _, tc := range []struct {
+		fixture, golden string
+		stderr          []string
+	}{
+		{
+			fixture: "certs-sslvpn-7.6.conf",
+			golden:  "fortios-certs-sslvpn-7.6.cdx.json",
+			stderr: []string{
+				"certs-sslvpn-7.6.conf:52: warning: FortiOS certificate local old-expired expired on 2024-12-31 [cert-expired]",
+				"certs-sslvpn-7.6.conf:89: warning: FortiOS certificate local broken: X.509 parse failed; reported without certificate details [cert-unparseable]",
+				`certs-sslvpn-7.6.conf:146: warning: FortiOS IPsec phase1-interface partner-sig: certificate "Fortinet_Factory" is not among the local certificates it can use (it may be built in) [unknown-certificate]`,
+			},
+		},
+		{
+			// branch-sig names root-rsa, which is in the root VDOM, not in
+			// branch or global.
+			fixture: "certs-sslvpn-multivdom-7.6.conf",
+			golden:  "fortios-certs-sslvpn-multivdom-7.6.cdx.json",
+			stderr: []string{
+				`certs-sslvpn-multivdom-7.6.conf:99: warning: FortiOS IPsec phase1-interface branch-sig (vdom branch): certificate "root-rsa" is not among the local certificates it can use (it may be built in) [unknown-certificate]`,
+			},
+		},
+	} {
+		t.Run(tc.fixture, func(t *testing.T) {
+			out, stderr, err := run(t, "fortios", sslvpnFixtures+tc.fixture, "--reproducible")
+			if err != nil {
+				t.Fatalf("fortios: %v", err)
+			}
+			if want := strings.Join(tc.stderr, "\n") + "\n"; stderr != want {
+				t.Errorf("stderr =\n%s\nwant\n%s", stderr, want)
+			}
+			for _, s := range cliSecretFragments {
+				if strings.Contains(out, s) || strings.Contains(stderr, s) {
+					t.Errorf("output contains secret fragment %q", s)
+				}
+			}
+			path := "../../pkg/testdata/golden/" + tc.golden
+			if *update {
+				writeFile(t, path, out)
+			}
+			want, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("read golden (run with -update to create it): %v", err)
+			}
+			if out != string(want) {
+				t.Errorf("output differs from %s; run go test ./internal/cli -run CertsSSLVPN -update and review the diff", path)
+			}
+		})
+	}
+}
+
+// TestFortiOS_ExpiryReferenceTime: without --reproducible, expiry is checked
+// against the clock; with --reproducible and no SOURCE_DATE_EPOCH it is not
+// evaluated, so the output stays the same from day to day.
+func TestFortiOS_ExpiryReferenceTime(t *testing.T) {
+	in := sslvpnFixtures + "certs-sslvpn-7.6.conf"
+
+	t.Setenv("SOURCE_DATE_EPOCH", "")
+	out, stderr, err := run(t, "fortios", in, "--reproducible")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(stderr, "[cert-expired]") || !strings.Contains(out, `"value": "not evaluated"`) || strings.Contains(out, "expiry-checked-at") {
+		t.Errorf("--reproducible without SOURCE_DATE_EPOCH evaluated expiry")
+	}
+
+	out, stderr, err = run(t, "fortios", in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stderr, "old-expired expired on 2024-12-31 [cert-expired]") || !strings.Contains(out, "cbom-netscan:cert:expiry-checked-at") {
+		t.Errorf("default run did not check expiry against the clock:\n%s", stderr)
 	}
 }

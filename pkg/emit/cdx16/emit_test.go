@@ -431,3 +431,73 @@ func assertEqual(t *testing.T, field string, want, got any) {
 		t.Errorf("%s = %v (%T), want %v (%T)", field, got, got, want, want)
 	}
 }
+
+// TestGoldenRefsResolve: every bom-ref that a golden file points at, in
+// dependencies, cryptoRefArray, ikev2TransformTypes, and certificate and
+// key properties, is a component in that file. CycloneDX schema validation
+// does not check this.
+func TestGoldenRefsResolve(t *testing.T) {
+	goldenDir := filepath.Join("..", "..", "testdata", "golden")
+	files, err := filepath.Glob(filepath.Join(goldenDir, "*.cdx.json"))
+	if err != nil || len(files) == 0 {
+		t.Fatalf("no golden files in %s: %v", goldenDir, err)
+	}
+	refKeys := map[string]bool{"signatureAlgorithmRef": true, "subjectPublicKeyRef": true, "algorithmRef": true, "ref": true}
+	listKeys := map[string]bool{"dependsOn": true, "cryptoRefArray": true, "encr": true, "prf": true, "integ": true, "ke": true, "auth": true}
+	for _, path := range files {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var bom struct {
+			Components   []map[string]any `json:"components"`
+			Dependencies []any            `json:"dependencies"`
+		}
+		if err := json.Unmarshal(data, &bom); err != nil {
+			t.Fatalf("%s: %v", path, err)
+		}
+		have := map[string]bool{}
+		for _, c := range bom.Components {
+			if id, ok := c["bom-ref"].(string); ok {
+				have[id] = true
+			}
+		}
+		var refs []string
+		var walk func(v any)
+		walk = func(v any) {
+			switch v := v.(type) {
+			case map[string]any:
+				for k, x := range v {
+					switch {
+					case refKeys[k]:
+						if s, ok := x.(string); ok {
+							refs = append(refs, s)
+						}
+					case listKeys[k]:
+						if l, ok := x.([]any); ok {
+							for _, e := range l {
+								if s, ok := e.(string); ok {
+									refs = append(refs, s)
+								}
+							}
+						}
+					}
+					walk(x)
+				}
+			case []any:
+				for _, x := range v {
+					walk(x)
+				}
+			}
+		}
+		for _, c := range bom.Components {
+			walk(c)
+		}
+		walk(bom.Dependencies)
+		for _, r := range refs {
+			if !have[r] {
+				t.Errorf("%s: reference %s has no component", filepath.Base(path), r)
+			}
+		}
+	}
+}

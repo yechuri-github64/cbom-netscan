@@ -5,8 +5,8 @@
 // Package global extracts admin HTTPS and SSH crypto from "config system
 // global" and "config system ssh-config" (research notes §3.1-3.2).
 //
-// Every field is resolved to one of three sources, recorded on the component
-// as cbom-netscan:fortios:<field>:source:
+// Every field is resolved to one of three sources, recorded on the protocol
+// component as cbom-netscan:fortios:<field>:source:
 //
 //	configured  set in the backup; :line and an evidence occurrence give the line
 //	default     not set; taken from the defaults table for the header's version
@@ -15,9 +15,14 @@
 // Only an allow-list of fields is read. Secret fields in these sections
 // (ssh-hsk, ssh-hsk-password) are never touched.
 //
+// Algorithm components are shared with other extractors (AES-256-GCM is one
+// component whether SSH or IPsec uses it), so they carry only the algorithm
+// and evidence occurrences; SSH tokens and provenance stay on the protocol.
+//
 // The components describe the configured set. strong-crypto is recorded as a
-// property but its effect on what is actually negotiated (§3.1a) is not
-// applied here; that "effective" view is separate work (§8.12).
+// property, and what it may disable is marked (§3.1a), but its effect on what
+// is actually negotiated is not applied; that "effective" view is separate
+// work (§8.12).
 package global
 
 import (

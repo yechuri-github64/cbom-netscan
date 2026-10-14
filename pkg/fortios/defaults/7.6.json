@@ -1,0 +1,93 @@
+{
+  "table": "7.6",
+  "versions": [
+    "7.6.3",
+    "7.6.4",
+    "7.6.5",
+    "7.6.6",
+    "7.6.7"
+  ],
+  "sections": {
+    "system global": {
+      "admin-https-ssl-versions": {
+        "value": [
+          "tlsv1-2",
+          "tlsv1-3"
+        ],
+        "source": "CLI HTML 7.6.7 339914554/config-system-global, verified 2026-10-14; research notes §3.1"
+      },
+      "admin-https-ssl-ciphersuites": {
+        "value": [
+          "TLS-AES-128-GCM-SHA256",
+          "TLS-AES-256-GCM-SHA384",
+          "TLS-CHACHA20-POLY1305-SHA256"
+        ],
+        "source": "CLI HTML 7.6.7 339914554/config-system-global, verified 2026-10-14; research notes §3.1"
+      },
+      "admin-https-ssl-banned-ciphers": {
+        "value": [],
+        "source": "CLI HTML 7.6.7 339914554/config-system-global, verified 2026-10-14; research notes §3.1 (no default listed)"
+      },
+      "admin-server-cert": {
+        "value": [
+          "Fortinet_GUI_Server"
+        ],
+        "source": "CLI HTML 7.6.7 339914554/config-system-global, verified 2026-10-14; research notes §3.1"
+      },
+      "strong-crypto": {
+        "value": [
+          "enable"
+        ],
+        "source": "CLI-7.6.7 p1549–1592 (system global), via research notes §3.1"
+      },
+      "ssl-static-key-ciphers": {
+        "value": [
+          "enable"
+        ],
+        "source": "CLI-7.6.7 p1549–1592 (system global), via research notes §3.1"
+      }
+    },
+    "system ssh-config": {
+      "ssh-enc-algo": {
+        "value": [
+          "aes256-ctr",
+          "aes256-gcm@openssh.com"
+        ],
+        "source": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
+      },
+      "ssh-kex-algo": {
+        "value": [
+          "diffie-hellman-group14-sha256",
+          "diffie-hellman-group16-sha512",
+          "diffie-hellman-group18-sha512",
+          "diffie-hellman-group-exchange-sha256",
+          "curve25519-sha256@libssh.org",
+          "ecdh-sha2-nistp256",
+          "ecdh-sha2-nistp384",
+          "ecdh-sha2-nistp521"
+        ],
+        "source": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
+      },
+      "ssh-mac-algo": {
+        "value": [
+          "hmac-sha2-256",
+          "hmac-sha2-256-etm@openssh.com",
+          "hmac-sha2-512",
+          "hmac-sha2-512-etm@openssh.com"
+        ],
+        "source": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
+      },
+      "ssh-hsk-algo": {
+        "value": [
+          "ecdsa-sha2-nistp521",
+          "ecdsa-sha2-nistp384",
+          "ecdsa-sha2-nistp256",
+          "rsa-sha2-256",
+          "rsa-sha2-512",
+          "ssh-ed25519"
+        ],
+        "source": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
+      }
+    }
+  }
+}

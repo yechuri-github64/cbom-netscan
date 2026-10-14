@@ -13,6 +13,12 @@ path = ["testdata/**", "LICENSES/**"]
 SPDX-FileCopyrightText = "2026 contributors to cbom-netscan"
 SPDX-License-Identifier = "CC0-1.0"
 
+# FortiOS default-value tables. JSON cannot carry an SPDX comment.
+[[annotations]]
+path = ["pkg/fortios/defaults/*.json"]
+SPDX-FileCopyrightText = "2026 contributors to cbom-netscan"
+SPDX-License-Identifier = "Apache-2.0"
+
 # Documentation that doesn't have its own SPDX header.
 [[annotations]]
 path = ["docs/**", "*.md", "NOTICE"]

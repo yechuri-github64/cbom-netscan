@@ -242,6 +242,108 @@ func TestLexer_HeaderErrorsRedactUser(t *testing.T) {
 	}
 }
 
+// TestLexer_PrivateEncryptionKeyNeverLeaks feeds #private-encryption-key=
+// lines through every path the lexer has (header block, comment later in the
+// file, CRLF, line-1 errors, crafted header fields) and fails if the key
+// value appears in any token, header field, warning, or error.
+func TestLexer_PrivateEncryptionKeyNeverLeaks(t *testing.T) {
+	const key = "c3ludGhldGljLXRlc3Qta2V5LTAwMQ=="
+	const dev = "#config-version=FGVMH6-7.6.7-FW-build3704-260601:opmode=0:vdom=0:user=admin\n"
+
+	cases := []struct {
+		name     string
+		input    string
+		wantErr  bool
+		wantFlag bool
+	}{
+		{
+			name: "header_block",
+			input: dev + "#conf_file_ver=1234567890123456\n#buildno=3704\n#global_vdom=1\n" +
+				"#private-encryption-key=" + key + "\nconfig system global\nend\n",
+			wantFlag: true,
+		},
+		{
+			name:     "after_ordinary_comment",
+			input:    dev + "# note\n#private-encryption-key=" + key + "\nconfig system global\nend\n",
+			wantFlag: true,
+		},
+		{
+			name:     "indented_later_in_file",
+			input:    dev + "config system global\nend\n    #private-encryption-key=" + key + "\n",
+			wantFlag: true,
+		},
+		{
+			name:     "crlf",
+			input:    strings.ReplaceAll(dev+"#private-encryption-key="+key+"\nconfig system global\nend\n", "\n", "\r\n"),
+			wantFlag: true,
+		},
+		{
+			name:    "on_line_1",
+			input:   "#private-encryption-key=" + key + "\n",
+			wantErr: true,
+		},
+		{
+			name:    "inside_malformed_header",
+			input:   "#config-version=FGVMH6:private-encryption-key=" + key + "\n",
+			wantErr: true,
+		},
+		{
+			name:  "inside_vdom_field",
+			input: "#config-version=FGVMH6-7.6.7-FW-build3704-260601:vdom=private-encryption-key=" + key + "\n",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var seen strings.Builder
+			l, err := lexer.New(strings.NewReader(tc.input))
+			if err != nil {
+				seen.WriteString(err.Error())
+			} else {
+				for {
+					tok, err := l.Next()
+					if err != nil {
+						seen.WriteString(err.Error())
+						break
+					}
+					if tok.Kind == lexer.TokEOF {
+						break
+					}
+					fmt.Fprintf(&seen, "%#v\n", tok)
+				}
+				fmt.Fprintf(&seen, "%#v\n%#v\n", *l.Header, l.Warnings)
+			}
+
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("New error = %v, wantErr %v", err, tc.wantErr)
+			}
+			for i := 0; i+12 <= len(key); i++ {
+				if strings.Contains(seen.String(), key[i:i+12]) {
+					t.Fatalf("key value leaked (fragment %q) in:\n%s", key[i:i+12], seen.String())
+				}
+			}
+			if err != nil {
+				return
+			}
+
+			h := l.Header
+			if h.PrivateEncryptionKey != tc.wantFlag || h.OpaqueSecrets != tc.wantFlag {
+				t.Errorf("PrivateEncryptionKey=%v OpaqueSecrets=%v, want both %v",
+					h.PrivateEncryptionKey, h.OpaqueSecrets, tc.wantFlag)
+			}
+			n := 0
+			for _, w := range l.Warnings {
+				if w.Code == "opaque-secrets" {
+					n++
+				}
+			}
+			if want := map[bool]int{true: 1, false: 0}[tc.wantFlag]; n != want {
+				t.Errorf("opaque-secrets warnings = %d, want %d", n, want)
+			}
+		})
+	}
+}
+
 // TestLexer_Reject verifies that New returns an error for inputs that are not
 // FortiOS standard backups: encrypted blobs, YAML exports, and empty files.
 func TestLexer_Reject(t *testing.T) {

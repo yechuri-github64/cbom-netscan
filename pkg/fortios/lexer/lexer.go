@@ -86,6 +86,14 @@ type ConfigHeader struct {
 	ConfFileVer string // #conf_file_ver= value; empty if absent
 	BuildNo     string // #buildno= value; empty if absent
 	GlobalVDOM  string // #global_vdom= value; empty if absent
+
+	// PrivateEncryptionKey is true when a #private-encryption-key= line was
+	// seen. The key value itself is never stored, emitted, or logged.
+	PrivateEncryptionKey bool
+	// OpaqueSecrets is true when secret fields in this backup are encrypted
+	// with a key the parser does not have, so they can only be reported as
+	// present (research notes §5.3).
+	OpaqueSecrets bool
 }
 
 // VDOMMode is the VDOM layout declared by the vdom= header field.
@@ -115,7 +123,17 @@ func redactUser(s string) string {
 
 // metaKeys are the header-block lines read after #config-version=, in the
 // order a FortiOS backup writes them.
-var metaKeys = []string{"conf_file_ver", "buildno", "global_vdom"}
+var metaKeys = []string{"conf_file_ver", "buildno", "global_vdom", privateKeyField}
+
+const privateKeyField = "private-encryption-key"
+
+var privateKeyRE = regexp.MustCompile(`(?i)(private-encryption-key=).*`)
+
+// redactPrivateKey masks everything after private-encryption-key= so error
+// messages never expose the key, whatever characters it contains.
+func redactPrivateKey(s string) string {
+	return privateKeyRE.ReplaceAllString(s, "${1}[REDACTED]")
+}
 
 // Lexer is a streaming FortiOS config tokenizer.
 type Lexer struct {
@@ -131,13 +149,29 @@ type Lexer struct {
 	Warnings []model.Warning
 }
 
-// warn records a header warning. Header warnings all refer to line 1.
+// warn records a warning about the #config-version line.
 func (l *Lexer) warn(code, msg string) {
+	l.warnAt(1, "#config-version", code, msg)
+}
+
+func (l *Lexer) warnAt(line int, symbol, code, msg string) {
 	l.Warnings = append(l.Warnings, model.Warning{
 		Code:    code,
 		Message: msg,
-		Ev:      model.Evidence{Line: 1, Symbol: "#config-version"},
+		Ev:      model.Evidence{Line: line, Symbol: symbol},
 	})
+}
+
+// markPrivateKey records that a #private-encryption-key= line was found on
+// line n. Only its presence is kept; callers must drop the value.
+func (l *Lexer) markPrivateKey(n int) {
+	if l.Header.PrivateEncryptionKey {
+		return
+	}
+	l.Header.PrivateEncryptionKey = true
+	l.Header.OpaqueSecrets = true
+	l.warnAt(n, "#"+privateKeyField, "opaque-secrets",
+		"backup has a #private-encryption-key= line; secret fields are encrypted and are reported as present only")
 }
 
 // New creates a Lexer from r and reads the mandatory #config-version= header.
@@ -173,7 +207,7 @@ func (l *Lexer) readHeader() error {
 
 	const prefix = "#config-version="
 	if !strings.HasPrefix(first, prefix) {
-		snip := redactUser(first)
+		snip := redactPrivateKey(redactUser(first))
 		if len(snip) > 40 {
 			snip = snip[:40]
 		}
@@ -183,7 +217,7 @@ func (l *Lexer) readHeader() error {
 	fields := strings.Split(first[len(prefix):], ":")
 	m := headerRE.FindStringSubmatch(fields[0])
 	if m == nil {
-		return fmt.Errorf("fortios lexer: malformed #config-version line: %q", redactUser(first))
+		return fmt.Errorf("fortios lexer: malformed #config-version line: %q", redactPrivateKey(redactUser(first)))
 	}
 	h := &ConfigHeader{Model: m[1], Version: m[2], Build: m[3]}
 	if buildDateRE.MatchString(m[4]) {
@@ -207,7 +241,8 @@ func (l *Lexer) readHeader() error {
 	case vdomSeen && vdomRaw == "1":
 		h.VDOMMode = VDOMMulti
 	case vdomSeen:
-		l.warn("vdom-mode-unknown", fmt.Sprintf("#config-version has vdom=%q, not 0 or 1; VDOM mode will be detected from the config tree", vdomRaw))
+		// The raw value is not echoed: it is untrusted header text.
+		l.warn("vdom-mode-unknown", "#config-version has a vdom= value other than 0 or 1; VDOM mode will be detected from the config tree")
 	default:
 		l.warn("vdom-mode-unknown", "#config-version has no vdom= field; VDOM mode will be detected from the config tree")
 	}
@@ -247,6 +282,8 @@ func (l *Lexer) readMetaLines() error {
 			l.Header.BuildNo = val
 		case "global_vdom":
 			l.Header.GlobalVDOM = val
+		case privateKeyField:
+			l.markPrivateKey(l.line)
 		}
 		l.line++
 	}
@@ -311,6 +348,12 @@ func (l *Lexer) Next() (Token, error) {
 			body, err := l.readToEOL()
 			if err != nil {
 				return Token{}, err
+			}
+			// A key line outside the header block must not reach the token
+			// stream either: record presence and drop the line.
+			if strings.HasPrefix(strings.TrimLeft(body, " \t"), privateKeyField+"=") {
+				l.markPrivateKey(pos)
+				continue
 			}
 			return Token{Kind: TokComment, Value: body, Line: pos}, nil
 		}

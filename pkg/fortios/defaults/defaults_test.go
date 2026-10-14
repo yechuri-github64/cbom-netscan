@@ -25,6 +25,7 @@ var requiredFields = map[string][]string{
 	"vpn ipsec phase1":           {"ike-version", "proposal", "dhgrp", "authmethod", "signature-hash-alg"},
 	"vpn ipsec phase2-interface": {"proposal", "pfs", "dhgrp"},
 	"vpn ipsec phase2":           {"proposal", "pfs", "dhgrp"},
+	"vpn ssl settings":           {"algorithm", "banned-cipher", "ciphersuite", "ssl-min-proto-ver", "ssl-max-proto-ver", "tls-groups", "servercert"},
 }
 
 func TestTables_WellFormed(t *testing.T) {
@@ -94,6 +95,13 @@ func TestIPsecDefaultsByVersion(t *testing.T) {
 		{"7.6.7", "vpn ipsec phase1-interface", "addke1", "", ""},
 		{"7.6.7", "vpn ipsec phase1-interface", "proposal", "undocumented", ""},
 		{"8.0.1", "vpn ipsec phase2", "proposal", "undocumented", ""},
+		{"7.4.12", "vpn ssl settings", "tls-groups", "undocumented", ""},
+		{"7.6.4", "vpn ssl settings", "tls-groups", "undocumented", ""},
+		{"7.6.5", "vpn ssl settings", "tls-groups", "P-521 P-384 ML-KEM768 ML-KEM1024 P-384-MLKEM1024 P-256-MLKEM768 X25519-MLKEM768 X448 FFDHE4096 FFDHE6144 FFDHE8192", ""},
+		{"8.0.1", "vpn ssl settings", "tls-groups", "P-521 P-384 ML-KEM768 ML-KEM1024 P-384-MLKEM1024 P-256-MLKEM768 X25519-MLKEM768 X448 FFDHE4096 FFDHE6144 FFDHE8192", ""},
+		{"7.6.7", "vpn ssl settings", "ssl-min-proto-ver", "tls1-2", ""},
+		{"7.6.7", "vpn ssl settings", "banned-cipher", "SHA1 SHA256 SHA384", ""},
+		{"7.4.12", "vpn ssl settings", "dtls-tunnel", "enable", ""},
 	}
 	for _, tc := range cases {
 		d := defaults.ForVersion(tc.version)
@@ -115,6 +123,9 @@ func TestIPsecDefaultsByVersion(t *testing.T) {
 		if f.ByVersion != nil {
 			t.Errorf("%s %s / %s: resolved field still carries ByVersion", tc.version, tc.section, tc.field)
 		}
+	}
+	if _, ok := defaults.ForVersion("7.6.7").Field("vpn ssl settings", "dtls-tunnel"); ok {
+		t.Errorf("7.6.7 has a dtls-tunnel default, but DTLS settings are 7.4.12-only")
 	}
 	if _, ok := defaults.ForVersion("7.4.12").Field("vpn ipsec phase1-interface", "addke1"); ok {
 		t.Errorf("7.4.12 has an addke1 default, but addke is absent before 7.6.3")

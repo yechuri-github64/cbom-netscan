@@ -299,6 +299,62 @@
         "value": [],
         "source": "CLI-8.0.1 p2458–2469 via research notes §3.4 (no default) The policy-based table has the same fields (research notes §3.3)."
       }
+    },
+    "vpn ssl settings": {
+      "algorithm": {
+        "value": [
+          "high"
+        ],
+        "source": "CLI HTML 8.0.0 114404382/config-vpn-ssl-settings, verified 2026-10-14; CLI-8.0.1 p2479–2489 via research notes §3.7"
+      },
+      "banned-cipher": {
+        "value": [
+          "SHA1",
+          "SHA256",
+          "SHA384"
+        ],
+        "source": "CLI HTML 8.0.0 114404382/config-vpn-ssl-settings, verified 2026-10-14; CLI-8.0.1 p2479–2489 via research notes §3.7"
+      },
+      "ciphersuite": {
+        "value": [
+          "TLS-AES-128-GCM-SHA256",
+          "TLS-AES-256-GCM-SHA384",
+          "TLS-CHACHA20-POLY1305-SHA256"
+        ],
+        "source": "CLI HTML 8.0.0 114404382/config-vpn-ssl-settings, verified 2026-10-14; CLI-8.0.1 p2479–2489 via research notes §3.7"
+      },
+      "ssl-min-proto-ver": {
+        "value": [
+          "tls1-2"
+        ],
+        "source": "CLI HTML 8.0.0 114404382/config-vpn-ssl-settings, verified 2026-10-14; CLI-8.0.1 p2479–2489 via research notes §3.7"
+      },
+      "ssl-max-proto-ver": {
+        "value": [
+          "tls1-3"
+        ],
+        "source": "CLI HTML 8.0.0 114404382/config-vpn-ssl-settings, verified 2026-10-14; CLI-8.0.1 p2479–2489 via research notes §3.7"
+      },
+      "servercert": {
+        "value": [],
+        "source": "CLI HTML 8.0.0 114404382/config-vpn-ssl-settings, verified 2026-10-14; CLI-8.0.1 p2479–2489 via research notes §3.7 (no default)"
+      },
+      "tls-groups": {
+        "value": [
+          "P-521",
+          "P-384",
+          "ML-KEM768",
+          "ML-KEM1024",
+          "P-384-MLKEM1024",
+          "P-256-MLKEM768",
+          "X25519-MLKEM768",
+          "X448",
+          "FFDHE4096",
+          "FFDHE6144",
+          "FFDHE8192"
+        ],
+        "source": "CLI HTML 8.0.0 114404382/config-vpn-ssl-settings, verified 2026-10-14; CLI-8.0.1 via research notes §3.7"
+      }
     }
   }
 }

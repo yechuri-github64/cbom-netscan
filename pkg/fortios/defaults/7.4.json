@@ -184,6 +184,68 @@
         "source": "research notes §3.4 (7.4.12 column) The policy-based table has the same fields (research notes §3.3).",
         "note": "CLI reference default. AG-7.6.7 says FortiGate uses DH groups 20 and 21 by default, and RN-8.0.0 (bug 1182788) replaces default groups 5 and 14 with 20 and 21 for CLI-configured tunnels; see research notes §9."
       }
+    },
+    "vpn ssl settings": {
+      "algorithm": {
+        "value": [
+          "high"
+        ],
+        "source": "CLI HTML 7.4.12 114404382/config-vpn-ssl-settings, verified 2026-10-14; research notes §3.7"
+      },
+      "banned-cipher": {
+        "value": [
+          "SHA1",
+          "SHA256",
+          "SHA384"
+        ],
+        "source": "CLI HTML 7.4.12 114404382/config-vpn-ssl-settings, verified 2026-10-14; research notes §3.7"
+      },
+      "ciphersuite": {
+        "value": [
+          "TLS-AES-128-GCM-SHA256",
+          "TLS-AES-256-GCM-SHA384",
+          "TLS-CHACHA20-POLY1305-SHA256"
+        ],
+        "source": "CLI HTML 7.4.12 114404382/config-vpn-ssl-settings, verified 2026-10-14; research notes §3.7"
+      },
+      "ssl-min-proto-ver": {
+        "value": [
+          "tls1-2"
+        ],
+        "source": "CLI HTML 7.4.12 114404382/config-vpn-ssl-settings, verified 2026-10-14; research notes §3.7"
+      },
+      "ssl-max-proto-ver": {
+        "value": [
+          "tls1-3"
+        ],
+        "source": "CLI HTML 7.4.12 114404382/config-vpn-ssl-settings, verified 2026-10-14; research notes §3.7"
+      },
+      "servercert": {
+        "value": [],
+        "source": "CLI HTML 7.4.12 114404382/config-vpn-ssl-settings, verified 2026-10-14; research notes §3.7 (no default)"
+      },
+      "tls-groups": {
+        "undocumented": true,
+        "source": "not in the 7.4.12 CLI reference; tls-groups was added in 7.6.5 (research notes §3.7)"
+      },
+      "dtls-tunnel": {
+        "value": [
+          "enable"
+        ],
+        "source": "CLI HTML 7.4.12 114404382/config-vpn-ssl-settings, verified 2026-10-14; research notes §3.7"
+      },
+      "dtls-min-proto-ver": {
+        "value": [
+          "dtls1-0"
+        ],
+        "source": "CLI HTML 7.4.12 114404382/config-vpn-ssl-settings, verified 2026-10-14; research notes §3.7"
+      },
+      "dtls-max-proto-ver": {
+        "value": [
+          "dtls1-2"
+        ],
+        "source": "CLI HTML 7.4.12 114404382/config-vpn-ssl-settings, verified 2026-10-14; research notes §3.7"
+      }
     }
   }
 }

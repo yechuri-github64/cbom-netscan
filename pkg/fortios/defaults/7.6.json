@@ -392,6 +392,100 @@
         "value": [],
         "source": "CLI HTML 7.6.7 252893715/config-vpn-ipsec-phase2-interface, verified 2026-10-14 (no default); research notes §3.4 The policy-based table has the same fields (research notes §3.3)."
       }
+    },
+    "vpn ssl settings": {
+      "algorithm": {
+        "value": [
+          "high"
+        ],
+        "source": "CLI HTML 7.6.7 114404382/config-vpn-ssl-settings, verified 2026-10-14; research notes §3.7"
+      },
+      "banned-cipher": {
+        "value": [
+          "SHA1",
+          "SHA256",
+          "SHA384"
+        ],
+        "source": "CLI HTML 7.6.7 114404382/config-vpn-ssl-settings, verified 2026-10-14; research notes §3.7"
+      },
+      "ciphersuite": {
+        "value": [
+          "TLS-AES-128-GCM-SHA256",
+          "TLS-AES-256-GCM-SHA384",
+          "TLS-CHACHA20-POLY1305-SHA256"
+        ],
+        "source": "CLI HTML 7.6.7 114404382/config-vpn-ssl-settings, verified 2026-10-14; research notes §3.7"
+      },
+      "ssl-min-proto-ver": {
+        "value": [
+          "tls1-2"
+        ],
+        "source": "CLI HTML 7.6.7 114404382/config-vpn-ssl-settings, verified 2026-10-14; research notes §3.7"
+      },
+      "ssl-max-proto-ver": {
+        "value": [
+          "tls1-3"
+        ],
+        "source": "CLI HTML 7.6.7 114404382/config-vpn-ssl-settings, verified 2026-10-14; research notes §3.7"
+      },
+      "servercert": {
+        "value": [],
+        "source": "CLI HTML 7.6.7 114404382/config-vpn-ssl-settings, verified 2026-10-14; research notes §3.7 (no default)"
+      },
+      "tls-groups": {
+        "undocumented": true,
+        "source": "not in the 7.6.3/7.6.4 CLI reference; tls-groups was added in 7.6.5 (research notes §3.7)",
+        "byVersion": {
+          "7.6.5": {
+            "value": [
+              "P-521",
+              "P-384",
+              "ML-KEM768",
+              "ML-KEM1024",
+              "P-384-MLKEM1024",
+              "P-256-MLKEM768",
+              "X25519-MLKEM768",
+              "X448",
+              "FFDHE4096",
+              "FFDHE6144",
+              "FFDHE8192"
+            ],
+            "source": "CLI-7.6.5 via research notes §3.7 (default from 7.6.5)"
+          },
+          "7.6.6": {
+            "value": [
+              "P-521",
+              "P-384",
+              "ML-KEM768",
+              "ML-KEM1024",
+              "P-384-MLKEM1024",
+              "P-256-MLKEM768",
+              "X25519-MLKEM768",
+              "X448",
+              "FFDHE4096",
+              "FFDHE6144",
+              "FFDHE8192"
+            ],
+            "source": "CLI-7.6.6 via research notes §3.7"
+          },
+          "7.6.7": {
+            "value": [
+              "P-521",
+              "P-384",
+              "ML-KEM768",
+              "ML-KEM1024",
+              "P-384-MLKEM1024",
+              "P-256-MLKEM768",
+              "X25519-MLKEM768",
+              "X448",
+              "FFDHE4096",
+              "FFDHE6144",
+              "FFDHE8192"
+            ],
+            "source": "CLI HTML 7.6.7 114404382/config-vpn-ssl-settings, verified 2026-10-14; research notes §3.7"
+          }
+        }
+      }
     }
   }
 }

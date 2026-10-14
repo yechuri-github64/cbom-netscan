@@ -32,7 +32,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"slices"
 	"sort"
+	"strings"
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
@@ -142,6 +144,7 @@ func omitESN(b []byte, unknown map[string]bool) ([]byte, error) {
 		compRef  string
 		compESN  *span
 		compSeen bool
+		cleaned  = map[string]bool{}
 	)
 	// path reports whether the stack is root{} → "components"[] → {} → the given keys.
 	path := func(keys ...string) bool {
@@ -211,6 +214,7 @@ func omitESN(b []byte, unknown map[string]bool) ([]byte, error) {
 			if path() && compSeen {
 				if compESN != nil && unknown[compRef] {
 					dels = append(dels, *compESN)
+					cleaned[compRef] = true
 				}
 				compSeen = false
 			}
@@ -223,6 +227,19 @@ func omitESN(b []byte, unknown map[string]bool) ([]byte, error) {
 				stack[top].expectKey = true
 			}
 		}
+	}
+	// Every listed component has ikev2TransformTypes and cyclonedx-go always
+	// writes esn there, so a miss means the library's output changed; fail
+	// rather than leave a misleading "esn": false.
+	var missed []string
+	for ref := range unknown {
+		if !cleaned[ref] {
+			missed = append(missed, ref)
+		}
+	}
+	if len(missed) > 0 {
+		slices.Sort(missed)
+		return nil, fmt.Errorf("cdx16: no ikev2TransformTypes.esn found to remove for %s", strings.Join(missed, ", "))
 	}
 	if len(dels) == 0 {
 		return b, nil

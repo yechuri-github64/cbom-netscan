@@ -4,7 +4,10 @@
 
 package cdx16
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestOmitESN(t *testing.T) {
 	const pp = `"cryptoProperties":{"protocolProperties":{"ikev2TransformTypes":`
@@ -12,6 +15,7 @@ func TestOmitESN(t *testing.T) {
 	cases := []struct {
 		name, in, want string
 		unknown        map[string]bool
+		wantErr        string
 	}{
 		{
 			name:    "esn_last",
@@ -57,22 +61,35 @@ func TestOmitESN(t *testing.T) {
 			unknown: map[string]bool{"a&b": true},
 		},
 		{
-			// An esn key outside ikev2TransformTypes is never touched.
+			// An esn key outside ikev2TransformTypes is never touched, and
+			// since the listed component has no esn to remove, that is an error.
 			name:    "esn_elsewhere_untouched",
 			in:      `{"components":[{"bom-ref":"a","esn":false,"cryptoProperties":{"esn":false}}]}`,
-			want:    `{"components":[{"bom-ref":"a","esn":false,"cryptoProperties":{"esn":false}}]}`,
 			unknown: map[string]bool{"a": true},
+			wantErr: "no ikev2TransformTypes.esn found to remove for a",
 		},
 		{
-			name:    "nothing_unknown",
+			name:    "listed_ref_missing_is_an_error",
+			in:      `{"components":[` + comp(`"a"`, `{"esn":false}`) + `]}`,
+			unknown: map[string]bool{"other": true, "a": true},
+			wantErr: "no ikev2TransformTypes.esn found to remove for other",
+		},
+		{
+			name:    "nothing_listed",
 			in:      `{"components":[` + comp(`"a"`, `{"esn":false}`) + `]}`,
 			want:    `{"components":[` + comp(`"a"`, `{"esn":false}`) + `]}`,
-			unknown: map[string]bool{"other": true},
+			unknown: map[string]bool{},
 		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			got, err := omitESN([]byte(tc.in), tc.unknown)
+			if tc.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
+					t.Fatalf("err = %v, want %q", err, tc.wantErr)
+				}
+				return
+			}
 			if err != nil {
 				t.Fatal(err)
 			}

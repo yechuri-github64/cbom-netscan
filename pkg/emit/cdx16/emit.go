@@ -24,10 +24,12 @@
 package cdx16
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/sha1"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"sort"
@@ -64,9 +66,88 @@ func (Emitter) Emit(_ context.Context, w io.Writer, inv *model.Inventory, meta m
 		bom.Dependencies = &deps
 	}
 
-	enc := cdx.NewBOMEncoder(w, cdx.BOMFileFormatJSON)
-	enc.SetPretty(true)
-	return enc.Encode(bom)
+	// Encode compactly, fix what the library cannot express, then indent.
+	// json.Encoder with SetIndent does the same marshal-then-indent, so
+	// untouched output is byte-identical to encoding with indentation.
+	compact, err := json.Marshal(bom)
+	if err != nil {
+		return err
+	}
+	compact, err = dropUnknownESN(compact, unknownESN(components, inv.Assets))
+	if err != nil {
+		return err
+	}
+	var out bytes.Buffer
+	if err := json.Indent(&out, compact, "", "  "); err != nil {
+		return err
+	}
+	out.WriteByte('\n')
+	_, err = w.Write(out.Bytes())
+	return err
+}
+
+// unknownESN lists, for each component that has ikev2TransformTypes, in
+// output order, whether its ESN is unknown (model ESN nil).
+func unknownESN(components []cdx.Component, assets []*model.Asset) []bool {
+	known := map[string]bool{}
+	for _, a := range assets {
+		if a.Proto != nil && a.Proto.ESN != nil {
+			known[a.ID] = true
+		}
+	}
+	var out []bool
+	for _, c := range components {
+		cp := c.CryptoProperties
+		if cp != nil && cp.ProtocolProperties != nil && cp.ProtocolProperties.IKEv2TransformTypes != nil {
+			out = append(out, !known[c.BOMRef])
+		}
+	}
+	return out
+}
+
+// dropUnknownESN removes "esn":false from the i-th ikev2TransformTypes object
+// when drop[i] is set. cyclonedx-go v0.12.0 declares ESN as a bool without
+// omitempty, so it always writes "esn":false, which would claim ESN is off
+// when the config does not say. CycloneDX 1.6 can only express "unknown" by
+// omitting the field.
+//
+// Matching on raw bytes is safe here: quotes inside JSON strings are escaped,
+// so `"ikev2TransformTypes":{` and `"esn":false` only occur as real keys.
+func dropUnknownESN(b []byte, drop []bool) ([]byte, error) {
+	key, esn := []byte(`"ikev2TransformTypes":{`), []byte(`"esn":false`)
+	var out []byte
+	rest := b
+	for i := 0; ; i++ {
+		j := bytes.Index(rest, key)
+		if j < 0 {
+			if i != len(drop) {
+				return nil, fmt.Errorf("cdx16: found %d ikev2TransformTypes objects, expected %d", i, len(drop))
+			}
+			return append(out, rest...), nil
+		}
+		if i >= len(drop) {
+			return nil, fmt.Errorf("cdx16: more ikev2TransformTypes objects than expected (%d)", len(drop))
+		}
+		start := j + len(key)
+		out = append(out, rest[:start]...)
+		rest = rest[start:]
+		if !drop[i] {
+			continue
+		}
+		k := bytes.Index(rest, esn)
+		if k < 0 {
+			return nil, fmt.Errorf("cdx16: ikev2TransformTypes object %d has no esn field", i)
+		}
+		before, after := rest[:k], rest[k+len(esn):]
+		switch {
+		case len(before) > 0 && before[len(before)-1] == ',':
+			before = before[:len(before)-1]
+		case len(after) > 0 && after[0] == ',':
+			after = after[1:]
+		}
+		out = append(out, before...)
+		rest = after
+	}
 }
 
 // ── metadata ────────────────────────────────────────────────────────────────

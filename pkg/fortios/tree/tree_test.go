@@ -53,15 +53,15 @@ next
 end
 `
 
-const multiDump = `scope "root"
+const multiDump = `scope vdom "root"
 config vpn ipsec phase1-interface @15
   edit "root-vpn" @16
     set ike-version ["2"] @17
-scope "dmz"
+scope vdom "dmz"
 config vpn ipsec phase1-interface @22
   edit "dmz-vpn" @23
     set ike-version ["1"] @24
-scope "global"
+scope global
 config system global @9
   set hostname ["fw01"] @10
 `
@@ -82,7 +82,7 @@ func dump(t *tree.Tree) string {
 	}
 	fmt.Fprintf(&b, "mode=%s detected=%v warnings=%v\n", modeName[t.VDOMMode], t.VDOMModeDetected, codes)
 	for _, s := range t.Scopes() {
-		fmt.Fprintf(&b, "scope %q\n", s)
+		fmt.Fprintf(&b, "scope %s\n", s)
 		for _, blk := range t.Roots(s) {
 			dumpBlock(&b, blk, "")
 		}
@@ -150,7 +150,7 @@ config vpn ipsec phase1-interface
 end
 `,
 			head: "mode=single detected=false warnings=[]",
-			want: `scope ""
+			want: `scope single
 config system global @2
   set hostname ["fw01"] @3
   set admin-https-ssl-versions ["tlsv1-2" "tlsv1-3"] @4
@@ -180,7 +180,7 @@ config vpn ipsec phase1-interface @6
 end
 `,
 			head: "mode=single detected=false warnings=[]",
-			want: `scope ""
+			want: `scope single
 config vpn ipsec phase1-interface @2
   edit "vpn1" @3
     set proposal ["aes256gcm-prfsha384"] @4
@@ -203,7 +203,7 @@ config vpn ipsec phase1-interface @2
 end
 `,
 			head: "mode=single detected=false warnings=[]",
-			want: `scope ""
+			want: `scope single
 config router bgp @2
   set as ["65001"] @3
   config neighbor @4
@@ -230,7 +230,7 @@ MIIB
     next
 end`,
 			head: "mode=single detected=false warnings=[]",
-			want: `scope ""
+			want: `scope single
 config firewall policy @3
   edit "1" @4
     set action ["next"] @5
@@ -256,7 +256,7 @@ config vpn certificate local @9
 			name:  "unknown_detects_single",
 			input: hdrUnknown + "config system global\n    set hostname fw01\nend\n",
 			head:  "mode=single detected=true warnings=[vdom-mode-unknown@1]",
-			want: `scope ""
+			want: `scope single
 config system global @2
   set hostname ["fw01"] @3
 `,
@@ -265,7 +265,7 @@ config system global @2
 			name:  "single_header_with_config_vdom",
 			input: hdrSingle + "config vdom\nedit root\nnext\nend\n",
 			head:  "mode=single detected=false warnings=[vdom-mode-conflict@2]",
-			want: `scope ""
+			want: `scope single
 config vdom @2
   edit "root" @3
 `,
@@ -274,7 +274,7 @@ config vdom @2
 			name:  "multi_stray_top_level_block",
 			input: hdrMulti + "config system global\n    set hostname fw01\nend\n",
 			head:  "mode=multi detected=false warnings=[unexpected-content@2]",
-			want: `scope "global"
+			want: `scope global
 config system global @2
   set hostname ["fw01"] @3
 `,
@@ -290,7 +290,7 @@ config b
 end
 `,
 			head: "mode=single detected=false warnings=[implied-next@5]",
-			want: `scope ""
+			want: `scope single
 config a @2
   edit "x" @3
     set k ["v"] @4
@@ -311,7 +311,7 @@ config b @6
 end
 `,
 			head: "mode=single detected=false warnings=[implied-next@6]",
-			want: `scope ""
+			want: `scope single
 config vpn ipsec phase1-interface @2
   edit "vpn1" @3
     set dhgrp ["20"] @7
@@ -325,7 +325,7 @@ config vpn ipsec phase1-interface @2
 			name:  "private_key_warning_reaches_tree",
 			input: hdrSingle + "# note\n#private-encryption-key=c3ludGhldGlj\nconfig a\nend\n",
 			head:  "mode=single detected=false warnings=[opaque-secrets@3]",
-			want: `scope ""
+			want: `scope single
 config a @4
 `,
 		},
@@ -368,8 +368,7 @@ func TestParse_Errors(t *testing.T) {
 		{"eof_open_nested", hdrSingle + "config a\nedit x\nconfig b\n", `unexpected end of file: config "b" (line 4) has no end`, ""},
 		{"lexer_error_propagates", hdrSingle + "config a\nset k \"open\n", "unterminated double-quoted string starting at line 3", ""},
 		{"bad_header_propagates", "not a backup\n", "not a FortiOS config backup", ""},
-		{"reserved_vdom_name", hdrMulti + "config vdom\nedit global\nnext\nend\n", `line 3: vdom name "global" is reserved`, ""},
-		{"empty_vdom_name", hdrMulti + "config vdom\nedit \"\"\nnext\nend\n", `line 3: vdom name "" is reserved`, ""},
+		{"empty_vdom_name", hdrMulti + "config vdom\nedit \"\"\nnext\nend\n", "line 3: empty vdom name", ""},
 	}
 
 	for _, tc := range cases {
@@ -419,7 +418,7 @@ end
 	if got := tr.Get(tree.ScopeSingle, "vpn ipsec phase2-interface"); got != nil {
 		t.Errorf("Get unknown path = %v, want nil", got)
 	}
-	if got := tr.Get("no-such-scope", "vpn ipsec phase1-interface"); got != nil {
+	if got := tr.Get(tree.VDOM("no-such-scope"), "vpn ipsec phase1-interface"); got != nil {
 		t.Errorf("Get unknown scope = %v, want nil", got)
 	}
 
@@ -437,18 +436,18 @@ end
 		t.Errorf("Attr(missing) = %+v, want nil", a)
 	}
 	if got := tr.Scopes(); len(got) != 1 || got[0] != tree.ScopeSingle {
-		t.Errorf("Scopes = %q, want [\"\"]", got)
+		t.Errorf("Scopes = %v, want [single]", got)
 	}
 }
 
 func TestGet_MultiVDOMScopes(t *testing.T) {
 	tr := parse(t, hdrMulti+multiBody)
 
-	if got := fmt.Sprintf("%q", tr.Scopes()); got != `["root" "dmz" "global"]` {
-		t.Errorf("Scopes = %s, want [root dmz global]", got)
+	if got := fmt.Sprint(tr.Scopes()); got != `[vdom "root" vdom "dmz" global]` {
+		t.Errorf("Scopes = %s, want [vdom \"root\" vdom \"dmz\" global]", got)
 	}
 	for scope, want := range map[string]string{"root": "root-vpn", "dmz": "dmz-vpn"} {
-		es := tr.Get(scope, "vpn ipsec phase1-interface")
+		es := tr.Get(tree.VDOM(scope), "vpn ipsec phase1-interface")
 		if len(es) != 1 || es[0].Name != want {
 			t.Errorf("Get(%q) = %v, want one entry %q", scope, es, want)
 		}
@@ -458,5 +457,40 @@ func TestGet_MultiVDOMScopes(t *testing.T) {
 	}
 	if bs := tr.Blocks(tree.ScopeGlobal, "system global"); len(bs) != 1 {
 		t.Errorf("Blocks(global, system global) = %d, want 1", len(bs))
+	}
+}
+
+// TestGet_VDOMNamedGlobal checks that a VDOM literally named "global" is
+// accepted and kept apart from the config global scope.
+func TestGet_VDOMNamedGlobal(t *testing.T) {
+	tr := parse(t, hdrMulti+`config global
+config system global
+    set hostname "fw01"
+end
+end
+config vdom
+edit global
+config vpn ipsec phase1-interface
+    edit "vdom-vpn"
+    next
+end
+next
+end
+`)
+
+	if got := fmt.Sprint(tr.Scopes()); got != `[global vdom "global"]` {
+		t.Errorf("Scopes = %s, want [global vdom \"global\"]", got)
+	}
+	if es := tr.Get(tree.VDOM("global"), "vpn ipsec phase1-interface"); len(es) != 1 || es[0].Name != "vdom-vpn" {
+		t.Errorf("Get(VDOM global) = %v, want one entry vdom-vpn", es)
+	}
+	if es := tr.Get(tree.ScopeGlobal, "vpn ipsec phase1-interface"); es != nil {
+		t.Errorf("VDOM content leaked into config global scope: %v", es)
+	}
+	if bs := tr.Blocks(tree.VDOM("global"), "system global"); bs != nil {
+		t.Errorf("config global content leaked into VDOM \"global\": %v", bs)
+	}
+	if bs := tr.Blocks(tree.ScopeGlobal, "system global"); len(bs) != 1 {
+		t.Errorf("Blocks(ScopeGlobal, system global) = %d, want 1", len(bs))
 	}
 }

@@ -61,14 +61,14 @@ func (t *Tree) assignScopes(roots []*Block) error {
 					"config vdom has set or config lines outside an edit; they are ignored")
 			}
 			for _, e := range b.Entries {
-				if e.Name == ScopeSingle || e.Name == ScopeGlobal {
-					return fmt.Errorf("fortios tree: line %d: vdom name %q is reserved", e.Line, e.Name)
+				if e.Name == "" {
+					return fmt.Errorf("fortios tree: line %d: empty vdom name", e.Line)
 				}
 				if len(e.Attrs) > 0 {
 					t.warn(e.Line, "config vdom", "unexpected-content",
 						fmt.Sprintf("edit %q in config vdom has set lines directly inside it; they are ignored", e.Name))
 				}
-				t.add(e.Name, e.Blocks...)
+				t.add(VDOM(e.Name), e.Blocks...)
 			}
 		default:
 			t.warn(b.Line, "config "+b.Path, "unexpected-content",

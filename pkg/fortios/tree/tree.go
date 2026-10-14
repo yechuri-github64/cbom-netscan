@@ -11,10 +11,11 @@
 //	}
 //
 // Single-VDOM backups have one scope, ScopeSingle. Multi-VDOM backups have
-// ScopeGlobal for "config global" plus one scope per VDOM name.
+// ScopeGlobal for "config global" plus VDOM(name) for each VDOM.
 package tree
 
 import (
+	"fmt"
 	"io"
 	"strings"
 
@@ -22,10 +23,40 @@ import (
 	"github.com/yechuri-github64/cbom-netscan/pkg/model"
 )
 
+// ScopeKind says what a scope is.
+type ScopeKind int
+
 const (
-	ScopeSingle = ""       // the only scope of a single-VDOM backup
-	ScopeGlobal = "global" // "config global" in a multi-VDOM backup
+	KindSingle ScopeKind = iota // the whole file of a single-VDOM backup
+	KindGlobal                  // "config global" in a multi-VDOM backup
+	KindVDOM                    // one "config vdom" / "edit <name>" in a multi-VDOM backup
 )
+
+// Scope identifies one scope. Kind and Name are separate fields so a VDOM
+// that happens to be named "global" never collides with the global scope.
+type Scope struct {
+	Kind ScopeKind
+	Name string // VDOM name; empty unless Kind is KindVDOM
+}
+
+var (
+	ScopeSingle = Scope{Kind: KindSingle}
+	ScopeGlobal = Scope{Kind: KindGlobal}
+)
+
+// VDOM returns the scope of the named VDOM.
+func VDOM(name string) Scope { return Scope{Kind: KindVDOM, Name: name} }
+
+func (s Scope) String() string {
+	switch s.Kind {
+	case KindSingle:
+		return "single"
+	case KindGlobal:
+		return "global"
+	default:
+		return fmt.Sprintf("vdom %q", s.Name)
+	}
+}
 
 // Attr is one "set <key> <values...>" or "unset <key>" line.
 type Attr struct {
@@ -76,8 +107,8 @@ type Tree struct {
 	VDOMModeDetected bool
 	Warnings         []model.Warning
 
-	scopes map[string][]*Block
-	order  []string
+	scopes map[Scope][]*Block
+	order  []Scope
 }
 
 // Parse lexes r and builds the scoped tree. Errors carry line numbers.
@@ -95,7 +126,7 @@ func Parse(r io.Reader) (*Tree, error) {
 		// Copied after build: the lexer can add warnings while tokenizing,
 		// e.g. for a #private-encryption-key= line later in the file.
 		Warnings: append(append([]model.Warning(nil), l.Warnings...), buildWarns...),
-		scopes:   map[string][]*Block{},
+		scopes:   map[Scope][]*Block{},
 	}
 	if err := t.assignScopes(roots); err != nil {
 		return nil, err
@@ -103,15 +134,15 @@ func Parse(r io.Reader) (*Tree, error) {
 	return t, nil
 }
 
-// Scopes returns the scope names in the order they first appear in the file.
-func (t *Tree) Scopes() []string { return append([]string(nil), t.order...) }
+// Scopes returns the scopes in the order they first appear in the file.
+func (t *Tree) Scopes() []Scope { return append([]Scope(nil), t.order...) }
 
 // Roots returns the top-level config blocks of a scope, in file order.
-func (t *Tree) Roots(scope string) []*Block { return t.scopes[scope] }
+func (t *Tree) Roots(scope Scope) []*Block { return t.scopes[scope] }
 
 // Blocks returns the top-level blocks of scope whose path matches, in file
 // order. Extra whitespace in path is ignored.
-func (t *Tree) Blocks(scope, path string) []*Block {
+func (t *Tree) Blocks(scope Scope, path string) []*Block {
 	p := strings.Join(strings.Fields(path), " ")
 	var out []*Block
 	for _, b := range t.scopes[scope] {
@@ -124,7 +155,7 @@ func (t *Tree) Blocks(scope, path string) []*Block {
 
 // Get returns the edit entries of every top-level block in scope with the
 // given path, in file order.
-func (t *Tree) Get(scope, path string) []*Entry {
+func (t *Tree) Get(scope Scope, path string) []*Entry {
 	var out []*Entry
 	for _, b := range t.Blocks(scope, path) {
 		out = append(out, b.Entries...)
@@ -132,7 +163,7 @@ func (t *Tree) Get(scope, path string) []*Entry {
 	return out
 }
 
-func (t *Tree) add(scope string, blocks ...*Block) {
+func (t *Tree) add(scope Scope, blocks ...*Block) {
 	if _, ok := t.scopes[scope]; !ok {
 		t.order = append(t.order, scope)
 		t.scopes[scope] = []*Block{}

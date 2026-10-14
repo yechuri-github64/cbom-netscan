@@ -296,7 +296,7 @@ func TestFortiOS_BadSourceDateEpoch(t *testing.T) {
 // TestFortiOS_IPsecWired runs the CLI on the IPsec fixtures and checks that
 // every component and dependency of the IPsec golden files is in the output
 // unchanged. The CLI output also holds the other extractors' components, so
-// it is a superset of the IPsec-only golden.
+// it is a superset of the IPsec golden (IPsec plus certificates).
 func TestFortiOS_IPsecWired(t *testing.T) {
 	t.Setenv("SOURCE_DATE_EPOCH", "1791676800")
 	for fixtureName, goldenName := range map[string]string{
@@ -308,11 +308,9 @@ func TestFortiOS_IPsecWired(t *testing.T) {
 			if err != nil {
 				t.Fatalf("fortios: %v", err)
 			}
-			// ipsec-7.6.conf has a placeholder certificate that does not parse
-			// (line 11) and one plaintext PSK on purpose (line 30).
+			// ipsec-7.6.conf has one plaintext PSK on purpose (line 44).
 			wantStderr := map[string]string{
-				"ipsec-7.6.conf": "ipsec-7.6.conf:11: warning: FortiOS certificate local lab-vpn-cert: X.509 parse failed; reported without certificate details [cert-unparseable]\n" +
-					"ipsec-7.6.conf:30: warning: FortiOS IPsec phase1-interface branch-ikev1 has a plaintext pre-shared key in the backup (value not shown); take backups with secrets encrypted [plaintext-psk]\n",
+				"ipsec-7.6.conf": "ipsec-7.6.conf:44: warning: FortiOS IPsec phase1-interface branch-ikev1 has a plaintext pre-shared key in the backup (value not shown); take backups with secrets encrypted [plaintext-psk]\n",
 			}[fixtureName]
 			if stderr != wantStderr {
 				t.Errorf("stderr = %q, want %q", stderr, wantStderr)

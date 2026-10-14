@@ -13,7 +13,9 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/certs"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/ipsec"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/tree"
 	"github.com/yechuri-github64/cbom-netscan/pkg/model"
@@ -45,8 +47,20 @@ func extract(t *testing.T, cfg string) *model.Inventory {
 		t.Fatalf("Parse: %v", err)
 	}
 	inv := model.NewInventory()
+	// Certificates too, so signature tunnels' references resolve by name.
+	certs.Extract(tr, "fw.conf", inv, time.Time{})
 	ipsec.Extract(tr, "fw.conf", inv)
 	return inv
+}
+
+// pemFile reads a synthetic test certificate from the certs package.
+func pemFile(t *testing.T, name string) string {
+	t.Helper()
+	data, err := os.ReadFile("../certs/testdata/" + name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return strings.TrimSpace(string(data))
 }
 
 func find(t *testing.T, inv *model.Inventory, name string) *model.Asset {
@@ -136,7 +150,7 @@ func TestExtract(t *testing.T) {
 				prop(t, hq, "dhgrp:source", "configured")
 				prop(t, hq, "view", "configured")
 				prop(t, find(t, inv, p2+"hq-p2"), "view", "configured")
-				prop(t, hq, "dhgrp:line", "22")
+				prop(t, hq, "dhgrp:line", "36")
 				prop(t, find(t, inv, p1+"hq-ikev2 pre-shared key"), "psksecret:form", "ENC")
 
 				br := find(t, inv, p1+"branch-ikev1")
@@ -161,15 +175,16 @@ func TestExtract(t *testing.T) {
 				prop(t, pq, "signature-hash-alg:source", "default")
 				prop(t, pq, "signature-hash-alg:value", "sha2-512")
 				prop(t, pq, "certificate:value", "lab-vpn-cert")
-				if len(pq.Proto.IKEAuth) != 0 {
-					t.Errorf("signature tunnel has auth refs %v; certificates are referenced by name only", pq.Proto.IKEAuth)
-				}
+				// M2: the signature tunnel authenticates with the certificate's
+				// RSA-2048 key and depends on the certificate.
+				eq(t, "pqc auth", names(inv, pq.Proto.IKEAuth), []string{"RSA-2048"})
+				eq(t, "pqc dependsOn", names(inv, pq.DependsOn), []string{"FortiOS certificate local lab-vpn-cert"})
 
 				mlkem := find(t, inv, "ML-KEM-768")
 				if mlkem.Alg.Primitive != "kem" || mlkem.Alg.NISTQuantumLevel == nil || *mlkem.Alg.NISTQuantumLevel != 3 {
 					t.Errorf("ML-KEM-768 alg = %+v", mlkem.Alg)
 				}
-				eq(t, "ML-KEM-768 occurrences", occurrences(mlkem), []string{"37 ", "58 "})
+				eq(t, "ML-KEM-768 occurrences", occurrences(mlkem), []string{"51 ", "72 "})
 				prop(t, find(t, inv, "KYBER-768"), "ike-transform-id", "1081")
 				prop(t, find(t, inv, "KYBER-768"), "ike-transform-id:private-use", "true")
 				prop(t, find(t, inv, "HQC-192"), "ike-transform-id", "1093")
@@ -202,7 +217,7 @@ func TestExtract(t *testing.T) {
 				if n != 1 {
 					t.Errorf("AES-256-GCM components = %d, want 1 shared component", n)
 				}
-				eq(t, "AES-256-GCM occurrences", occurrences(find(t, inv, "AES-256-GCM")), []string{"21 ", "35 ", "47 ", "57 "})
+				eq(t, "AES-256-GCM occurrences", occurrences(find(t, inv, "AES-256-GCM")), []string{"35 ", "49 ", "61 ", "71 "})
 
 				hqp2 := find(t, inv, p2+"hq-p2")
 				eq(t, "hq-p2 dependsOn", names(inv, hqp2.DependsOn), []string{p1 + "hq-ikev2"})
@@ -378,6 +393,65 @@ end
 				eq(t, "warnings", warnCodes(inv), []string{"plaintext-psk"})
 				if w := inv.Warnings[0]; w.Ev.Line != 7 || strings.Contains(w.Message, "c3lu") {
 					t.Errorf("plaintext-psk warning = %+v; want line 7 and no value", w)
+				}
+			},
+		},
+		{
+			// M2: certificate names resolve in the tunnel's VDOM, then in
+			// global; a name with no local certificate gives a warning, and an
+			// unparseable certificate is still depended on but adds no auth
+			// algorithm. A psk tunnel's certificate field is not linked.
+			name: "signature_tunnels_link_certificates",
+			cfg: strings.Replace(hdr767, "vdom=0", "vdom=1", 1) + `config vdom
+edit root
+next
+end
+config global
+config vpn certificate local
+    edit "shared-gw"
+        set certificate "` + pemFile(t, "gw-ecdsa.pem") + `"
+    next
+end
+end
+config vdom
+edit root
+config vpn certificate local
+    edit "broken"
+        set certificate "-----BEGIN CERTIFICATE-----
+bm90IGEgY2VydGlmaWNhdGU=
+-----END CERTIFICATE-----"
+    next
+end
+config vpn ipsec phase1-interface
+    edit "sig"
+        set ike-version 2
+        set authmethod signature
+        set certificate "shared-gw" "broken" "Fortinet_Factory"
+    next
+    edit "psk"
+        set ike-version 2
+        set certificate "shared-gw"
+        set psksecret ENC c3ludGhldGljLXBzaw==
+    next
+end
+end
+`,
+			check: func(t *testing.T, inv *model.Inventory) {
+				sig := find(t, inv, p1+"sig (vdom root)")
+				eq(t, "sig dependsOn", names(inv, sig.DependsOn), []string{
+					"FortiOS certificate local shared-gw (global)", "FortiOS certificate local broken (vdom root)",
+				})
+				eq(t, "sig auth", names(inv, sig.Proto.IKEAuth), []string{"ECDSA-P256"})
+				psk := find(t, inv, p1+"psk (vdom root)")
+				if len(psk.DependsOn) != 0 {
+					t.Errorf("psk tunnel depends on %v; only signature tunnels use their certificate", names(inv, psk.DependsOn))
+				}
+				eq(t, "psk auth", names(inv, psk.Proto.IKEAuth), []string{p1 + "psk (vdom root) pre-shared key"})
+				eq(t, "warnings", warnCodes(inv), []string{"cert-unparseable", "unknown-certificate"})
+				for _, w := range inv.Warnings {
+					if w.Code == "unknown-certificate" && (!strings.Contains(w.Message, `"Fortinet_Factory"`) || w.Ev.Line == 0 || w.Ev.Context != "vdom root") {
+						t.Errorf("unknown-certificate warning = %+v; want the name, line, and scope", w)
+					}
 				}
 			},
 		},

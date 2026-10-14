@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/yechuri-github64/cbom-netscan/pkg/emit/cdx16"
+	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/certs"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/coverage"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/ipsec"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/tree"
@@ -48,7 +49,12 @@ func TestGolden(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Parse: %v", err)
 			}
+			// Certificates are extracted too, as the CLI does, so the signature
+			// tunnel's certificate and key algorithm references resolve. The
+			// expiry reference time is the CLI test's SOURCE_DATE_EPOCH.
+			created := time.Unix(1791676800, 0).UTC()
 			inv := model.NewInventory()
+			certs.Extract(tr, filepath.Base(fixture), inv, created)
 			ipsec.Extract(tr, filepath.Base(fixture), inv)
 			var codes []string
 			for _, w := range inv.Warnings {
@@ -62,7 +68,7 @@ func TestGolden(t *testing.T) {
 			meta := model.Meta{
 				ToolVersion:  "test",
 				Lifecycle:    "operations",
-				Created:      time.Unix(1791676800, 0),
+				Created:      created,
 				SerialNumber: cdx16.ReproducibleSerial(sha256.Sum256(data), "test"),
 				// The same coverage properties the CLI records.
 				Properties: coverage.Check(tr).Properties(),

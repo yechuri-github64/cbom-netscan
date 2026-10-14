@@ -20,7 +20,12 @@
 // Field provenance is recorded as in the global extractor (package field).
 // Only allow-listed fields are read. psksecret is looked at only to report
 // whether it is present and in which form (ENC, masked, or plaintext); its
-// value is never stored. Certificates are referenced by name only.
+// value is never stored.
+//
+// A tunnel with authmethod signature depends on the local certificates its
+// certificate field names, and its auth transform references each
+// certificate key's algorithm (package certs gives the bom-refs). Run
+// certs.Extract on the same tree so those components exist.
 package ipsec
 
 import (
@@ -30,6 +35,7 @@ import (
 	"strings"
 
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/defaults"
+	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/certs"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/internal/algo"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/internal/field"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/tree"
@@ -46,6 +52,7 @@ var families = []struct{ phase1, phase2 string }{
 // location is recorded in evidence occurrences, e.g. the backup's file name.
 func Extract(t *tree.Tree, location string, inv *model.Inventory) {
 	x := &extractor{
+		t:   t,
 		inv: inv,
 		r:   &field.Resolver{Loc: location, Inv: inv, Defaults: defaults.ForVersion(t.Header.Version)},
 	}
@@ -69,6 +76,7 @@ func Extract(t *tree.Tree, location string, inv *model.Inventory) {
 }
 
 type extractor struct {
+	t   *tree.Tree
 	inv *model.Inventory
 	r   *field.Resolver
 }
@@ -304,6 +312,9 @@ func (x *extractor) phase1(scope tree.Scope, section string, e *tree.Entry) *mod
 	}
 	if cert := x.resolve(en, "certificate", specCertName); cert.Source == field.Configured {
 		x.r.Record(a, cert, true)
+		if method == "signature" {
+			x.certificates(scope, cert, a, &rs)
+		}
 	}
 	// A PSK is reported whenever one is set, even if the tunnel authenticates
 	// with signatures; it is part of the auth transform only for psk.
@@ -313,6 +324,30 @@ func (x *extractor) phase1(scope tree.Scope, section string, e *tree.Entry) *mod
 
 	rs.apply(a.Proto, a.Proto.Version == "2")
 	return x.inv.Add(a)
+}
+
+// certificates links a signature tunnel to the local certificates named in
+// cert: the tunnel depends on each certificate, and the certificate key's
+// algorithm joins the auth transform. A name with no local certificate in
+// the backup (for example a built-in one) gives a warning.
+func (x *extractor) certificates(scope tree.Scope, cert field.Value, tunnel *model.Asset, rs *refs) {
+	for _, name := range cert.Tokens {
+		r := certs.Ref(x.t, x.r.Loc, scope, name)
+		if r.Missing {
+			x.inv.AddWarning(model.Warning{
+				Code:    "unknown-certificate",
+				Message: fmt.Sprintf("%s: certificate %q is not among the local certificates it can use (it may be built in)", tunnel.Name, name),
+				Ev:      x.r.Evidence(cert),
+			})
+			continue
+		}
+		if !slices.Contains(tunnel.DependsOn, r.Cert) {
+			tunnel.DependsOn = append(tunnel.DependsOn, r.Cert)
+		}
+		if r.KeyAlg != "" {
+			rs.add(&rs.auth, r.KeyAlg)
+		}
+	}
 }
 
 // psk records whether a pre-shared key is set and in which form, and returns

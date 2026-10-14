@@ -2,7 +2,7 @@
   "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "serialNumber": "urn:uuid:ea86d969-8aae-5c4b-bbeb-46d4b23033a5",
+  "serialNumber": "urn:uuid:4103c3e3-73bb-5805-a346-df80ca2fa091",
   "version": 1,
   "metadata": {
     "timestamp": "2026-10-11T00:00:00Z",
@@ -83,7 +83,7 @@
         },
         {
           "name": "cbom-netscan:fortios:proposal:line",
-          "value": "28"
+          "value": "42"
         },
         {
           "name": "cbom-netscan:fortios:proposal:source",
@@ -106,7 +106,7 @@
         "occurrences": [
           {
             "location": "ipsec-7.6.conf",
-            "line": 28,
+            "line": 42,
             "symbol": "vpn ipsec phase1-interface/branch-ikev1/proposal"
           }
         ]
@@ -154,7 +154,7 @@
         },
         {
           "name": "cbom-netscan:fortios:dhgrp:line",
-          "value": "22"
+          "value": "36"
         },
         {
           "name": "cbom-netscan:fortios:dhgrp:source",
@@ -166,7 +166,7 @@
         },
         {
           "name": "cbom-netscan:fortios:ike-version:line",
-          "value": "19"
+          "value": "33"
         },
         {
           "name": "cbom-netscan:fortios:ike-version:source",
@@ -178,7 +178,7 @@
         },
         {
           "name": "cbom-netscan:fortios:proposal:line",
-          "value": "21"
+          "value": "35"
         },
         {
           "name": "cbom-netscan:fortios:proposal:source",
@@ -201,17 +201,17 @@
         "occurrences": [
           {
             "location": "ipsec-7.6.conf",
-            "line": 19,
+            "line": 33,
             "symbol": "vpn ipsec phase1-interface/hq-ikev2/ike-version"
           },
           {
             "location": "ipsec-7.6.conf",
-            "line": 21,
+            "line": 35,
             "symbol": "vpn ipsec phase1-interface/hq-ikev2/proposal"
           },
           {
             "location": "ipsec-7.6.conf",
-            "line": 22,
+            "line": 36,
             "symbol": "vpn ipsec phase1-interface/hq-ikev2/dhgrp"
           }
         ]
@@ -251,7 +251,7 @@
       "properties": [
         {
           "name": "cbom-netscan:fortios:addke1:line",
-          "value": "37"
+          "value": "51"
         },
         {
           "name": "cbom-netscan:fortios:addke1:source",
@@ -263,7 +263,7 @@
         },
         {
           "name": "cbom-netscan:fortios:addke2:line",
-          "value": "38"
+          "value": "52"
         },
         {
           "name": "cbom-netscan:fortios:addke2:source",
@@ -275,7 +275,7 @@
         },
         {
           "name": "cbom-netscan:fortios:authmethod:line",
-          "value": "39"
+          "value": "53"
         },
         {
           "name": "cbom-netscan:fortios:authmethod:source",
@@ -287,7 +287,7 @@
         },
         {
           "name": "cbom-netscan:fortios:certificate:line",
-          "value": "40"
+          "value": "54"
         },
         {
           "name": "cbom-netscan:fortios:certificate:source",
@@ -303,7 +303,7 @@
         },
         {
           "name": "cbom-netscan:fortios:dhgrp:line",
-          "value": "36"
+          "value": "50"
         },
         {
           "name": "cbom-netscan:fortios:dhgrp:source",
@@ -315,7 +315,7 @@
         },
         {
           "name": "cbom-netscan:fortios:ike-version:line",
-          "value": "34"
+          "value": "48"
         },
         {
           "name": "cbom-netscan:fortios:ike-version:source",
@@ -327,7 +327,7 @@
         },
         {
           "name": "cbom-netscan:fortios:proposal:line",
-          "value": "35"
+          "value": "49"
         },
         {
           "name": "cbom-netscan:fortios:proposal:source",
@@ -358,37 +358,37 @@
         "occurrences": [
           {
             "location": "ipsec-7.6.conf",
-            "line": 34,
+            "line": 48,
             "symbol": "vpn ipsec phase1-interface/pqc-ikev2/ike-version"
           },
           {
             "location": "ipsec-7.6.conf",
-            "line": 35,
+            "line": 49,
             "symbol": "vpn ipsec phase1-interface/pqc-ikev2/proposal"
           },
           {
             "location": "ipsec-7.6.conf",
-            "line": 36,
+            "line": 50,
             "symbol": "vpn ipsec phase1-interface/pqc-ikev2/dhgrp"
           },
           {
             "location": "ipsec-7.6.conf",
-            "line": 37,
+            "line": 51,
             "symbol": "vpn ipsec phase1-interface/pqc-ikev2/addke1"
           },
           {
             "location": "ipsec-7.6.conf",
-            "line": 38,
+            "line": 52,
             "symbol": "vpn ipsec phase1-interface/pqc-ikev2/addke2"
           },
           {
             "location": "ipsec-7.6.conf",
-            "line": 39,
+            "line": 53,
             "symbol": "vpn ipsec phase1-interface/pqc-ikev2/authmethod"
           },
           {
             "location": "ipsec-7.6.conf",
-            "line": 40,
+            "line": 54,
             "symbol": "vpn ipsec phase1-interface/pqc-ikev2/certificate"
           }
         ]
@@ -410,6 +410,9 @@
               "crypto/0dfe508521cabe86",
               "crypto/e5848a7169d1e7a6",
               "crypto/cb5bec34f690e79a"
+            ],
+            "auth": [
+              "crypto/6debf911118e9077"
             ]
           }
         }
@@ -442,7 +445,7 @@
         },
         {
           "name": "cbom-netscan:fortios:pfs:line",
-          "value": "53"
+          "value": "67"
         },
         {
           "name": "cbom-netscan:fortios:pfs:source",
@@ -458,7 +461,7 @@
         },
         {
           "name": "cbom-netscan:fortios:proposal:line",
-          "value": "52"
+          "value": "66"
         },
         {
           "name": "cbom-netscan:fortios:proposal:source",
@@ -477,12 +480,12 @@
         "occurrences": [
           {
             "location": "ipsec-7.6.conf",
-            "line": 52,
+            "line": 66,
             "symbol": "vpn ipsec phase2-interface/branch-p2/proposal"
           },
           {
             "location": "ipsec-7.6.conf",
-            "line": 53,
+            "line": 67,
             "symbol": "vpn ipsec phase2-interface/branch-p2/pfs"
           }
         ]
@@ -513,7 +516,7 @@
         },
         {
           "name": "cbom-netscan:fortios:dhgrp:line",
-          "value": "48"
+          "value": "62"
         },
         {
           "name": "cbom-netscan:fortios:dhgrp:source",
@@ -541,7 +544,7 @@
         },
         {
           "name": "cbom-netscan:fortios:proposal:line",
-          "value": "47"
+          "value": "61"
         },
         {
           "name": "cbom-netscan:fortios:proposal:source",
@@ -560,12 +563,12 @@
         "occurrences": [
           {
             "location": "ipsec-7.6.conf",
-            "line": 47,
+            "line": 61,
             "symbol": "vpn ipsec phase2-interface/hq-p2/proposal"
           },
           {
             "location": "ipsec-7.6.conf",
-            "line": 48,
+            "line": 62,
             "symbol": "vpn ipsec phase2-interface/hq-p2/dhgrp"
           }
         ]
@@ -593,7 +596,7 @@
       "properties": [
         {
           "name": "cbom-netscan:fortios:addke1:line",
-          "value": "58"
+          "value": "72"
         },
         {
           "name": "cbom-netscan:fortios:addke1:source",
@@ -641,7 +644,7 @@
         },
         {
           "name": "cbom-netscan:fortios:proposal:line",
-          "value": "57"
+          "value": "71"
         },
         {
           "name": "cbom-netscan:fortios:proposal:source",
@@ -660,12 +663,12 @@
         "occurrences": [
           {
             "location": "ipsec-7.6.conf",
-            "line": 57,
+            "line": 71,
             "symbol": "vpn ipsec phase2-interface/pqc-p2/proposal"
           },
           {
             "location": "ipsec-7.6.conf",
-            "line": 58,
+            "line": 72,
             "symbol": "vpn ipsec phase2-interface/pqc-p2/addke1"
           }
         ]
@@ -694,7 +697,7 @@
         "occurrences": [
           {
             "location": "ipsec-7.6.conf",
-            "line": 28,
+            "line": 42,
             "symbol": "vpn ipsec phase1-interface/branch-ikev1/proposal"
           }
         ]
@@ -715,12 +718,12 @@
         "occurrences": [
           {
             "location": "ipsec-7.6.conf",
-            "line": 28,
+            "line": 42,
             "symbol": "vpn ipsec phase1-interface/branch-ikev1/proposal"
           },
           {
             "location": "ipsec-7.6.conf",
-            "line": 52,
+            "line": 66,
             "symbol": "vpn ipsec phase2-interface/branch-p2/proposal"
           }
         ]
@@ -742,7 +745,7 @@
         "occurrences": [
           {
             "location": "ipsec-7.6.conf",
-            "line": 21,
+            "line": 35,
             "symbol": "vpn ipsec phase1-interface/hq-ikev2/proposal"
           }
         ]
@@ -764,22 +767,22 @@
         "occurrences": [
           {
             "location": "ipsec-7.6.conf",
-            "line": 21,
+            "line": 35,
             "symbol": "vpn ipsec phase1-interface/hq-ikev2/proposal"
           },
           {
             "location": "ipsec-7.6.conf",
-            "line": 35,
+            "line": 49,
             "symbol": "vpn ipsec phase1-interface/pqc-ikev2/proposal"
           },
           {
             "location": "ipsec-7.6.conf",
-            "line": 47,
+            "line": 61,
             "symbol": "vpn ipsec phase2-interface/hq-p2/proposal"
           },
           {
             "location": "ipsec-7.6.conf",
-            "line": 57,
+            "line": 71,
             "symbol": "vpn ipsec phase2-interface/pqc-p2/proposal"
           }
         ]
@@ -801,7 +804,7 @@
         "occurrences": [
           {
             "location": "ipsec-7.6.conf",
-            "line": 47,
+            "line": 61,
             "symbol": "vpn ipsec phase2-interface/hq-p2/proposal"
           }
         ]
@@ -811,6 +814,28 @@
         "algorithmProperties": {
           "primitive": "ae"
         }
+      }
+    },
+    {
+      "bom-ref": "crypto/da6cc9ccf609d3ce",
+      "type": "cryptographic-asset",
+      "name": "ECDSA-SHA384",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 11,
+            "symbol": "vpn certificate local/lab-vpn-cert/certificate"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "signature",
+          "nistQuantumSecurityLevel": 0
+        },
+        "oid": "1.2.840.10045.4.3.3"
       }
     },
     {
@@ -827,12 +852,12 @@
         "occurrences": [
           {
             "location": "ipsec-7.6.conf",
-            "line": 22,
+            "line": 36,
             "symbol": "vpn ipsec phase1-interface/hq-ikev2/dhgrp"
           },
           {
             "location": "ipsec-7.6.conf",
-            "line": 48,
+            "line": 62,
             "symbol": "vpn ipsec phase2-interface/hq-p2/dhgrp"
           }
         ]
@@ -860,12 +885,12 @@
         "occurrences": [
           {
             "location": "ipsec-7.6.conf",
-            "line": 22,
+            "line": 36,
             "symbol": "vpn ipsec phase1-interface/hq-ikev2/dhgrp"
           },
           {
             "location": "ipsec-7.6.conf",
-            "line": 36,
+            "line": 50,
             "symbol": "vpn ipsec phase1-interface/pqc-ikev2/dhgrp"
           }
         ]
@@ -887,12 +912,12 @@
         "occurrences": [
           {
             "location": "ipsec-7.6.conf",
-            "line": 28,
+            "line": 42,
             "symbol": "vpn ipsec phase1-interface/branch-ikev1/proposal"
           },
           {
             "location": "ipsec-7.6.conf",
-            "line": 52,
+            "line": 66,
             "symbol": "vpn ipsec phase2-interface/branch-p2/proposal"
           }
         ]
@@ -912,7 +937,7 @@
         "occurrences": [
           {
             "location": "ipsec-7.6.conf",
-            "line": 21,
+            "line": 35,
             "symbol": "vpn ipsec phase1-interface/hq-ikev2/proposal"
           }
         ]
@@ -942,7 +967,7 @@
         "occurrences": [
           {
             "location": "ipsec-7.6.conf",
-            "line": 38,
+            "line": 52,
             "symbol": "vpn ipsec phase1-interface/pqc-ikev2/addke2"
           }
         ]
@@ -973,7 +998,7 @@
         "occurrences": [
           {
             "location": "ipsec-7.6.conf",
-            "line": 38,
+            "line": 52,
             "symbol": "vpn ipsec phase1-interface/pqc-ikev2/addke2"
           }
         ]
@@ -1000,12 +1025,12 @@
         "occurrences": [
           {
             "location": "ipsec-7.6.conf",
-            "line": 37,
+            "line": 51,
             "symbol": "vpn ipsec phase1-interface/pqc-ikev2/addke1"
           },
           {
             "location": "ipsec-7.6.conf",
-            "line": 58,
+            "line": 72,
             "symbol": "vpn ipsec phase2-interface/pqc-p2/addke1"
           }
         ]
@@ -1027,7 +1052,7 @@
         "occurrences": [
           {
             "location": "ipsec-7.6.conf",
-            "line": 28,
+            "line": 42,
             "symbol": "vpn ipsec phase1-interface/branch-ikev1/proposal"
           }
         ]
@@ -1047,7 +1072,7 @@
         "occurrences": [
           {
             "location": "ipsec-7.6.conf",
-            "line": 21,
+            "line": 35,
             "symbol": "vpn ipsec phase1-interface/hq-ikev2/proposal"
           }
         ]
@@ -1067,12 +1092,12 @@
         "occurrences": [
           {
             "location": "ipsec-7.6.conf",
-            "line": 21,
+            "line": 35,
             "symbol": "vpn ipsec phase1-interface/hq-ikev2/proposal"
           },
           {
             "location": "ipsec-7.6.conf",
-            "line": 35,
+            "line": 49,
             "symbol": "vpn ipsec phase1-interface/pqc-ikev2/proposal"
           }
         ]
@@ -1081,6 +1106,94 @@
         "assetType": "algorithm",
         "algorithmProperties": {
           "primitive": "kdf"
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/6debf911118e9077",
+      "type": "cryptographic-asset",
+      "name": "RSA-2048",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 11,
+            "symbol": "vpn certificate local/lab-vpn-cert/certificate"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "pke",
+          "parameterSetIdentifier": "2048",
+          "nistQuantumSecurityLevel": 0
+        },
+        "oid": "1.2.840.113549.1.1.1"
+      }
+    },
+    {
+      "bom-ref": "crypto/775a9784c61284fb",
+      "type": "cryptographic-asset",
+      "name": "FortiOS certificate local lab-vpn-cert",
+      "properties": [
+        {
+          "name": "cbom-netscan:cert:cabf-max-days",
+          "value": "200 (issued on or after 2026-03-15; Baseline Requirements §6.3.2)"
+        },
+        {
+          "name": "cbom-netscan:cert:exceeds-cabf-max",
+          "value": "false"
+        },
+        {
+          "name": "cbom-netscan:cert:expired",
+          "value": "false"
+        },
+        {
+          "name": "cbom-netscan:cert:expiry-checked-at",
+          "value": "2026-10-11T00:00:00Z"
+        },
+        {
+          "name": "cbom-netscan:cert:is-ca",
+          "value": "false"
+        },
+        {
+          "name": "cbom-netscan:cert:serial",
+          "value": "2"
+        },
+        {
+          "name": "cbom-netscan:cert:sha256",
+          "value": "1a5e45f4330587f4a342d1e2b6c3464c518bde307da67f30ebb308190c780652"
+        },
+        {
+          "name": "cbom-netscan:cert:validity-days",
+          "value": "121"
+        },
+        {
+          "name": "cbom-netscan:fortios:certificate-kind",
+          "value": "local"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 11,
+            "symbol": "vpn certificate local/lab-vpn-cert/certificate"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "certificate",
+        "certificateProperties": {
+          "subjectName": "CN=vpn.example.com,O=Example Lab",
+          "issuerName": "CN=Example Lab Root CA,O=Example Lab",
+          "notValidBefore": "2026-10-01T00:00:00Z",
+          "notValidAfter": "2027-01-29T00:00:00Z",
+          "signatureAlgorithmRef": "crypto/da6cc9ccf609d3ce",
+          "subjectPublicKeyRef": "crypto/87b51021409a9947",
+          "certificateFormat": "X.509",
+          "certificateExtension": "pem"
         }
       }
     },
@@ -1095,14 +1208,14 @@
         },
         {
           "name": "cbom-netscan:fortios:psksecret:line",
-          "value": "30"
+          "value": "44"
         }
       ],
       "evidence": {
         "occurrences": [
           {
             "location": "ipsec-7.6.conf",
-            "line": 30,
+            "line": 44,
             "symbol": "vpn ipsec phase1-interface/branch-ikev1/psksecret"
           }
         ]
@@ -1125,14 +1238,14 @@
         },
         {
           "name": "cbom-netscan:fortios:psksecret:line",
-          "value": "24"
+          "value": "38"
         }
       ],
       "evidence": {
         "occurrences": [
           {
             "location": "ipsec-7.6.conf",
-            "line": 24,
+            "line": 38,
             "symbol": "vpn ipsec phase1-interface/hq-ikev2/psksecret"
           }
         ]
@@ -1143,6 +1256,57 @@
           "type": "secret-key"
         }
       }
+    },
+    {
+      "bom-ref": "crypto/10e4b69890818cd9",
+      "type": "cryptographic-asset",
+      "name": "FortiOS certificate local lab-vpn-cert private key",
+      "properties": [
+        {
+          "name": "cbom-netscan:fortios:private-key",
+          "value": "present"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 8,
+            "symbol": "vpn certificate local/lab-vpn-cert/private-key"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "related-crypto-material",
+        "relatedCryptoMaterialProperties": {
+          "type": "private-key",
+          "algorithmRef": "crypto/6debf911118e9077",
+          "size": 2048
+        }
+      }
+    },
+    {
+      "bom-ref": "crypto/87b51021409a9947",
+      "type": "cryptographic-asset",
+      "name": "FortiOS certificate local lab-vpn-cert public key",
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "ipsec-7.6.conf",
+            "line": 11,
+            "symbol": "vpn certificate local/lab-vpn-cert/certificate"
+          }
+        ]
+      },
+      "cryptoProperties": {
+        "assetType": "related-crypto-material",
+        "relatedCryptoMaterialProperties": {
+          "type": "public-key",
+          "id": "spki-sha256:a81101e3af74af177bb2ba0a7e9282d68abff31941a72a7d58615c46c37e948f",
+          "algorithmRef": "crypto/6debf911118e9077",
+          "size": 2048
+        }
+      }
     }
   ],
   "dependencies": [
@@ -1150,6 +1314,12 @@
       "ref": "crypto/43df498346fd5977",
       "dependsOn": [
         "crypto/76f97fcaea062268"
+      ]
+    },
+    {
+      "ref": "crypto/4512ec4882efddae",
+      "dependsOn": [
+        "crypto/775a9784c61284fb"
       ]
     },
     {

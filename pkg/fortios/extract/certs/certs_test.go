@@ -599,9 +599,10 @@ func level(a *model.Asset) string {
 	return strconv.Itoa(*a.Alg.NISTQuantumLevel)
 }
 
-// TestPrivateKeyForms: the form comes from the first token or the BEGIN line
-// alone. An unencrypted PKCS #8 key warns; a traditional or OpenSSH key, whose
-// encryption the BEGIN line does not show, warns that it may be unencrypted.
+// TestPrivateKeyForms: the form comes from the first token, or the BEGIN line
+// and, for traditional keys, the Proc-Type header after it. Unencrypted
+// PKCS #8 and traditional keys warn; an OpenSSH key, whose encryption is
+// inside the body, warns that it may be unencrypted.
 // The key bodies here are not valid base64, so the test would fail if the
 // code tried to decode them, and their marker text must not reach output.
 func TestPrivateKeyForms(t *testing.T) {
@@ -614,9 +615,19 @@ func TestPrivateKeyForms(t *testing.T) {
 		{`FortinetPasswordMask`, "masked", ""},
 		{`"-----BEGIN ENCRYPTED PRIVATE KEY-----` + body + `-----END ENCRYPTED PRIVATE KEY-----"`, "encrypted-pem", ""},
 		{`"-----BEGIN PRIVATE KEY-----` + body + `-----END PRIVATE KEY-----"`, "plaintext-pem", "is an unencrypted PEM key"},
-		{`"-----BEGIN RSA PRIVATE KEY-----` + body + `-----END RSA PRIVATE KEY-----"`, "pem-encryption-unknown", "may be unencrypted"},
-		{`"-----BEGIN EC PRIVATE KEY-----` + body + `-----END EC PRIVATE KEY-----"`, "pem-encryption-unknown", "may be unencrypted"},
-		{`"-----BEGIN OPENSSH PRIVATE KEY-----` + body + `-----END OPENSSH PRIVATE KEY-----"`, "pem-encryption-unknown", "may be unencrypted"},
+		// Traditional keys: the RFC 1421 Proc-Type header directly after the
+		// BEGIN line decides; without it the key is plaintext.
+		{`"-----BEGIN RSA PRIVATE KEY-----` + body + `-----END RSA PRIVATE KEY-----"`, "plaintext-pem", "is an unencrypted PEM key"},
+		{`"-----BEGIN EC PRIVATE KEY-----` + body + `-----END EC PRIVATE KEY-----"`, "plaintext-pem", "is an unencrypted PEM key"},
+		{`"-----BEGIN DSA PRIVATE KEY-----` + body + `-----END DSA PRIVATE KEY-----"`, "plaintext-pem", "is an unencrypted PEM key"},
+		{`"-----BEGIN RSA PRIVATE KEY-----` + "\nProc-Type: 4,ENCRYPTED\nDEK-Info: AES-256-CBC,00112233445566778899AABBCCDDEEFF\n" + body + `-----END RSA PRIVATE KEY-----"`, "encrypted-pem", ""},
+		{`"-----BEGIN EC PRIVATE KEY-----` + "\r\nProc-Type: 4, ENCRYPTED\r\nDEK-Info: AES-128-CBC,00112233445566778899AABBCCDDEEFF\r\n" + body + `-----END EC PRIVATE KEY-----"`, "encrypted-pem", ""},
+		// Another Proc-Type value is not encryption, and a Proc-Type line that
+		// does not directly follow the BEGIN line is not the header.
+		{`"-----BEGIN DSA PRIVATE KEY-----` + "\nProc-Type: 4,MIC-ONLY\n" + body + `-----END DSA PRIVATE KEY-----"`, "plaintext-pem", "is an unencrypted PEM key"},
+		{`"-----BEGIN RSA PRIVATE KEY-----` + body + "Proc-Type: 4,ENCRYPTED\n" + `-----END RSA PRIVATE KEY-----"`, "plaintext-pem", "is an unencrypted PEM key"},
+		// OpenSSH keys record their cipher inside the body, which is not read.
+		{`"-----BEGIN OPENSSH PRIVATE KEY-----` + body + `-----END OPENSSH PRIVATE KEY-----"`, "pem-encryption-unknown", "OpenSSH-format"},
 		// Text after the BEGIN line's closing dashes does not hide the key.
 		{`"-----BEGIN PRIVATE KEY----- trailing` + body + `-----END PRIVATE KEY-----"`, "plaintext-pem", "is an unencrypted PEM key"},
 		// Leading blank lines and spaces are skipped before the BEGIN line.

@@ -20,8 +20,9 @@
 //
 // The private-key value is never parsed, decoded, or emitted: the code only
 // checks whether the field is set and, to tell its form, its first token or
-// a PEM key's BEGIN line. An unencrypted PEM key is warned about. The
-// password field is never read.
+// a PEM key's BEGIN line (plus, for traditional RSA/EC/DSA keys, the RFC 1421
+// Proc-Type header). An unencrypted PEM key is warned about. The password
+// field is never read.
 //
 // Certificates are flagged when expired at the reference time (a warning).
 // A leaf certificate whose validity exceeds the CA/Browser Forum maximum for
@@ -505,8 +506,8 @@ func addCert(inv *model.Inventory, location string, scope tree.Scope, tb table, 
 }
 
 // addPrivateKey records a private key's presence and form. The key is never
-// read: only the first token, or a PEM key's BEGIN line, is looked at (see
-// privateKeyForm). A key that is, or may be, unencrypted in the backup gives
+// read: only the first token, or a PEM key's BEGIN line and Proc-Type
+// header, is looked at (see privateKeyForm). A key that is, or may be, unencrypted in the backup gives
 // a plaintext-private-key warning, without the value.
 func addPrivateKey(inv *model.Inventory, location, ctx string, tb table, e *tree.Entry, certName string, key *alg, keyID string) {
 	if tb.kind != "local" {
@@ -525,7 +526,7 @@ func addPrivateKey(inv *model.Inventory, location, ctx string, tb table, e *tree
 	if warn {
 		msg := "is an unencrypted PEM key"
 		if form == formPEMUnknown {
-			msg = "is a PEM key whose encryption the BEGIN line does not show, so it may be unencrypted"
+			msg = "is an OpenSSH-format (or other) PEM key that records its encryption inside the key, which is not read, so it may be unencrypted"
 		}
 		inv.AddWarning(model.Warning{
 			Code:    "plaintext-private-key",

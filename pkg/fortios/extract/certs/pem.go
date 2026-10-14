@@ -28,34 +28,31 @@ func isEndLine(line, label string) bool {
 	return strings.HasPrefix(strings.TrimSpace(line), "-----END "+label+"-----")
 }
 
-// firstLine is text up to its first newline.
-func firstLine(text string) string {
-	if i := strings.IndexByte(text, '\n'); i >= 0 {
-		return text[:i]
-	}
-	return text
-}
-
 // isKeyLabel reports whether a PEM label is a private key of any format.
 func isKeyLabel(label string) bool {
 	return strings.HasSuffix(label, "PRIVATE KEY")
 }
 
 // Private-key forms, recorded as private-key:form. Only the first token, or
-// for a PEM key only its BEGIN line, decides the form.
+// for a PEM key its BEGIN line and, for traditional keys, the Proc-Type
+// header after it, decides the form.
 const (
 	formENC        = "ENC"                    // FortiOS-encrypted (ENC <blob>)
 	formMasked     = "masked"                 // FortinetPasswordMask
-	formEncrypted  = "encrypted-pem"          // -----BEGIN ENCRYPTED PRIVATE KEY----- (PKCS #8, encrypted)
-	formPlaintext  = "plaintext-pem"          // -----BEGIN PRIVATE KEY----- (PKCS #8, unencrypted)
-	formPEMUnknown = "pem-encryption-unknown" // RSA/EC/DSA/OPENSSH PRIVATE KEY: encryption is not shown in the BEGIN line
+	formEncrypted  = "encrypted-pem"          // ENCRYPTED PRIVATE KEY (PKCS #8), or RSA/EC/DSA PRIVATE KEY with Proc-Type: 4,ENCRYPTED
+	formPlaintext  = "plaintext-pem"          // PRIVATE KEY (PKCS #8), or RSA/EC/DSA PRIVATE KEY without that header
+	formPEMUnknown = "pem-encryption-unknown" // OPENSSH (or other) PRIVATE KEY: encryption is recorded inside the key body, which is not read
 	formOther      = "other"
 )
 
+// traditionalKeyLabels are OpenSSL's traditional key formats, which mark
+// encryption with RFC 1421 headers (Proc-Type, DEK-Info) after the BEGIN line.
+var traditionalKeyLabels = map[string]bool{"RSA PRIVATE KEY": true, "EC PRIVATE KEY": true, "DSA PRIVATE KEY": true}
+
 // privateKeyForm classifies a private-key value without reading the key: it
 // looks at the first token (ENC, FortinetPasswordMask) or, for a PEM key, at
-// the BEGIN line alone. warn is set when the key is, or may be, stored
-// unencrypted in the backup.
+// the BEGIN line and, for a traditional key, the line after it. warn is set
+// when the key is, or may be, stored unencrypted in the backup.
 func privateKeyForm(values []string) (form string, warn bool) {
 	switch values[0] {
 	case "ENC":
@@ -64,18 +61,34 @@ func privateKeyForm(values []string) (form string, warn bool) {
 		return formMasked, false
 	}
 	// Leading blank lines or spaces do not hide a PEM key.
-	label := pemLabel(firstLine(strings.TrimLeft(values[0], " \t\r\n")))
+	lines := strings.SplitN(strings.TrimLeft(values[0], " \t\r\n"), "\n", 3)
+	label := pemLabel(lines[0])
 	switch {
 	case label == "ENCRYPTED PRIVATE KEY":
 		return formEncrypted, false
 	case label == "PRIVATE KEY":
 		return formPlaintext, true
+	case traditionalKeyLabels[label]:
+		if len(lines) > 1 && procTypeEncrypted(lines[1]) {
+			return formEncrypted, false
+		}
+		return formPlaintext, true
 	case isKeyLabel(label):
-		// Traditional OpenSSL keys mark encryption in headers after the
-		// BEGIN line, and OpenSSH keys inside the body; neither is read.
+		// OpenSSH keys record their cipher inside the base64 body, which is
+		// never decoded, so whether they are encrypted is unknown.
 		return formPEMUnknown, true
 	}
 	return formOther, false
+}
+
+// procTypeEncrypted reports whether line is the RFC 1421 header
+// "Proc-Type: 4,ENCRYPTED". RFC 1421 puts Proc-Type first, directly after
+// the BEGIN line, so only that line is checked. The header is metadata, not
+// key material; if the line is instead the first line of the key body, it
+// is only compared with the header's prefix and nothing from it is kept.
+func procTypeEncrypted(line string) bool {
+	value, ok := strings.CutPrefix(strings.TrimSpace(line), "Proc-Type:")
+	return ok && strings.ReplaceAll(strings.TrimSpace(value), " ", "") == "4,ENCRYPTED"
 }
 
 // certField is what a certificate field holds, found from BEGIN and END

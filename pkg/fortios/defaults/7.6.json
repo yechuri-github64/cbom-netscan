@@ -88,6 +88,310 @@
         ],
         "source": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
       }
+    },
+    "vpn ipsec phase1-interface": {
+      "ike-version": {
+        "value": [
+          "1"
+        ],
+        "source": "CLI-7.6.3–7.6.7 via research notes §3.3"
+      },
+      "proposal": {
+        "undocumented": true,
+        "source": "research notes §3.3, §8.4: the CLI reference gives no default"
+      },
+      "dhgrp": {
+        "value": [
+          "14"
+        ],
+        "source": "CLI HTML 7.6.4 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14; CLI-7.6.3 via research notes §3.3",
+        "note": "CLI reference default. AG-7.6.7 says FortiGate uses DH groups 20 and 21 by default, and RN-8.0.0 (bug 1182788) replaces default groups 5 and 14 with 20 and 21 for CLI-configured tunnels; see research notes §9.",
+        "byVersion": {
+          "7.6.5": {
+            "value": [
+              "20"
+            ],
+            "source": "CLI HTML 7.6.5 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14 (default shown as 20 **)",
+            "note": "Model-dependent (CLI reference footnote **). CLI reference default. AG-7.6.7 says FortiGate uses DH groups 20 and 21 by default, and RN-8.0.0 (bug 1182788) replaces default groups 5 and 14 with 20 and 21 for CLI-configured tunnels; see research notes §9."
+          },
+          "7.6.6": {
+            "value": [
+              "20"
+            ],
+            "source": "CLI-7.6.6 via research notes §3.3 (default 20 **)",
+            "note": "Model-dependent (CLI reference footnote **). CLI reference default. AG-7.6.7 says FortiGate uses DH groups 20 and 21 by default, and RN-8.0.0 (bug 1182788) replaces default groups 5 and 14 with 20 and 21 for CLI-configured tunnels; see research notes §9."
+          },
+          "7.6.7": {
+            "value": [
+              "20"
+            ],
+            "source": "CLI HTML 7.6.7 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14; research notes §3.3",
+            "note": "CLI reference default. AG-7.6.7 says FortiGate uses DH groups 20 and 21 by default, and RN-8.0.0 (bug 1182788) replaces default groups 5 and 14 with 20 and 21 for CLI-configured tunnels; see research notes §9."
+          }
+        }
+      },
+      "authmethod": {
+        "value": [
+          "psk"
+        ],
+        "source": "CLI HTML 7.6.7 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14; research notes §3.3"
+      },
+      "signature-hash-alg": {
+        "value": [
+          "sha2-512"
+        ],
+        "source": "CLI-7.6.7 p2286–2318 via research notes §3.3"
+      },
+      "addke1": {
+        "value": [],
+        "source": "CLI HTML 7.6.7 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14 (no default); research notes §3.3"
+      },
+      "addke2": {
+        "value": [],
+        "source": "CLI HTML 7.6.7 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14 (no default); research notes §3.3"
+      },
+      "addke3": {
+        "value": [],
+        "source": "CLI HTML 7.6.7 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14 (no default); research notes §3.3"
+      },
+      "addke4": {
+        "value": [],
+        "source": "CLI HTML 7.6.7 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14 (no default); research notes §3.3"
+      },
+      "addke5": {
+        "value": [],
+        "source": "CLI HTML 7.6.7 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14 (no default); research notes §3.3"
+      },
+      "addke6": {
+        "value": [],
+        "source": "CLI HTML 7.6.7 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14 (no default); research notes §3.3"
+      },
+      "addke7": {
+        "value": [],
+        "source": "CLI HTML 7.6.7 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14 (no default); research notes §3.3"
+      }
+    },
+    "vpn ipsec phase1": {
+      "ike-version": {
+        "value": [
+          "1"
+        ],
+        "source": "CLI-7.6.3–7.6.7 via research notes §3.3 The policy-based table has the same fields (research notes §3.3)."
+      },
+      "proposal": {
+        "undocumented": true,
+        "source": "research notes §3.3, §8.4: the CLI reference gives no default The policy-based table has the same fields (research notes §3.3)."
+      },
+      "dhgrp": {
+        "value": [
+          "14"
+        ],
+        "source": "CLI HTML 7.6.4 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14; CLI-7.6.3 via research notes §3.3 The policy-based table has the same fields (research notes §3.3).",
+        "note": "CLI reference default. AG-7.6.7 says FortiGate uses DH groups 20 and 21 by default, and RN-8.0.0 (bug 1182788) replaces default groups 5 and 14 with 20 and 21 for CLI-configured tunnels; see research notes §9.",
+        "byVersion": {
+          "7.6.5": {
+            "value": [
+              "20"
+            ],
+            "source": "CLI HTML 7.6.5 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14 (default shown as 20 **) The policy-based table has the same fields (research notes §3.3).",
+            "note": "Model-dependent (CLI reference footnote **). CLI reference default. AG-7.6.7 says FortiGate uses DH groups 20 and 21 by default, and RN-8.0.0 (bug 1182788) replaces default groups 5 and 14 with 20 and 21 for CLI-configured tunnels; see research notes §9."
+          },
+          "7.6.6": {
+            "value": [
+              "20"
+            ],
+            "source": "CLI-7.6.6 via research notes §3.3 (default 20 **) The policy-based table has the same fields (research notes §3.3).",
+            "note": "Model-dependent (CLI reference footnote **). CLI reference default. AG-7.6.7 says FortiGate uses DH groups 20 and 21 by default, and RN-8.0.0 (bug 1182788) replaces default groups 5 and 14 with 20 and 21 for CLI-configured tunnels; see research notes §9."
+          },
+          "7.6.7": {
+            "value": [
+              "20"
+            ],
+            "source": "CLI HTML 7.6.7 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14; research notes §3.3 The policy-based table has the same fields (research notes §3.3).",
+            "note": "CLI reference default. AG-7.6.7 says FortiGate uses DH groups 20 and 21 by default, and RN-8.0.0 (bug 1182788) replaces default groups 5 and 14 with 20 and 21 for CLI-configured tunnels; see research notes §9."
+          }
+        }
+      },
+      "authmethod": {
+        "value": [
+          "psk"
+        ],
+        "source": "CLI HTML 7.6.7 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14; research notes §3.3 The policy-based table has the same fields (research notes §3.3)."
+      },
+      "signature-hash-alg": {
+        "value": [
+          "sha2-512"
+        ],
+        "source": "CLI-7.6.7 p2286–2318 via research notes §3.3 The policy-based table has the same fields (research notes §3.3)."
+      },
+      "addke1": {
+        "value": [],
+        "source": "CLI HTML 7.6.7 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14 (no default); research notes §3.3 The policy-based table has the same fields (research notes §3.3)."
+      },
+      "addke2": {
+        "value": [],
+        "source": "CLI HTML 7.6.7 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14 (no default); research notes §3.3 The policy-based table has the same fields (research notes §3.3)."
+      },
+      "addke3": {
+        "value": [],
+        "source": "CLI HTML 7.6.7 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14 (no default); research notes §3.3 The policy-based table has the same fields (research notes §3.3)."
+      },
+      "addke4": {
+        "value": [],
+        "source": "CLI HTML 7.6.7 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14 (no default); research notes §3.3 The policy-based table has the same fields (research notes §3.3)."
+      },
+      "addke5": {
+        "value": [],
+        "source": "CLI HTML 7.6.7 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14 (no default); research notes §3.3 The policy-based table has the same fields (research notes §3.3)."
+      },
+      "addke6": {
+        "value": [],
+        "source": "CLI HTML 7.6.7 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14 (no default); research notes §3.3 The policy-based table has the same fields (research notes §3.3)."
+      },
+      "addke7": {
+        "value": [],
+        "source": "CLI HTML 7.6.7 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14 (no default); research notes §3.3 The policy-based table has the same fields (research notes §3.3)."
+      }
+    },
+    "vpn ipsec phase2-interface": {
+      "proposal": {
+        "undocumented": true,
+        "source": "research notes §3.4, §8.4: the CLI reference gives no default"
+      },
+      "pfs": {
+        "value": [
+          "enable"
+        ],
+        "source": "CLI HTML 7.6.7 252893715/config-vpn-ipsec-phase2-interface, verified 2026-10-14; research notes §3.4"
+      },
+      "dhgrp": {
+        "value": [
+          "14"
+        ],
+        "source": "research notes §3.4 (7.6.3, 7.6.4: as phase1)",
+        "note": "CLI reference default. AG-7.6.7 says FortiGate uses DH groups 20 and 21 by default, and RN-8.0.0 (bug 1182788) replaces default groups 5 and 14 with 20 and 21 for CLI-configured tunnels; see research notes §9.",
+        "byVersion": {
+          "7.6.5": {
+            "value": [
+              "20"
+            ],
+            "source": "research notes §3.4 (7.6.5: as phase1, 20 **)",
+            "note": "Model-dependent (CLI reference footnote **). CLI reference default. AG-7.6.7 says FortiGate uses DH groups 20 and 21 by default, and RN-8.0.0 (bug 1182788) replaces default groups 5 and 14 with 20 and 21 for CLI-configured tunnels; see research notes §9."
+          },
+          "7.6.6": {
+            "value": [
+              "20"
+            ],
+            "source": "research notes §3.4 (7.6.6: as phase1, 20 **)",
+            "note": "Model-dependent (CLI reference footnote **). CLI reference default. AG-7.6.7 says FortiGate uses DH groups 20 and 21 by default, and RN-8.0.0 (bug 1182788) replaces default groups 5 and 14 with 20 and 21 for CLI-configured tunnels; see research notes §9."
+          },
+          "7.6.7": {
+            "value": [
+              "20"
+            ],
+            "source": "CLI HTML 7.6.7 252893715/config-vpn-ipsec-phase2-interface, verified 2026-10-14; research notes §3.4",
+            "note": "CLI reference default. AG-7.6.7 says FortiGate uses DH groups 20 and 21 by default, and RN-8.0.0 (bug 1182788) replaces default groups 5 and 14 with 20 and 21 for CLI-configured tunnels; see research notes §9."
+          }
+        }
+      },
+      "addke1": {
+        "value": [],
+        "source": "CLI HTML 7.6.7 252893715/config-vpn-ipsec-phase2-interface, verified 2026-10-14 (no default); research notes §3.4"
+      },
+      "addke2": {
+        "value": [],
+        "source": "CLI HTML 7.6.7 252893715/config-vpn-ipsec-phase2-interface, verified 2026-10-14 (no default); research notes §3.4"
+      },
+      "addke3": {
+        "value": [],
+        "source": "CLI HTML 7.6.7 252893715/config-vpn-ipsec-phase2-interface, verified 2026-10-14 (no default); research notes §3.4"
+      },
+      "addke4": {
+        "value": [],
+        "source": "CLI HTML 7.6.7 252893715/config-vpn-ipsec-phase2-interface, verified 2026-10-14 (no default); research notes §3.4"
+      },
+      "addke5": {
+        "value": [],
+        "source": "CLI HTML 7.6.7 252893715/config-vpn-ipsec-phase2-interface, verified 2026-10-14 (no default); research notes §3.4"
+      },
+      "addke6": {
+        "value": [],
+        "source": "CLI HTML 7.6.7 252893715/config-vpn-ipsec-phase2-interface, verified 2026-10-14 (no default); research notes §3.4"
+      },
+      "addke7": {
+        "value": [],
+        "source": "CLI HTML 7.6.7 252893715/config-vpn-ipsec-phase2-interface, verified 2026-10-14 (no default); research notes §3.4"
+      }
+    },
+    "vpn ipsec phase2": {
+      "proposal": {
+        "undocumented": true,
+        "source": "research notes §3.4, §8.4: the CLI reference gives no default The policy-based table has the same fields (research notes §3.3)."
+      },
+      "pfs": {
+        "value": [
+          "enable"
+        ],
+        "source": "CLI HTML 7.6.7 252893715/config-vpn-ipsec-phase2-interface, verified 2026-10-14; research notes §3.4 The policy-based table has the same fields (research notes §3.3)."
+      },
+      "dhgrp": {
+        "value": [
+          "14"
+        ],
+        "source": "research notes §3.4 (7.6.3, 7.6.4: as phase1) The policy-based table has the same fields (research notes §3.3).",
+        "note": "CLI reference default. AG-7.6.7 says FortiGate uses DH groups 20 and 21 by default, and RN-8.0.0 (bug 1182788) replaces default groups 5 and 14 with 20 and 21 for CLI-configured tunnels; see research notes §9.",
+        "byVersion": {
+          "7.6.5": {
+            "value": [
+              "20"
+            ],
+            "source": "research notes §3.4 (7.6.5: as phase1, 20 **) The policy-based table has the same fields (research notes §3.3).",
+            "note": "Model-dependent (CLI reference footnote **). CLI reference default. AG-7.6.7 says FortiGate uses DH groups 20 and 21 by default, and RN-8.0.0 (bug 1182788) replaces default groups 5 and 14 with 20 and 21 for CLI-configured tunnels; see research notes §9."
+          },
+          "7.6.6": {
+            "value": [
+              "20"
+            ],
+            "source": "research notes §3.4 (7.6.6: as phase1, 20 **) The policy-based table has the same fields (research notes §3.3).",
+            "note": "Model-dependent (CLI reference footnote **). CLI reference default. AG-7.6.7 says FortiGate uses DH groups 20 and 21 by default, and RN-8.0.0 (bug 1182788) replaces default groups 5 and 14 with 20 and 21 for CLI-configured tunnels; see research notes §9."
+          },
+          "7.6.7": {
+            "value": [
+              "20"
+            ],
+            "source": "CLI HTML 7.6.7 252893715/config-vpn-ipsec-phase2-interface, verified 2026-10-14; research notes §3.4 The policy-based table has the same fields (research notes §3.3).",
+            "note": "CLI reference default. AG-7.6.7 says FortiGate uses DH groups 20 and 21 by default, and RN-8.0.0 (bug 1182788) replaces default groups 5 and 14 with 20 and 21 for CLI-configured tunnels; see research notes §9."
+          }
+        }
+      },
+      "addke1": {
+        "value": [],
+        "source": "CLI HTML 7.6.7 252893715/config-vpn-ipsec-phase2-interface, verified 2026-10-14 (no default); research notes §3.4 The policy-based table has the same fields (research notes §3.3)."
+      },
+      "addke2": {
+        "value": [],
+        "source": "CLI HTML 7.6.7 252893715/config-vpn-ipsec-phase2-interface, verified 2026-10-14 (no default); research notes §3.4 The policy-based table has the same fields (research notes §3.3)."
+      },
+      "addke3": {
+        "value": [],
+        "source": "CLI HTML 7.6.7 252893715/config-vpn-ipsec-phase2-interface, verified 2026-10-14 (no default); research notes §3.4 The policy-based table has the same fields (research notes §3.3)."
+      },
+      "addke4": {
+        "value": [],
+        "source": "CLI HTML 7.6.7 252893715/config-vpn-ipsec-phase2-interface, verified 2026-10-14 (no default); research notes §3.4 The policy-based table has the same fields (research notes §3.3)."
+      },
+      "addke5": {
+        "value": [],
+        "source": "CLI HTML 7.6.7 252893715/config-vpn-ipsec-phase2-interface, verified 2026-10-14 (no default); research notes §3.4 The policy-based table has the same fields (research notes §3.3)."
+      },
+      "addke6": {
+        "value": [],
+        "source": "CLI HTML 7.6.7 252893715/config-vpn-ipsec-phase2-interface, verified 2026-10-14 (no default); research notes §3.4 The policy-based table has the same fields (research notes §3.3)."
+      },
+      "addke7": {
+        "value": [],
+        "source": "CLI HTML 7.6.7 252893715/config-vpn-ipsec-phase2-interface, verified 2026-10-14 (no default); research notes §3.4 The policy-based table has the same fields (research notes §3.3)."
+      }
     }
   }
 }

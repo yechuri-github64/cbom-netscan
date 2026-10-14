@@ -28,6 +28,10 @@
       "name": "FortiOS admin HTTPS TLS 1.2",
       "properties": [
         {
+          "name": "cbom-netscan:fortios:admin-https-ssl-banned-ciphers:default-source",
+          "value": "CLI HTML 7.6.7 339914554/config-system-global, verified 2026-10-14; research notes §3.1 (no default listed)"
+        },
+        {
           "name": "cbom-netscan:fortios:admin-https-ssl-banned-ciphers:source",
           "value": "default"
         },
@@ -74,6 +78,10 @@
         {
           "name": "cbom-netscan:fortios:ssl-static-key-ciphers:value",
           "value": "disable"
+        },
+        {
+          "name": "cbom-netscan:fortios:strong-crypto:default-source",
+          "value": "CLI-7.6.7 p1549–1592 (system global), via research notes §3.1"
         },
         {
           "name": "cbom-netscan:fortios:strong-crypto:source",
@@ -149,6 +157,10 @@
           "value": "7.6"
         },
         {
+          "name": "cbom-netscan:fortios:strong-crypto:default-source",
+          "value": "CLI-7.6.7 p1549–1592 (system global), via research notes §3.1"
+        },
+        {
           "name": "cbom-netscan:fortios:strong-crypto:source",
           "value": "default"
         },
@@ -210,6 +222,10 @@
           "value": "configured"
         },
         {
+          "name": "cbom-netscan:fortios:ssh-hsk-algo:default-source",
+          "value": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
+        },
+        {
           "name": "cbom-netscan:fortios:ssh-hsk-algo:source",
           "value": "default"
         },
@@ -220,6 +236,10 @@
         {
           "name": "cbom-netscan:fortios:ssh-kex-algo:source",
           "value": "configured"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssh-mac-algo:default-source",
+          "value": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
         },
         {
           "name": "cbom-netscan:fortios:ssh-mac-algo:source",
@@ -366,6 +386,10 @@
           "value": "7.6"
         },
         {
+          "name": "cbom-netscan:fortios:ssh-hsk-algo:default-source",
+          "value": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
+        },
+        {
           "name": "cbom-netscan:fortios:ssh-hsk-algo:source",
           "value": "default"
         }
@@ -386,6 +410,10 @@
         {
           "name": "cbom-netscan:fortios:defaults-table",
           "value": "7.6"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssh-hsk-algo:default-source",
+          "value": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
         },
         {
           "name": "cbom-netscan:fortios:ssh-hsk-algo:source",
@@ -410,6 +438,10 @@
           "value": "7.6"
         },
         {
+          "name": "cbom-netscan:fortios:ssh-hsk-algo:default-source",
+          "value": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
+        },
+        {
           "name": "cbom-netscan:fortios:ssh-hsk-algo:source",
           "value": "default"
         }
@@ -430,6 +462,10 @@
         {
           "name": "cbom-netscan:fortios:defaults-table",
           "value": "7.6"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssh-mac-algo:default-source",
+          "value": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
         },
         {
           "name": "cbom-netscan:fortios:ssh-mac-algo:source",
@@ -453,6 +489,10 @@
           "value": "7.6"
         },
         {
+          "name": "cbom-netscan:fortios:ssh-mac-algo:default-source",
+          "value": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
+        },
+        {
           "name": "cbom-netscan:fortios:ssh-mac-algo:source",
           "value": "default"
         }
@@ -472,6 +512,10 @@
         {
           "name": "cbom-netscan:fortios:defaults-table",
           "value": "7.6"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssh-mac-algo:default-source",
+          "value": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
         },
         {
           "name": "cbom-netscan:fortios:ssh-mac-algo:source",
@@ -495,6 +539,10 @@
           "value": "7.6"
         },
         {
+          "name": "cbom-netscan:fortios:ssh-mac-algo:default-source",
+          "value": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
+        },
+        {
           "name": "cbom-netscan:fortios:ssh-mac-algo:source",
           "value": "default"
         }
@@ -514,6 +562,10 @@
         {
           "name": "cbom-netscan:fortios:defaults-table",
           "value": "7.6"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssh-hsk-algo:default-source",
+          "value": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
         },
         {
           "name": "cbom-netscan:fortios:ssh-hsk-algo:source",
@@ -537,6 +589,10 @@
           "value": "7.6"
         },
         {
+          "name": "cbom-netscan:fortios:ssh-hsk-algo:default-source",
+          "value": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
+        },
+        {
           "name": "cbom-netscan:fortios:ssh-hsk-algo:source",
           "value": "default"
         }
@@ -556,6 +612,10 @@
         {
           "name": "cbom-netscan:fortios:defaults-table",
           "value": "7.6"
+        },
+        {
+          "name": "cbom-netscan:fortios:ssh-hsk-algo:default-source",
+          "value": "CLI HTML 7.6.7 207795941/config-system-ssh-config, verified 2026-10-14; research notes §3.2"
         },
         {
           "name": "cbom-netscan:fortios:ssh-hsk-algo:source",

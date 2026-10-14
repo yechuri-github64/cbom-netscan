@@ -7,6 +7,7 @@ package defaults_test
 import (
 	"regexp"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/defaults"
@@ -19,7 +20,11 @@ var requiredFields = map[string][]string{
 		"admin-https-ssl-versions", "admin-https-ssl-ciphersuites", "admin-https-ssl-banned-ciphers",
 		"admin-server-cert", "strong-crypto", "ssl-static-key-ciphers",
 	},
-	"system ssh-config": {"ssh-enc-algo", "ssh-kex-algo", "ssh-mac-algo", "ssh-hsk-algo"},
+	"system ssh-config":          {"ssh-enc-algo", "ssh-kex-algo", "ssh-mac-algo", "ssh-hsk-algo"},
+	"vpn ipsec phase1-interface": {"ike-version", "proposal", "dhgrp", "authmethod", "signature-hash-alg"},
+	"vpn ipsec phase1":           {"ike-version", "proposal", "dhgrp", "authmethod", "signature-hash-alg"},
+	"vpn ipsec phase2-interface": {"proposal", "pfs", "dhgrp"},
+	"vpn ipsec phase2":           {"proposal", "pfs", "dhgrp"},
 }
 
 func TestTables_WellFormed(t *testing.T) {
@@ -44,11 +49,75 @@ func TestTables_WellFormed(t *testing.T) {
 					t.Errorf("table %s: missing %s / %s", tb.Name, section, f)
 					continue
 				}
-				if got.Value == nil || got.Source == "" {
-					t.Errorf("table %s: %s / %s needs a value list and a source", tb.Name, section, f)
+				checkField(t, tb.Name+": "+section+" / "+f, got)
+				for v, o := range got.ByVersion {
+					checkField(t, tb.Name+": "+section+" / "+f+" @"+v, o)
 				}
 			}
 		}
+	}
+}
+
+// checkField: a default has a source, and either a value list or is marked
+// undocumented (never both).
+func checkField(t *testing.T, where string, f defaults.Field) {
+	t.Helper()
+	switch {
+	case f.Source == "":
+		t.Errorf("%s: no source", where)
+	case f.Undocumented && f.Value != nil:
+		t.Errorf("%s: undocumented but has a value", where)
+	case !f.Undocumented && f.Value == nil:
+		t.Errorf("%s: no value list (use [] for an empty default, or undocumented)", where)
+	}
+}
+
+// TestIPsecDefaultsByVersion pins the per-version IPsec defaults from the
+// research notes (§3.3, §3.4, §9).
+func TestIPsecDefaultsByVersion(t *testing.T) {
+	cases := []struct {
+		version, section, field, want string // want "undocumented" for no default
+		noteHas                       string
+	}{
+		{"7.4.12", "vpn ipsec phase1-interface", "dhgrp", "14", "20 and 21"},
+		{"7.6.4", "vpn ipsec phase1-interface", "dhgrp", "14", "20 and 21"},
+		{"7.6.5", "vpn ipsec phase1-interface", "dhgrp", "20", "Model-dependent"},
+		{"7.6.6", "vpn ipsec phase1", "dhgrp", "20", "Model-dependent"},
+		{"7.6.7", "vpn ipsec phase1-interface", "dhgrp", "20", "20 and 21"},
+		{"7.6.7", "vpn ipsec phase2-interface", "dhgrp", "20", ""},
+		{"8.0.1", "vpn ipsec phase2", "dhgrp", "20", ""},
+		{"7.6.7", "vpn ipsec phase1-interface", "ike-version", "1", ""},
+		{"8.0.1", "vpn ipsec phase1-interface", "ike-version", "2", "upgrading does not change"},
+		{"7.6.7", "vpn ipsec phase1-interface", "signature-hash-alg", "sha2-512", ""},
+		{"8.0.1", "vpn ipsec phase1-interface", "signature-hash-alg", "identity", ""},
+		{"7.6.7", "vpn ipsec phase2-interface", "pfs", "enable", ""},
+		{"7.6.7", "vpn ipsec phase1-interface", "addke1", "", ""},
+		{"7.6.7", "vpn ipsec phase1-interface", "proposal", "undocumented", ""},
+		{"8.0.1", "vpn ipsec phase2", "proposal", "undocumented", ""},
+	}
+	for _, tc := range cases {
+		d := defaults.ForVersion(tc.version)
+		f, ok := d.Field(tc.section, tc.field)
+		if !ok {
+			t.Errorf("%s %s / %s: missing", tc.version, tc.section, tc.field)
+			continue
+		}
+		got := strings.Join(f.Value, " ")
+		if f.Undocumented {
+			got = "undocumented"
+		}
+		if got != tc.want {
+			t.Errorf("%s %s / %s = %q, want %q", tc.version, tc.section, tc.field, got, tc.want)
+		}
+		if tc.noteHas != "" && !strings.Contains(f.Note, tc.noteHas) {
+			t.Errorf("%s %s / %s note %q lacks %q", tc.version, tc.section, tc.field, f.Note, tc.noteHas)
+		}
+		if f.ByVersion != nil {
+			t.Errorf("%s %s / %s: resolved field still carries ByVersion", tc.version, tc.section, tc.field)
+		}
+	}
+	if _, ok := defaults.ForVersion("7.4.12").Field("vpn ipsec phase1-interface", "addke1"); ok {
+		t.Errorf("7.4.12 has an addke1 default, but addke is absent before 7.6.3")
 	}
 }
 

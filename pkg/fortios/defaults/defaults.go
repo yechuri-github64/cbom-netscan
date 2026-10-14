@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
+	"slices"
 )
 
 //go:embed *.json
@@ -26,6 +27,14 @@ var files embed.FS
 type Field struct {
 	Value  []string `json:"value"` // space-separated tokens as the CLI writes them
 	Source string   `json:"source"`
+	// Note is a caveat reported with the default, e.g. a doc conflict.
+	Note string `json:"note,omitempty"`
+	// Undocumented means the docs give no default, so the value is unknown
+	// even though the table covers the version (research notes §8.4).
+	Undocumented bool `json:"undocumented,omitempty"`
+	// ByVersion replaces the field for specific versions the table covers,
+	// for defaults that changed inside a release line.
+	ByVersion map[string]Field `json:"byVersion,omitempty"`
 }
 
 // Table is the defaults for one FortiOS release line.
@@ -78,21 +87,50 @@ func load(fsys fs.FS) ([]*Table, error) {
 			}
 			seen[v] = name
 		}
+		for section, fields := range t.Sections {
+			for field, f := range fields {
+				for v := range f.ByVersion {
+					if !slices.Contains(t.Versions, v) {
+						return nil, fmt.Errorf("defaults %s: %s / %s overrides version %s, which the table does not cover", name, section, field, v)
+					}
+				}
+			}
+		}
 		out = append(out, &t)
 	}
 	return out, nil
 }
 
-// ForVersion returns the table that lists version exactly, or nil.
-func ForVersion(version string) *Table {
+// Defaults is a table resolved for one exact FortiOS version.
+type Defaults struct {
+	Name    string // table name, e.g. "7.6"
+	Version string // the exact version it was resolved for, e.g. "7.6.5"
+	table   *Table
+}
+
+// ForVersion returns the defaults for version, or nil when no table lists
+// version exactly.
+func ForVersion(version string) *Defaults {
 	for _, t := range tables {
-		for _, v := range t.Versions {
-			if v == version {
-				return t
-			}
+		if slices.Contains(t.Versions, version) {
+			return &Defaults{Name: t.Name, Version: version, table: t}
 		}
 	}
 	return nil
+}
+
+// Field returns the default for field in the config section, with any
+// ByVersion override for d.Version applied.
+func (d *Defaults) Field(section, field string) (Field, bool) {
+	f, ok := d.table.Field(section, field)
+	if !ok {
+		return Field{}, false
+	}
+	if o, ok := f.ByVersion[d.Version]; ok {
+		return o, true
+	}
+	f.ByVersion = nil
+	return f, true
 }
 
 // Tables returns every embedded table.

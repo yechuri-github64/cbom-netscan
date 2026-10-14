@@ -22,10 +22,9 @@ package global
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
 
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/defaults"
+	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/internal/field"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/lexer"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/tree"
 	"github.com/yechuri-github64/cbom-netscan/pkg/model"
@@ -34,12 +33,6 @@ import (
 const (
 	sectionGlobal = "system global"
 	sectionSSH    = "system ssh-config"
-
-	srcConfigured = "configured"
-	srcDefault    = "default"
-	srcUnknown    = "unknown"
-
-	propPrefix = "cbom-netscan:fortios:"
 )
 
 // Extract adds admin HTTPS and SSH components from the global scope of t to
@@ -47,112 +40,48 @@ const (
 func Extract(t *tree.Tree, location string, inv *model.Inventory) {
 	x := &extractor{
 		t:     t,
-		loc:   location,
 		inv:   inv,
-		tbl:   defaults.ForVersion(t.Header.Version),
+		r:     &field.Resolver{Loc: location, Inv: inv, Defaults: defaults.ForVersion(t.Header.Version)},
 		scope: tree.ScopeSingle,
 	}
 	if t.VDOMMode == lexer.VDOMMulti {
 		x.scope = tree.ScopeGlobal
 	}
-	if x.tbl == nil {
-		inv.AddWarning(model.Warning{
-			Code:    "no-default-table",
-			Message: fmt.Sprintf("no defaults table for FortiOS %s; fields not set in the config are reported as unknown", t.Header.Version),
-			Ev:      model.Evidence{Location: location, Line: 1, Symbol: "#config-version"},
-		})
+	if x.r.Defaults == nil {
+		inv.AddWarning(NoDefaultsWarning(t, location))
 	}
 	x.adminHTTPS()
 	x.ssh()
 }
 
+// NoDefaultsWarning is the warning for a backup whose version has no
+// defaults table. Other extractors reuse it so the message is identical and
+// callers can print it once.
+func NoDefaultsWarning(t *tree.Tree, location string) model.Warning {
+	return model.Warning{
+		Code:    "no-default-table",
+		Message: fmt.Sprintf("no defaults table for FortiOS %s; fields not set in the config are reported as unknown", t.Header.Version),
+		Ev:      model.Evidence{Location: location, Line: 1, Symbol: "#config-version"},
+	}
+}
+
 type extractor struct {
 	t     *tree.Tree
-	loc   string
 	inv   *model.Inventory
-	tbl   *defaults.Table
+	r     *field.Resolver
 	scope tree.Scope
 }
 
-// value is one resolved field.
-type value struct {
-	field  string
-	symbol string // "system global/admin-https-ssl-versions"
-	tokens []string
-	src    string
-	line   int // set when src is configured
-}
-
-// resolve finds field in section: the last set line wins across repeated
-// blocks, unset means the default, and with no table the value is unknown.
-// Configured tokens are filtered through sp before they are returned.
-func (x *extractor) resolve(section, field string, sp spec) value {
-	v := value{field: field, symbol: section + "/" + field, src: srcUnknown}
+// resolve finds field in section of the global scope (the last set line
+// wins across repeated blocks) and resolves it.
+func (x *extractor) resolve(section, name string, sp field.Spec) field.Value {
 	var attr *tree.Attr
 	for _, b := range x.t.Blocks(x.scope, section) {
-		if a := b.Attr(field); a != nil {
+		if a := b.Attr(name); a != nil {
 			attr = a
 		}
 	}
-	if attr != nil && !attr.Unset {
-		v.src, v.line = srcConfigured, attr.Line
-		v.tokens = x.clean(v, attr.Values, sp)
-		return v
-	}
-	if x.tbl != nil {
-		if f, ok := x.tbl.Field(section, field); ok {
-			v.src, v.tokens = srcDefault, f.Value
-		}
-	}
-	return v
-}
-
-// clean applies sp to configured tokens and removes empty and repeated ones.
-func (x *extractor) clean(v value, toks []string, sp spec) []string {
-	var out []string
-	seen := map[string]bool{}
-	for _, tok := range toks {
-		if tok == "" || seen[tok] {
-			continue
-		}
-		switch {
-		case sp.known[tok]:
-		case sp.pattern != nil && sp.pattern.MatchString(tok):
-			if !sp.freeform {
-				x.warn(v, fmt.Sprintf("%s has unknown option %q; kept with primitive unknown", v.symbol, tok))
-			}
-		default:
-			x.warn(v, v.symbol+" has a token that is not a valid option; it was dropped and is not shown")
-			continue
-		}
-		seen[tok] = true
-		out = append(out, tok)
-	}
-	return out
-}
-
-func (x *extractor) warn(v value, msg string) {
-	x.inv.AddWarning(model.Warning{
-		Code:    "unknown-token",
-		Message: msg,
-		Ev:      model.Evidence{Location: x.loc, Line: v.line, Symbol: v.symbol},
-	})
-}
-
-// record writes v's provenance onto a, and its value when withValue is set.
-func (x *extractor) record(a *model.Asset, v value, withValue bool) {
-	p := propPrefix + v.field
-	a.Properties[p+":source"] = v.src
-	switch v.src {
-	case srcConfigured:
-		a.Properties[p+":line"] = strconv.Itoa(v.line)
-		a.Evidence = append(a.Evidence, model.Evidence{Location: x.loc, Line: v.line, Symbol: v.symbol})
-	case srcDefault:
-		a.Properties[propPrefix+"defaults-table"] = x.tbl.Name
-	}
-	if withValue && v.src != srcUnknown {
-		a.Properties[p+":value"] = strings.Join(v.tokens, " ")
-	}
+	return x.r.Resolve(attr, section, name, section+"/"+name, "", sp)
 }
 
 // adminHTTPS emits one TLS protocol component per enabled admin HTTPS
@@ -175,33 +104,33 @@ func (x *extractor) adminHTTPS() {
 			Proto:      &model.Protocol{Type: "tls", Version: version},
 			Properties: map[string]string{},
 		}
-		x.record(a, versions, false)
-		x.record(a, strong, true)
-		x.record(a, cert, true)
+		x.r.Record(a, versions, false)
+		x.r.Record(a, strong, true)
+		x.r.Record(a, cert, true)
 		return a
 	}
 
-	if versions.src == srcUnknown {
+	if versions.Source == field.Unknown {
 		a := newTLS("FortiOS admin HTTPS TLS", "")
-		x.record(a, suites, false)
-		x.record(a, banned, true)
-		x.record(a, static, true)
+		x.r.Record(a, suites, false)
+		x.r.Record(a, banned, true)
+		x.r.Record(a, static, true)
 		x.inv.Add(a)
 		return
 	}
 
-	for _, tok := range versions.tokens {
+	for _, tok := range versions.Tokens {
 		ver := tlsVersions[tok]
 		a := newTLS("FortiOS admin HTTPS TLS "+ver, ver)
 		if ver == "1.3" {
-			x.record(a, suites, false)
-			for _, s := range suites.tokens {
+			x.r.Record(a, suites, false)
+			for _, s := range suites.Tokens {
 				a.Proto.CipherSuites = append(a.Proto.CipherSuites, model.CipherSuite{Name: s})
 			}
 		} else {
-			x.record(a, banned, true)
-			x.record(a, static, true)
-			a.Properties[propPrefix+"cipher-suites"] = srcUnknown
+			x.r.Record(a, banned, true)
+			x.r.Record(a, static, true)
+			a.Properties[field.Prefix+"cipher-suites"] = field.Unknown
 		}
 		x.inv.Add(a)
 	}
@@ -227,9 +156,9 @@ func (x *extractor) ssh() {
 		{"ssh-hsk-algo", sshHsk},
 	}
 	for _, f := range fields {
-		v := x.resolve(sectionSSH, f.name, spec{known: keys(f.algs), pattern: sshTokenRE})
-		x.record(p, v, false)
-		for _, tok := range v.tokens {
+		v := x.resolve(sectionSSH, f.name, field.Spec{Known: keys(f.algs), Pattern: sshTokenRE})
+		x.r.Record(p, v, false)
+		for _, tok := range v.Tokens {
 			alg, ok := f.algs[tok]
 			if !ok {
 				alg = model.Algorithm{Primitive: "unknown"}
@@ -240,12 +169,11 @@ func (x *extractor) ssh() {
 				Alg:        &alg,
 				Properties: map[string]string{},
 			}
-			x.record(a, v, false)
+			x.r.Record(a, v, false)
 			if h, ok := hybridProp[tok]; ok {
-				a.Properties[propPrefix+"hybrid"] = h
+				a.Properties[field.Prefix+"hybrid"] = h
 			}
-			x.inv.Add(a)
-			p.Proto.Refs = append(p.Proto.Refs, a.ID)
+			p.Proto.Refs = append(p.Proto.Refs, x.inv.Add(a).ID)
 		}
 	}
 	x.inv.Add(p)

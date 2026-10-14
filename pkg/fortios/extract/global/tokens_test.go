@@ -8,13 +8,14 @@ import (
 	"testing"
 
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/defaults"
+	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/internal/field"
 )
 
 // TestDefaultsUseKnownTokens fails if a defaults table contains a token the
 // classifier does not know, which would mean a typo in the JSON or a missing
 // classification entry.
 func TestDefaultsUseKnownTokens(t *testing.T) {
-	specs := map[string]map[string]spec{
+	specs := map[string]map[string]field.Spec{
 		sectionGlobal: {
 			"admin-https-ssl-versions":       specTLSVersions,
 			"admin-https-ssl-ciphersuites":   specTLS13Suites,
@@ -24,24 +25,24 @@ func TestDefaultsUseKnownTokens(t *testing.T) {
 			"admin-server-cert":              specCertName,
 		},
 		sectionSSH: {
-			"ssh-enc-algo": {known: keys(sshEnc)},
-			"ssh-kex-algo": {known: keys(sshKex)},
-			"ssh-mac-algo": {known: keys(sshMac)},
-			"ssh-hsk-algo": {known: keys(sshHsk)},
+			"ssh-enc-algo": {Known: keys(sshEnc)},
+			"ssh-kex-algo": {Known: keys(sshKex)},
+			"ssh-mac-algo": {Known: keys(sshMac)},
+			"ssh-hsk-algo": {Known: keys(sshHsk)},
 		},
 	}
 	for _, tb := range defaults.Tables() {
 		for section, fields := range specs {
-			for field, sp := range fields {
-				f, ok := tb.Field(section, field)
+			for name, sp := range fields {
+				f, ok := tb.Field(section, name)
 				if !ok {
-					t.Errorf("table %s: no %s / %s", tb.Name, section, field)
+					t.Errorf("table %s: no %s / %s", tb.Name, section, name)
 					continue
 				}
 				for _, tok := range f.Value {
-					known := sp.known[tok] || (sp.freeform && sp.pattern.MatchString(tok))
+					known := sp.Known[tok] || (sp.Freeform && sp.Pattern.MatchString(tok))
 					if !known {
-						t.Errorf("table %s: %s / %s default token %q is not known", tb.Name, section, field, tok)
+						t.Errorf("table %s: %s / %s default token %q is not known", tb.Name, section, name, tok)
 					}
 				}
 			}

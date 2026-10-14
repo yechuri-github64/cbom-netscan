@@ -11,17 +11,20 @@ func NewInventory() *Inventory {
 	return &Inventory{byKey: make(map[string]*Asset)}
 }
 
-// Add inserts an asset into the inventory.
+// Add inserts an asset into the inventory and returns the asset that is
+// stored: a itself, or the existing asset it was merged into.
 //
 // Deduplication key: (Type, Name, OID).  If an asset with the same key
 // already exists, the new asset's evidence is merged into the existing
 // one instead of creating a duplicate component.  This is the expected
 // behaviour when the same algorithm appears in multiple config blocks or
-// in both a config file and a live TLS scan.
+// in both a config file and a live TLS scan.  Callers that reference the
+// asset from elsewhere must use the returned asset's ID, since the existing
+// asset keeps its own ID.
 //
 // Add sets a.ID via BOMRef() using the first evidence location if ID is
 // empty, so callers do not have to compute bom-refs themselves.
-func (inv *Inventory) Add(a *Asset) {
+func (inv *Inventory) Add(a *Asset) *Asset {
 	if a.ID == "" {
 		loc := ""
 		if len(a.Evidence) > 0 {
@@ -33,11 +36,12 @@ func (inv *Inventory) Add(a *Asset) {
 	key := string(a.Type) + "\x00" + a.Name + "\x00" + a.OID
 	if existing, ok := inv.byKey[key]; ok {
 		existing.Evidence = append(existing.Evidence, a.Evidence...)
-		return
+		return existing
 	}
 
 	inv.byKey[key] = a
 	inv.Assets = append(inv.Assets, a)
+	return a
 }
 
 // AddWarning appends a warning to the inventory.

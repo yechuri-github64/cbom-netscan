@@ -7,6 +7,7 @@ package global
 import (
 	"regexp"
 
+	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/internal/field"
 	"github.com/yechuri-github64/cbom-netscan/pkg/model"
 )
 
@@ -106,24 +107,12 @@ var sshHsk = map[string]model.Algorithm{
 	"ssh-ed25519":         {Primitive: "signature"},
 }
 
-// spec says which configured tokens may reach the CBOM.
-//
-// Known tokens are kept. An unknown token that matches pattern is kept and
-// flagged (new firmware may add options); with freeform set it is kept
-// silently, for names such as certificates. Anything else is dropped without
-// being echoed in the warning, so stray secret text never reaches output.
-type spec struct {
-	known    map[string]bool
-	pattern  *regexp.Regexp // nil: unknown tokens are always dropped
-	freeform bool
-}
-
 var (
-	specTLSVersions = spec{known: keys(tlsVersions)}
-	specTLS13Suites = spec{known: tls13Suites, pattern: regexp.MustCompile(`^TLS-[A-Z0-9-]{1,60}$`)}
-	specBanned      = spec{known: bannedCiphers, pattern: regexp.MustCompile(`^[A-Z0-9]{1,16}$`)}
-	specEnableDis   = spec{known: enableDisable}
-	specCertName    = spec{pattern: regexp.MustCompile(`^[A-Za-z0-9 _.@-]{1,35}$`), freeform: true}
+	specTLSVersions = field.Spec{Known: keys(tlsVersions)}
+	specTLS13Suites = field.Spec{Known: tls13Suites, Pattern: regexp.MustCompile(`^TLS-[A-Z0-9-]{1,60}$`)}
+	specBanned      = field.Spec{Known: bannedCiphers, Pattern: regexp.MustCompile(`^[A-Z0-9]{1,16}$`)}
+	specEnableDis   = field.Spec{Known: enableDisable}
+	specCertName    = field.Spec{Pattern: regexp.MustCompile(`^[A-Za-z0-9 _.@-]{1,35}$`), Freeform: true}
 	sshTokenRE      = regexp.MustCompile(`^[a-z0-9][a-z0-9@._-]{0,63}$`)
 )
 

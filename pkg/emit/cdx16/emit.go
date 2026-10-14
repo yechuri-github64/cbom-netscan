@@ -10,7 +10,9 @@
 //   - Output is deterministic when SOURCE_DATE_EPOCH is set: the BOM serial
 //     number and timestamp are both derived from that value, so two runs on
 //     the same inventory produce byte-identical output.
-//   - Components are sorted by bom-ref before emission so diffs are stable.
+//   - Components are sorted protocols first, then algorithms, certificates,
+//     and related crypto material, then by name (bom-ref breaks ties), so
+//     the output reads top-down and diffs are stable.
 //   - Properties within each component are sorted by name for the same reason.
 //   - We set bom.SpecVersion = SpecVersion1_6 directly and call Encode (not
 //     EncodeVersion) to avoid the copyAndConvert path in cyclonedx-go v0.12.0.
@@ -132,12 +134,36 @@ func buildComponents(assets []*model.Asset) ([]cdx.Component, []cdx.Dependency) 
 		}
 	}
 
-	// Sort by bom-ref so diffs are stable across runs.
-	sort.Slice(components, func(i, j int) bool {
-		return components[i].BOMRef < components[j].BOMRef
+	sort.SliceStable(components, func(i, j int) bool {
+		a, b := components[i], components[j]
+		if ra, rb := assetTypeRank(a), assetTypeRank(b); ra != rb {
+			return ra < rb
+		}
+		if a.Name != b.Name {
+			return a.Name < b.Name
+		}
+		return a.BOMRef < b.BOMRef
 	})
 
 	return components, deps
+}
+
+// assetTypeRank orders components by asset type for output.
+func assetTypeRank(c cdx.Component) int {
+	if c.CryptoProperties == nil {
+		return 4
+	}
+	switch c.CryptoProperties.AssetType {
+	case cdx.CryptoAssetTypeProtocol:
+		return 0
+	case cdx.CryptoAssetTypeAlgorithm:
+		return 1
+	case cdx.CryptoAssetTypeCertificate:
+		return 2
+	case cdx.CryptoAssetTypeRelatedCryptoMaterial:
+		return 3
+	}
+	return 4
 }
 
 // buildCryptoProps maps a model.Asset to CycloneDX CryptoProperties.

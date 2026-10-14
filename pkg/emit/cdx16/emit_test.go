@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -241,6 +242,51 @@ func TestEmit_EvidenceOccurrence(t *testing.T) {
 	assertEqual(t, "occ[0].symbol", "system ssh-config/ssh-enc-algo", occs[0]["symbol"])
 	if _, ok := occs[1]["line"]; ok {
 		t.Errorf("occ[1] has a line although Evidence.Line is 0: %v", occs[1])
+	}
+}
+
+// TestEmit_ComponentOrder checks the output order: protocols, algorithms,
+// certificates, related material, then by name within each type.
+func TestEmit_ComponentOrder(t *testing.T) {
+	inv := model.NewInventory()
+	add := func(typ model.AssetType, name string) {
+		a := &model.Asset{Type: typ, Name: name}
+		switch typ {
+		case model.AssetTypeProtocol:
+			a.Proto = &model.Protocol{Type: "ssh"}
+		case model.AssetTypeAlgorithm:
+			a.Alg = &model.Algorithm{Primitive: "mac"}
+		case model.AssetTypeCertificate:
+			a.Cert = &model.Cert{}
+		case model.AssetTypeRelatedMaterial:
+			a.Mat = &model.Material{Type: "private-key"}
+		}
+		inv.Add(a)
+	}
+	add(model.AssetTypeRelatedMaterial, "a-key")
+	add(model.AssetTypeAlgorithm, "zz-alg")
+	add(model.AssetTypeCertificate, "a-cert")
+	add(model.AssetTypeProtocol, "z-proto")
+	add(model.AssetTypeAlgorithm, "aa-alg")
+	add(model.AssetTypeProtocol, "a-proto")
+
+	var buf bytes.Buffer
+	if err := (cdx16.Emitter{}).Emit(context.Background(), &buf, inv, model.Meta{}); err != nil {
+		t.Fatalf("Emit: %v", err)
+	}
+	var bom struct {
+		Components []struct{ Name string } `json:"components"`
+	}
+	if err := json.Unmarshal(buf.Bytes(), &bom); err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, c := range bom.Components {
+		got = append(got, c.Name)
+	}
+	want := []string{"a-proto", "z-proto", "aa-alg", "zz-alg", "a-cert", "a-key"}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("order = %v, want %v", got, want)
 	}
 }
 

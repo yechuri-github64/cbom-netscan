@@ -161,6 +161,10 @@ func TestPEMLabel(t *testing.T) {
 	if !isEndLine("-----END PRIVATE KEY----- trailing", "PRIVATE KEY") || isEndLine("-----END RSA PRIVATE KEY-----", "PRIVATE KEY") {
 		t.Errorf("isEndLine does not match the END line with trailing text, or matches another label")
 	}
+	// A byte order mark before the END line is skipped, as before BEGIN.
+	if !isEndLine("\uFEFF-----END PRIVATE KEY-----", "PRIVATE KEY") || !isEndLine(" \uFEFF\uFEFF-----END CERTIFICATE-----\r", "CERTIFICATE") {
+		t.Errorf("isEndLine does not skip a leading byte order mark")
+	}
 }
 
 // TestNestedCertificateNotDecoded: a CERTIFICATE block with a BEGIN line

@@ -703,6 +703,9 @@ func TestCertificateFieldBlocks(t *testing.T) {
 		{"trailing_text_on_key_lines", "-----BEGIN PRIVATE KEY-----junk\nc3ludGhldGlj\n-----END PRIVATE KEY----- junk\n" + gw, "CN=gw.example.net,O=Example Lab", "1", "", ""},
 		// A byte order mark before a key block or the certificate hides neither.
 		{"bom_before_key_and_cert", "\uFEFF" + key + "\n\uFEFF" + gw, "CN=gw.example.net,O=Example Lab", "1", "", ""},
+		// A BOM before the key's END line still ends the key block, so the
+		// certificate after it is parsed rather than swallowed by the key.
+		{"bom_before_end_line", strings.Replace(key, "-----END", "\uFEFF-----END", 1) + "\n" + gw, "CN=gw.example.net,O=Example Lab", "1", "", ""},
 		// A key pasted inside the CERTIFICATE block: the key is counted, the
 		// block is not decoded, and a later certificate is still parsed.
 		{"key_inside_cert_block", certWithKeyInside(gw, key), "", "1", "", ""},

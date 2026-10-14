@@ -29,9 +29,10 @@ func trimLeading(s string) string {
 }
 
 // isEndLine reports whether line ends a block with this label; like
-// pemLabel, it ignores text after the closing dashes.
+// pemLabel, it skips leading whitespace and byte order marks and ignores
+// text after the closing dashes.
 func isEndLine(line, label string) bool {
-	return strings.HasPrefix(strings.TrimSpace(line), "-----END "+label+"-----")
+	return strings.HasPrefix(strings.TrimSpace(trimLeading(line)), "-----END "+label+"-----")
 }
 
 // isKeyLabel reports whether a PEM label is a private key of any format.

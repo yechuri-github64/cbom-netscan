@@ -70,8 +70,8 @@ type Token struct {
 // the #config-version= line plus the #conf_file_ver=, #buildno= and
 // #global_vdom= lines that follow it.
 //
-// The user= field (the exporting admin) is deliberately never stored, and is
-// redacted from error messages, so it cannot leak into a CBOM or a log.
+// The user= field (the exporting admin) is deliberately never stored, and
+// header errors never quote the line, so it cannot leak into a CBOM or a log.
 //
 // Only VDOM mode is interpreted; the other values are kept as raw strings
 // because Fortinet does not document their semantics (research notes §10).
@@ -114,11 +114,29 @@ var headerRE = regexp.MustCompile(`^([^-]+)-(\d+\.\d+\.\d+)-FW-build(\d+)(?:-(.*
 
 var buildDateRE = regexp.MustCompile(`^\d{6}$`)
 
-var userFieldRE = regexp.MustCompile(`(?i)(user=)[^:]*`)
+var (
+	headerVersionRE = regexp.MustCompile(`^\d+\.\d+\.\d+$`)
+	headerBuildRE   = regexp.MustCompile(`^FW-build\d+(?:-.*)?$`)
+)
 
-// redactUser masks the user= value so error messages never expose it.
-func redactUser(s string) string {
-	return userFieldRE.ReplaceAllString(s, "${1}[REDACTED]")
+// headerFault names the part of the first #config-version field that does
+// not parse. The result is a fixed word and never contains input bytes.
+func headerFault(f string) string {
+	model, rest, ok := strings.Cut(f, "-")
+	switch {
+	case !ok:
+		return "field format"
+	case model == "":
+		return "model"
+	}
+	version, rest, ok := strings.Cut(rest, "-")
+	switch {
+	case !headerVersionRE.MatchString(version):
+		return "version"
+	case !ok || !headerBuildRE.MatchString(rest):
+		return "build"
+	}
+	return "field format"
 }
 
 // metaKeys are the header-block lines read after #config-version=, in the
@@ -126,14 +144,6 @@ func redactUser(s string) string {
 var metaKeys = []string{"conf_file_ver", "buildno", "global_vdom", privateKeyField}
 
 const privateKeyField = "private-encryption-key"
-
-var privateKeyRE = regexp.MustCompile(`(?i)(private-encryption-key=).*`)
-
-// redactPrivateKey masks everything after private-encryption-key= so error
-// messages never expose the key, whatever characters it contains.
-func redactPrivateKey(s string) string {
-	return privateKeyRE.ReplaceAllString(s, "${1}[REDACTED]")
-}
 
 // Lexer is a streaming FortiOS config tokenizer.
 type Lexer struct {
@@ -253,7 +263,9 @@ func (l *Lexer) readHeader() error {
 	fields := strings.Split(first[len(prefix):], ":")
 	m := headerRE.FindStringSubmatch(fields[0])
 	if m == nil {
-		return fmt.Errorf("fortios lexer: malformed #config-version line: %q", redactPrivateKey(redactUser(first)))
+		// Only the failing part is named; the line itself may carry user=
+		// or a key, so it is never quoted.
+		return fmt.Errorf("fortios lexer: malformed #config-version line: bad %s", headerFault(fields[0]))
 	}
 	h := &ConfigHeader{Model: m[1], Version: m[2], Build: m[3]}
 	if buildDateRE.MatchString(m[4]) {

@@ -347,8 +347,9 @@ func TestLexer_PrivateEncryptionKeyNeverLeaks(t *testing.T) {
 // TestLexer_Reject verifies that New returns an error for inputs that are not
 // FortiOS standard backups: encrypted blobs, YAML exports, and empty files.
 // TestLexer_RejectNeverEchoesInput feeds files passed by mistake, led by a
-// fake PEM private key, and fails if any 6-byte run of the input appears in
-// the error. A classification phrase is all the error may contain.
+// fake PEM private key, plus malformed #config-version lines, and fails if any
+// 6-byte run of the file data appears in the error. A fixed classification
+// phrase is all the error may contain.
 func TestLexer_RejectNeverEchoesInput(t *testing.T) {
 	const fakeKey = "-----BEGIN OPENSSH PRIVATE KEY-----\n" +
 		"c3ludGhldGljLWZha2UtcHJpdmF0ZS1rZXktbGluZS0x\n" +
@@ -360,6 +361,11 @@ func TestLexer_RejectNeverEchoesInput(t *testing.T) {
 		"pem_private_key_bom":   "\xEF\xBB\xBF" + fakeKey,
 		"credentials_file":      "API_TOKEN=c3ludGhldGljLXRva2Vu\n",
 		"short_secret_one_line": "hunter2-c3ludGhldGlj",
+		// Malformed headers that carry user= and key-like text.
+		"header_bad_model":        "#config-version=-7.6.7-FW-build3704-260601:opmode=0:vdom=0:user=alice-c3ludGhldGlj\n",
+		"header_bad_version":      "#config-version=FGVMH6-7.x-FW-build3704-260601:opmode=0:vdom=0:user=alice-c3ludGhldGlj\n",
+		"header_bad_build":        "#config-version=FGVMH6-7.6.7-FW-buildXYZ:opmode=0:vdom=0:user=alice-c3ludGhldGlj\n",
+		"header_bad_field_format": "#config-version=c3ludGhldGljLWtleQ==:private-encryption-key=c3ludGhldGljLXBlaw==\n",
 	}
 	for name, in := range inputs {
 		t.Run(name, func(t *testing.T) {
@@ -368,8 +374,11 @@ func TestLexer_RejectNeverEchoesInput(t *testing.T) {
 				t.Fatal("New: expected error")
 			}
 			msg := err.Error()
-			for i := 0; i+6 <= len(in); i++ {
-				frag := in[i : i+6]
+			// "#config-version=" is fixed syntax the error may name; every
+			// byte after it is file data and must not appear.
+			data := strings.TrimPrefix(in, "#config-version=")
+			for i := 0; i+6 <= len(data); i++ {
+				frag := data[i : i+6]
 				if strings.TrimSpace(frag) != frag {
 					continue // whitespace-edged runs can match ordinary prose
 				}
@@ -426,6 +435,31 @@ func TestLexer_Reject(t *testing.T) {
 			name:    "openssh_public_key",
 			input:   "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBogus comment\n",
 			wantMsg: "not a FortiOS config backup: looks like a PEM/key file",
+		},
+		{
+			name:    "header_bad_model",
+			input:   "#config-version=-7.6.7-FW-build3704-260601:vdom=0\n",
+			wantMsg: "malformed #config-version line: bad model",
+		},
+		{
+			name:    "header_bad_version",
+			input:   "#config-version=FGVMH6-7.6-FW-build3704-260601:vdom=0\n",
+			wantMsg: "malformed #config-version line: bad version",
+		},
+		{
+			name:    "header_bad_build",
+			input:   "#config-version=FGVMH6-7.6.7-FW-buildXYZ-260601:vdom=0\n",
+			wantMsg: "malformed #config-version line: bad build",
+		},
+		{
+			name:    "header_missing_build",
+			input:   "#config-version=FGVMH6-7.6.7:vdom=0\n",
+			wantMsg: "malformed #config-version line: bad build",
+		},
+		{
+			name:    "header_bad_field_format",
+			input:   "#config-version=FGVMH6:vdom=0\n",
+			wantMsg: "malformed #config-version line: bad field format",
 		},
 		{
 			name:    "plain_text",

@@ -196,7 +196,7 @@ func buildComponents(assets []*model.Asset) ([]cdx.Component, []cdx.Dependency) 
 
 		c.CryptoProperties = buildCryptoProps(a)
 		c.Evidence = buildEvidence(a.Evidence)
-		c.Properties = buildProperties(a.Properties)
+		c.Properties = buildProperties(withCertProps(a))
 
 		components = append(components, c)
 
@@ -333,6 +333,26 @@ func buildCertProps(cert *model.Cert) *cdx.CertificateProperties {
 	}
 
 	return p
+}
+
+// withCertProps returns a's properties plus the certificate fields CycloneDX
+// 1.6 has no slot for: the fingerprint and serial number go out as
+// cbom-netscan:cert:sha256 and cbom-netscan:cert:serial (see model.Cert).
+func withCertProps(a *model.Asset) map[string]string {
+	if a.Cert == nil || (a.Cert.SHA256 == "" && a.Cert.Serial == "") {
+		return a.Properties
+	}
+	m := make(map[string]string, len(a.Properties)+2)
+	for k, v := range a.Properties {
+		m[k] = v
+	}
+	if a.Cert.SHA256 != "" {
+		m["cbom-netscan:cert:sha256"] = a.Cert.SHA256
+	}
+	if a.Cert.Serial != "" {
+		m["cbom-netscan:cert:serial"] = a.Cert.Serial
+	}
+	return m
 }
 
 // buildProtoProps maps model.Protocol → cdx.CryptoProtocolProperties.

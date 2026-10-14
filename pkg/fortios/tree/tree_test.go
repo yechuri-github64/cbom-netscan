@@ -78,7 +78,7 @@ func dump(t *tree.Tree) string {
 	var b strings.Builder
 	var codes []string
 	for _, w := range t.Warnings {
-		codes = append(codes, w.Code)
+		codes = append(codes, fmt.Sprintf("%s@%d", w.Code, w.Ev.Line))
 	}
 	fmt.Fprintf(&b, "mode=%s detected=%v warnings=%v\n", modeName[t.VDOMMode], t.VDOMModeDetected, codes)
 	for _, s := range t.Scopes() {
@@ -249,13 +249,13 @@ config vpn certificate local @9
 		{
 			name:  "unknown_detects_multi",
 			input: hdrUnknown + multiBody,
-			head:  "mode=multi detected=true warnings=[vdom-mode-unknown]",
+			head:  "mode=multi detected=true warnings=[vdom-mode-unknown@1]",
 			want:  multiDump,
 		},
 		{
 			name:  "unknown_detects_single",
 			input: hdrUnknown + "config system global\n    set hostname fw01\nend\n",
-			head:  "mode=single detected=true warnings=[vdom-mode-unknown]",
+			head:  "mode=single detected=true warnings=[vdom-mode-unknown@1]",
 			want: `scope ""
 config system global @2
   set hostname ["fw01"] @3
@@ -264,7 +264,7 @@ config system global @2
 		{
 			name:  "single_header_with_config_vdom",
 			input: hdrSingle + "config vdom\nedit root\nnext\nend\n",
-			head:  "mode=single detected=false warnings=[vdom-mode-conflict]",
+			head:  "mode=single detected=false warnings=[vdom-mode-conflict@2]",
 			want: `scope ""
 config vdom @2
   edit "root" @3
@@ -273,10 +273,50 @@ config vdom @2
 		{
 			name:  "multi_stray_top_level_block",
 			input: hdrMulti + "config system global\n    set hostname fw01\nend\n",
-			head:  "mode=multi detected=false warnings=[unexpected-content]",
+			head:  "mode=multi detected=false warnings=[unexpected-content@2]",
 			want: `scope "global"
 config system global @2
   set hostname ["fw01"] @3
+`,
+		},
+		{
+			// Documentation-style snippet: end straight after edit.
+			name: "end_without_next_is_implied",
+			input: hdrSingle + `config a
+    edit "x"
+        set k v
+end
+config b
+end
+`,
+			head: "mode=single detected=false warnings=[implied-next@5]",
+			want: `scope ""
+config a @2
+  edit "x" @3
+    set k ["v"] @4
+config b @6
+`,
+		},
+		{
+			// The implied next closes only the inner edit and its config;
+			// the outer edit stays open and later lines still attach to it.
+			name: "implied_next_in_nested_config",
+			input: hdrSingle + `config vpn ipsec phase1-interface
+    edit "vpn1"
+        config ipv4-exclude-range
+            edit 1
+        end
+        set dhgrp 20
+    next
+end
+`,
+			head: "mode=single detected=false warnings=[implied-next@6]",
+			want: `scope ""
+config vpn ipsec phase1-interface @2
+  edit "vpn1" @3
+    set dhgrp ["20"] @7
+    config ipv4-exclude-range @4
+      edit "1" @5
 `,
 		},
 		{
@@ -284,7 +324,7 @@ config system global @2
 			// drops it while tokenizing; its warning must still reach Tree.
 			name:  "private_key_warning_reaches_tree",
 			input: hdrSingle + "# note\n#private-encryption-key=c3ludGhldGlj\nconfig a\nend\n",
-			head:  "mode=single detected=false warnings=[opaque-secrets]",
+			head:  "mode=single detected=false warnings=[opaque-secrets@3]",
 			want: `scope ""
 config a @4
 `,
@@ -312,7 +352,6 @@ func TestParse_Errors(t *testing.T) {
 		{"end_without_config", hdrSingle + "end\n", "line 2: end without a matching config", ""},
 		{"next_at_top_level", hdrSingle + "next\n", "line 2: next without a matching edit", ""},
 		{"next_in_config_without_edit", hdrSingle + "config a\nnext\n", `line 3: next without a matching edit (inside config "a" from line 2)`, ""},
-		{"end_while_edit_open", hdrSingle + "config a\nedit x\nend\n", `line 4: end while edit "x" (line 3) is still open; expected next`, ""},
 		{"edit_outside_config", hdrSingle + "edit x\n", "line 2: edit outside a config block", ""},
 		{"edit_inside_edit", hdrSingle + "config a\nedit x\nedit y\n", `line 4: edit inside edit "x" (line 3); missing next`, ""},
 		{"edit_two_names", hdrSingle + "config a\nedit x y\n", "line 3: edit needs exactly one name, got 2", ""},

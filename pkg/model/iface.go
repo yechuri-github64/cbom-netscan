@@ -53,7 +53,7 @@ type Warning struct {
 	// Code is a machine-readable identifier.
 	// Known values: "default-assumed", "unknown-token", "encrypted-backup",
 	// "secret-redacted", "pem-truncated", "vdom-mode-unknown", "opaque-secrets",
-	// "vdom-mode-conflict", "unexpected-content".
+	// "vdom-mode-conflict", "unexpected-content", "implied-next".
 	Code    string
 	Message string
 	Ev      Evidence

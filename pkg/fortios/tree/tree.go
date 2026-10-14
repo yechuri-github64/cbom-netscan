@@ -86,7 +86,7 @@ func Parse(r io.Reader) (*Tree, error) {
 	if err != nil {
 		return nil, err
 	}
-	roots, err := build(l)
+	roots, buildWarns, err := build(l)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +94,7 @@ func Parse(r io.Reader) (*Tree, error) {
 		Header: l.Header,
 		// Copied after build: the lexer can add warnings while tokenizing,
 		// e.g. for a #private-encryption-key= line later in the file.
-		Warnings: append([]model.Warning(nil), l.Warnings...),
+		Warnings: append(append([]model.Warning(nil), l.Warnings...), buildWarns...),
 		scopes:   map[string][]*Block{},
 	}
 	if err := t.assignScopes(roots); err != nil {

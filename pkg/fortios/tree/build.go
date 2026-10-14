@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/lexer"
+	"github.com/yechuri-github64/cbom-netscan/pkg/model"
 )
 
 // frame is one open config block or edit entry on the parse stack.
@@ -44,14 +45,15 @@ func nextToken(l *lexer.Lexer) (lexer.Token, error) {
 //
 // Errors never quote attribute values or stray tokens, only keywords, config
 // paths and edit names, so a malformed secret cannot end up in an error.
-func build(l *lexer.Lexer) ([]*Block, error) {
+func build(l *lexer.Lexer) ([]*Block, []model.Warning, error) {
 	var roots []*Block
 	var stack []frame
+	var warns []model.Warning
 
 	tok, err := nextToken(l)
 	for {
 		if err != nil {
-			return nil, fmt.Errorf("fortios tree: %w", err)
+			return nil, nil, fmt.Errorf("fortios tree: %w", err)
 		}
 		if tok.Kind == lexer.TokEOF {
 			break
@@ -67,7 +69,7 @@ func build(l *lexer.Lexer) ([]*Block, error) {
 			args = append(args, tok.Value)
 		}
 		if err != nil {
-			return nil, fmt.Errorf("fortios tree: %w", err)
+			return nil, nil, fmt.Errorf("fortios tree: %w", err)
 		}
 
 		var top *frame
@@ -78,7 +80,7 @@ func build(l *lexer.Lexer) ([]*Block, error) {
 		switch kw.Kind {
 		case lexer.TokConfig:
 			if len(args) == 0 {
-				return nil, errAt(line, "config without a path")
+				return nil, nil, errAt(line, "config without a path")
 			}
 			b := &Block{Path: strings.Join(args, " "), Line: line}
 			switch {
@@ -94,11 +96,11 @@ func build(l *lexer.Lexer) ([]*Block, error) {
 		case lexer.TokEdit:
 			switch {
 			case top == nil:
-				return nil, errAt(line, "edit outside a config block")
+				return nil, nil, errAt(line, "edit outside a config block")
 			case top.entry != nil:
-				return nil, errAt(line, "edit inside edit %q (line %d); missing next", top.entry.Name, top.entry.Line)
+				return nil, nil, errAt(line, "edit inside edit %q (line %d); missing next", top.entry.Name, top.entry.Line)
 			case len(args) != 1:
-				return nil, errAt(line, "edit needs exactly one name, got %d", len(args))
+				return nil, nil, errAt(line, "edit needs exactly one name, got %d", len(args))
 			}
 			e := &Entry{Name: args[0], Line: line}
 			top.block.Entries = append(top.block.Entries, e)
@@ -108,11 +110,11 @@ func build(l *lexer.Lexer) ([]*Block, error) {
 			unset := kw.Kind == lexer.TokUnset
 			switch {
 			case top == nil:
-				return nil, errAt(line, "%s outside a config block", kw.Value)
+				return nil, nil, errAt(line, "%s outside a config block", kw.Value)
 			case len(args) == 0:
-				return nil, errAt(line, "%s without a field name", kw.Value)
+				return nil, nil, errAt(line, "%s without a field name", kw.Value)
 			case unset && len(args) > 1:
-				return nil, errAt(line, "unset takes only a field name")
+				return nil, nil, errAt(line, "unset takes only a field name")
 			}
 			a := &Attr{Key: args[0], Line: line, Unset: unset}
 			if !unset {
@@ -127,38 +129,47 @@ func build(l *lexer.Lexer) ([]*Block, error) {
 		case lexer.TokNext:
 			switch {
 			case len(args) > 0:
-				return nil, errAt(line, "next takes no arguments")
+				return nil, nil, errAt(line, "next takes no arguments")
 			case top == nil:
-				return nil, errAt(line, "next without a matching edit")
+				return nil, nil, errAt(line, "next without a matching edit")
 			case top.block != nil:
-				return nil, errAt(line, "next without a matching edit (inside config %q from line %d)", top.block.Path, top.block.Line)
+				return nil, nil, errAt(line, "next without a matching edit (inside config %q from line %d)", top.block.Path, top.block.Line)
 			}
 			stack = stack[:len(stack)-1]
 
 		case lexer.TokEnd:
 			switch {
 			case len(args) > 0:
-				return nil, errAt(line, "end takes no arguments")
+				return nil, nil, errAt(line, "end takes no arguments")
 			case top == nil:
-				return nil, errAt(line, "end without a matching config")
-			case top.entry != nil:
-				return nil, errAt(line, "end while edit %q (line %d) is still open; expected next", top.entry.Name, top.entry.Line)
+				return nil, nil, errAt(line, "end without a matching config")
+			}
+			// Real backups always write next, but documentation examples and
+			// hand-edited snippets often go straight to end. Treat it as an
+			// implied next: close the edit, then the config block around it.
+			if top.entry != nil {
+				warns = append(warns, model.Warning{
+					Code:    "implied-next",
+					Message: fmt.Sprintf("end closes edit %q (line %d) without a next; treated as next then end", top.entry.Name, top.entry.Line),
+					Ev:      model.Evidence{Line: line, Symbol: "edit " + top.entry.Name},
+				})
+				stack = stack[:len(stack)-1]
 			}
 			stack = stack[:len(stack)-1]
 
 		case lexer.TokString:
-			return nil, errAt(line, "unexpected quoted string; expected config, edit, set, unset, next, or end")
+			return nil, nil, errAt(line, "unexpected quoted string; expected config, edit, set, unset, next, or end")
 		default:
-			return nil, errAt(line, "unexpected word; expected config, edit, set, unset, next, or end")
+			return nil, nil, errAt(line, "unexpected word; expected config, edit, set, unset, next, or end")
 		}
 	}
 
 	if len(stack) > 0 {
 		f := stack[len(stack)-1]
 		if f.entry != nil {
-			return nil, fmt.Errorf("fortios tree: unexpected end of file: edit %q (line %d) has no next", f.entry.Name, f.entry.Line)
+			return nil, nil, fmt.Errorf("fortios tree: unexpected end of file: edit %q (line %d) has no next", f.entry.Name, f.entry.Line)
 		}
-		return nil, fmt.Errorf("fortios tree: unexpected end of file: config %q (line %d) has no end", f.block.Path, f.block.Line)
+		return nil, nil, fmt.Errorf("fortios tree: unexpected end of file: config %q (line %d) has no end", f.block.Path, f.block.Line)
 	}
-	return roots, nil
+	return roots, warns, nil
 }

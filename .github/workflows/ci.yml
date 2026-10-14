@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 contributors to cbom-netscan
+# SPDX-License-Identifier: Apache-2.0
+
 # CI: format check, vet, race-enabled tests, and golden-file schema validation.
 name: ci
 

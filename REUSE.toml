@@ -9,7 +9,7 @@ version = 1
 # Test fixtures and IANA registry data are dedicated to the public domain.
 # Nobody has to worry about licence compliance when writing tests.
 [[annotations]]
-path = ["**/testdata/**", "LICENSES/**"]
+path = ["**/testdata/**"]
 SPDX-FileCopyrightText = "2026 contributors to cbom-netscan"
 SPDX-License-Identifier = "CC0-1.0"
 
@@ -18,6 +18,12 @@ SPDX-License-Identifier = "CC0-1.0"
 path = ["pkg/fortios/defaults/*.json"]
 SPDX-FileCopyrightText = "2026 contributors to cbom-netscan"
 SPDX-License-Identifier = "Apache-2.0"
+
+# Go module files cannot hold a license comment.
+[[annotations]]
+path = ["go.mod", "go.sum"]
+SPDX-FileCopyrightText = "2026 contributors to cbom-netscan"
+SPDX-License-Identifier = "CC0-1.0"
 
 # Documentation that doesn't have its own SPDX header.
 [[annotations]]

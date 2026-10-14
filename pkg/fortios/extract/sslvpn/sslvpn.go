@@ -152,6 +152,9 @@ func (x *extractor) scope(scope tree.Scope, blocks []*tree.Block) {
 	var certRefs []string
 	for _, name := range server.Tokens {
 		r := certs.Ref(x.t, x.r.Loc, scope, name)
+		if r.Missing && r.Reported {
+			continue // the certificate extractor already warned
+		}
 		if r.Missing {
 			x.inv.AddWarning(model.Warning{
 				Code:    "unknown-certificate",

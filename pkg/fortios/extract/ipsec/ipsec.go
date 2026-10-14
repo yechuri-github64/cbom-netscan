@@ -333,6 +333,9 @@ func (x *extractor) phase1(scope tree.Scope, section string, e *tree.Entry) *mod
 func (x *extractor) certificates(scope tree.Scope, cert field.Value, tunnel *model.Asset, rs *refs) {
 	for _, name := range cert.Tokens {
 		r := certs.Ref(x.t, x.r.Loc, scope, name)
+		if r.Missing && r.Reported {
+			continue // the certificate extractor already warned
+		}
 		if r.Missing {
 			x.inv.AddWarning(model.Warning{
 				Code:    "unknown-certificate",

@@ -267,3 +267,60 @@ end
 		t.Errorf("warnings = %+v", inv.Warnings)
 	}
 }
+
+// TestMissingGlobalReferenceWarnedOnce: a VDOM entry that refers to a global
+// certificate missing from the backup is one problem, reported once by the
+// certificate extractor (cert-reference-missing). The IPsec tunnel and SSL
+// VPN settings that use the name do not add unknown-certificate warnings.
+func TestMissingGlobalReferenceWarnedOnce(t *testing.T) {
+	cfg := `#config-version=FGVMH6-7.6.7-FW-build3704-260601:opmode=0:vdom=1:user=admin
+config vdom
+edit root
+next
+end
+config global
+config system global
+    set hostname "fw"
+end
+end
+config vdom
+edit root
+config vpn certificate local
+    edit "Fortinet_Factory"
+        set range global
+        set source factory
+    next
+end
+config vpn ipsec phase1-interface
+    edit "sig"
+        set ike-version 2
+        set authmethod signature
+        set certificate "Fortinet_Factory"
+    next
+end
+config vpn ssl settings
+    set servercert "Fortinet_Factory"
+end
+end
+`
+	tr, err := tree.Parse(strings.NewReader(cfg))
+	if err != nil {
+		t.Fatal(err)
+	}
+	inv := model.NewInventory()
+	certs.Extract(tr, "fw.conf", inv, time.Unix(1791676800, 0))
+	ipsec.Extract(tr, "fw.conf", inv)
+	sslvpn.Extract(tr, "fw.conf", inv)
+	var codes []string
+	for _, w := range inv.Warnings {
+		codes = append(codes, w.Code)
+	}
+	if !slices.Equal(codes, []string{"cert-reference-missing"}) {
+		t.Errorf("warnings = %v, want only [cert-reference-missing]", codes)
+	}
+	for _, a := range inv.Assets {
+		if a.Type == model.AssetTypeProtocol && len(a.DependsOn) != 0 {
+			t.Errorf("%s depends on %v; the certificate is not in the backup", a.Name, a.DependsOn)
+		}
+	}
+}

@@ -176,6 +176,10 @@ type Refs struct {
 	Cert    string // certificate component
 	KeyAlg  string // the certificate key's algorithm component; empty if the PEM does not parse
 	Missing bool   // no local certificate with that name in the backup
+	// Reported is set with Missing when the name is a VDOM reference to a
+	// global certificate that is not in the backup. Extract already warns
+	// about that (cert-reference-missing), so callers should not warn again.
+	Reported bool
 }
 
 // Ref finds the local certificate name for a component in scope, looking in
@@ -188,13 +192,18 @@ func Ref(t *tree.Tree, location string, scope tree.Scope, name string) Refs {
 	if scope.Kind == tree.KindVDOM {
 		scopes = append(scopes, tree.ScopeGlobal)
 	}
+	reference := false // a VDOM entry names a global certificate
 	for _, s := range scopes {
 		for _, tb := range tables {
 			if tb.kind != "local" {
 				continue
 			}
 			for _, e := range t.Get(s, tb.path) {
-				if e.Name != name || globalRef(s, tb, e) {
+				if e.Name != name {
+					continue
+				}
+				if globalRef(s, tb, e) {
+					reference = true
 					continue
 				}
 				r := Refs{Cert: model.BOMRef(model.AssetTypeCertificate, certName(s, tb, e), location)}
@@ -205,7 +214,7 @@ func Ref(t *tree.Tree, location string, scope tree.Scope, name string) Refs {
 			}
 		}
 	}
-	return Refs{Missing: true}
+	return Refs{Missing: true, Reported: reference}
 }
 
 // certName is the component name: table kind, entry name, and scope.

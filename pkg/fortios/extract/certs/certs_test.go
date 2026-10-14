@@ -555,8 +555,13 @@ end
 			t.Errorf("dangling reference became component %s", a.Name)
 		}
 	}
-	if r := certs.Ref(tr, "fw.conf", tree.VDOM("root"), "dangling"); !r.Missing {
-		t.Errorf("Ref(dangling) = %+v, want missing", r)
+	// The dangling reference is missing and already reported by Extract, so
+	// callers do not warn again; a name with no entry at all is not reported.
+	if r := certs.Ref(tr, "fw.conf", tree.VDOM("root"), "dangling"); !r.Missing || !r.Reported {
+		t.Errorf("Ref(dangling) = %+v, want missing and reported", r)
+	}
+	if r := certs.Ref(tr, "fw.conf", tree.VDOM("root"), "no-such-cert"); !r.Missing || r.Reported {
+		t.Errorf("Ref(no-such-cert) = %+v, want missing and not reported", r)
 	}
 }
 

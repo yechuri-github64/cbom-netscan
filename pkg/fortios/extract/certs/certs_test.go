@@ -681,6 +681,11 @@ func TestCertificateFieldBlocks(t *testing.T) {
 		// BEGIN and END lines with trailing text are still recognised: the
 		// key is counted and the certificate after it is parsed.
 		{"trailing_text_on_key_lines", "-----BEGIN PRIVATE KEY-----junk\nc3ludGhldGlj\n-----END PRIVATE KEY----- junk\n" + gw, "CN=gw.example.net,O=Example Lab", "1", "", ""},
+		// A key pasted inside the CERTIFICATE block: the key is counted, the
+		// block is not decoded, and a later certificate is still parsed.
+		{"key_inside_cert_block", certWithKeyInside(gw, key), "", "1", "", ""},
+		{"key_inside_cert_then_cert", certWithKeyInside(gw, rsaKey) + "\n" + vpn, "CN=vpn.example.com,O=Example Lab", "1", "", ""},
+		{"key_inside_unterminated_cert", "-----BEGIN CERTIFICATE-----\nMIIB\n" + key, "", "1", "", ""},
 		// An unterminated key block swallows the rest of the field.
 		{"unterminated_key", "-----BEGIN PRIVATE KEY-----\nc3ludGhldGlj\n" + gw, "", "1", "", ""},
 	} {
@@ -744,4 +749,11 @@ func TestCABFInformational(t *testing.T) {
 			t.Errorf("CA/B limit produced a warning: %+v", w)
 		}
 	}
+}
+
+// certWithKeyInside puts key between the first and second lines of a
+// certificate's base64 body.
+func certWithKeyInside(cert, key string) string {
+	lines := strings.Split(cert, "\n")
+	return strings.Join(append(append(append([]string{}, lines[:2]...), key), lines[2:]...), "\n")
 }

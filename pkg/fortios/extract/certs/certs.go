@@ -254,6 +254,9 @@ func parsePEM(attr *tree.Attr) (*parsed, error) {
 		return nil, fmt.Errorf("no certificate PEM")
 	}
 	f := scanCertField(text)
+	if f.cert == "" && f.nestedCerts > 0 {
+		return nil, fmt.Errorf("the CERTIFICATE block contains another PEM block, so it was not decoded")
+	}
 	if f.cert == "" {
 		return nil, fmt.Errorf("no PEM CERTIFICATE block")
 	}

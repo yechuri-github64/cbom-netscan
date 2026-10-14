@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/tree"
 )
 
 // TestCABFMaxDays checks each step of Baseline Requirements §6.3.2 at the
@@ -91,7 +93,8 @@ func TestSignatureNamesDoNotShadowKeyNames(t *testing.T) {
 }
 
 // FuzzScanCertField: the block scanner must end on any text, and the
-// certificate text it returns must be one complete CERTIFICATE block.
+// certificate text it returns must be one complete CERTIFICATE block with
+// no other BEGIN line inside.
 func FuzzScanCertField(f *testing.F) {
 	f.Add("-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----")
 	f.Add("-----BEGIN PRIVATE KEY-----\nx\n-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----")
@@ -105,6 +108,11 @@ func FuzzScanCertField(f *testing.F) {
 		lines := strings.Split(c.cert, "\n")
 		if pemLabel(lines[0]) != "CERTIFICATE" || !isEndLine(lines[len(lines)-1], "CERTIFICATE") {
 			t.Fatalf("certificate text is not one complete CERTIFICATE block")
+		}
+		for _, l := range lines[1:] {
+			if pemLabel(l) != "" {
+				t.Fatalf("certificate text contains another BEGIN line, so it could decode an inner block")
+			}
 		}
 	})
 }
@@ -151,5 +159,20 @@ func TestPEMLabel(t *testing.T) {
 	}
 	if !isEndLine("-----END PRIVATE KEY----- trailing", "PRIVATE KEY") || isEndLine("-----END RSA PRIVATE KEY-----", "PRIVATE KEY") {
 		t.Errorf("isEndLine does not match the END line with trailing text, or matches another label")
+	}
+}
+
+// TestNestedCertificateNotDecoded: a CERTIFICATE block with a BEGIN line
+// inside is never handed to pem.Decode, so the inner block's body is never
+// decoded; parsePEM says why.
+func TestNestedCertificateNotDecoded(t *testing.T) {
+	text := "-----BEGIN CERTIFICATE-----\nMIIB\n-----BEGIN EC PRIVATE KEY-----\nc3ludGhldGlj\n-----END EC PRIVATE KEY-----\nMIIB\n-----END CERTIFICATE-----"
+	f := scanCertField(text)
+	if f.cert != "" || f.nestedCerts != 1 || f.keyBlocks != 1 {
+		t.Errorf("scanCertField = %+v, want no certificate text, 1 nested certificate, 1 key", f)
+	}
+	_, err := parsePEM(&tree.Attr{Values: []string{text}})
+	if err == nil || !strings.Contains(err.Error(), "not decoded") {
+		t.Errorf("parsePEM error = %v", err)
 	}
 }

@@ -83,10 +83,11 @@ func privateKeyForm(values []string) (form string, warn bool) {
 // other blocks. Only certificate text is kept; other blocks are counted by
 // label and their bodies are never decoded or stored.
 type certField struct {
-	cert       string // first complete CERTIFICATE block, BEGIN to END line; "" if none
-	extraCerts int    // further CERTIFICATE blocks (a chain), not inventoried
-	keyBlocks  int    // private-key blocks of any format
-	other      int    // any other PEM blocks
+	cert        string // first complete CERTIFICATE block, BEGIN to END line; "" if none
+	extraCerts  int    // further CERTIFICATE blocks (a chain), not inventoried
+	keyBlocks   int    // private-key blocks of any format, including inside a CERTIFICATE block
+	other       int    // any other PEM blocks
+	nestedCerts int    // CERTIFICATE blocks with another BEGIN line inside; never decoded
 }
 
 // scanCertField splits text into PEM blocks by their BEGIN and END lines.
@@ -105,11 +106,35 @@ func scanCertField(text string) certField {
 				break
 			}
 		}
+		// A BEGIN line inside a CERTIFICATE block (a key pasted into it)
+		// makes the block unsafe to decode: pem.Decode would skip the bad
+		// base64 and decode the inner block. Such a block is counted, its
+		// inner BEGIN lines are classified, and it is never decoded.
+		nested := false
+		if label == "CERTIFICATE" {
+			bodyEnd := end
+			if end < 0 {
+				bodyEnd = len(lines)
+			}
+			for _, l := range lines[i+1 : bodyEnd] {
+				switch inner := pemLabel(l); {
+				case inner == "":
+				case isKeyLabel(inner):
+					f.keyBlocks++
+					nested = true
+				default:
+					f.other++
+					nested = true
+				}
+			}
+		}
 		switch {
 		case isKeyLabel(label):
 			f.keyBlocks++
 		case label != "CERTIFICATE":
 			f.other++
+		case nested:
+			f.nestedCerts++
 		case end < 0:
 			// An unterminated certificate block is not a certificate.
 		case f.cert == "":

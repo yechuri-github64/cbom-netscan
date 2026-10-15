@@ -171,6 +171,20 @@ type Inventory struct {
 	// byKey deduplicates on (Type, Name, OID).  Unexported so callers
 	// must go through Add(); the emitter reads only Assets.
 	byKey map[string]*Asset
+
+	// seen holds, for each stored asset that a duplicate was merged into,
+	// the set of its evidence occurrences, so a merge checks each new
+	// occurrence in O(1) instead of scanning all of them: an algorithm
+	// shared by every tunnel of a large backup is merged once per tunnel.
+	seen map[*Asset]*evidenceSet
+}
+
+// evidenceSet is the set of an asset's evidence occurrences. n is how many
+// of the asset's Evidence entries it covers, so occurrences appended to the
+// asset outside merge are added before the next check.
+type evidenceSet struct {
+	set map[Evidence]struct{}
+	n   int
 }
 
 // Meta holds BOM-level metadata passed to every Emitter.

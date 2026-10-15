@@ -14,7 +14,7 @@ import (
 // Always use this constructor; the zero value of Inventory has a nil map
 // and will panic on Add().
 func NewInventory() *Inventory {
-	return &Inventory{byKey: make(map[string]*Asset)}
+	return &Inventory{byKey: make(map[string]*Asset), seen: make(map[*Asset]*evidenceSet)}
 }
 
 // Add inserts an asset into the inventory and returns the asset that is
@@ -28,21 +28,26 @@ func NewInventory() *Inventory {
 // asset from elsewhere must use the returned asset's ID, since the existing
 // asset keeps its own ID.
 //
-// Add sets a.ID via BOMRef() using the first evidence location if ID is
-// empty, so callers do not have to compute bom-refs themselves.
+// A new asset with an empty ID gets one from BOMRef(), using its first
+// evidence location, so callers do not have to compute bom-refs. A duplicate
+// is not given an ID: use the returned asset's.
+//
+// Add is O(1) per call, also for an asset that is a duplicate of one already
+// stored many times (see merge).
 func (inv *Inventory) Add(a *Asset) *Asset {
+	key := string(a.Type) + "\x00" + a.Name + "\x00" + a.OID
+	if existing, ok := inv.byKey[key]; ok {
+		inv.merge(existing, a)
+		return existing
+	}
+
+	// Only a new asset needs a bom-ref; a duplicate keeps the stored one.
 	if a.ID == "" {
 		loc := ""
 		if len(a.Evidence) > 0 {
 			loc = a.Evidence[0].Location
 		}
 		a.ID = BOMRef(a.Type, a.Name, loc)
-	}
-
-	key := string(a.Type) + "\x00" + a.Name + "\x00" + a.OID
-	if existing, ok := inv.byKey[key]; ok {
-		inv.merge(existing, a)
-		return existing
 	}
 
 	inv.byKey[key] = a
@@ -64,11 +69,21 @@ func (inv *Inventory) Add(a *Asset) *Asset {
 // as a merge-conflict. extract/shared_test.go checks that the extractors
 // define shared components identically.
 func (inv *Inventory) merge(existing, a *Asset) {
+	es := inv.seen[existing]
+	if es == nil || es.n > len(existing.Evidence) {
+		es = &evidenceSet{set: make(map[Evidence]struct{}, len(existing.Evidence)+len(a.Evidence))}
+		inv.seen[existing] = es
+	}
+	for _, ev := range existing.Evidence[es.n:] {
+		es.set[ev] = struct{}{}
+	}
 	for _, ev := range a.Evidence {
-		if !slices.Contains(existing.Evidence, ev) {
+		if _, dup := es.set[ev]; !dup {
+			es.set[ev] = struct{}{}
 			existing.Evidence = append(existing.Evidence, ev)
 		}
 	}
+	es.n = len(existing.Evidence)
 	if len(a.Properties) > 0 && existing.Properties == nil {
 		existing.Properties = map[string]string{}
 	}

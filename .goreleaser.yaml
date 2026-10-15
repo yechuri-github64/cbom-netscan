@@ -79,6 +79,11 @@ sboms:
     documents:
       - "{{ .ArtifactName }}.sbom.json"
     args: ["$artifact", "--output", "cyclonedx-json=$document"]
+    env:
+      # goreleaser's default, kept: setting env replaces the defaults.
+      - SYFT_FILE_METADATA_CATALOGER_ENABLED=true
+      # No call to syft's update server during a release build.
+      - SYFT_CHECK_FOR_APP_UPDATE=false
 
 # Sigstore keyless signing of checksums.txt with cosign v3: the workflow's
 # GitHub OIDC identity gets a short-lived certificate, and the signature and

@@ -256,13 +256,19 @@ merge conflict.
 ## 5. Warnings
 
 Warnings go to stderr as `file:line: warning: message [code]`. They never
-contain a secret value or the content of a key or certificate.
+contain a secret value or the content of a key or certificate. Every
+warning, from the parser or an extractor, counts toward the
+`--max-evidence` limit ([SECURITY.md](SECURITY.md#resource-limits)).
 
 | Code | Meaning |
 |---|---|
 | `no-default-table` | No defaults table for this firmware; unset fields are `unknown` |
 | `unknown-token` | A configured token is not a known option (kept if it looks like one, dropped and not shown otherwise) |
 | `implied-next` | An `end` closed an `edit` without `next`; read as `next` then `end` |
+| `vdom-mode-unknown` | The header has no `vdom=` field, or a value other than 0 or 1; the VDOM mode is taken from the configuration instead |
+| `vdom-mode-conflict` | The header declares single-VDOM (`vdom=0`), but the file has a top-level `config global` or `config vdom` block; it is kept as an ordinary block |
+| `unexpected-content` | In a multi-VDOM backup, lines outside the expected structure: `set` or `edit` lines directly in `config global`, lines outside an `edit` in `config vdom`, or a top-level block outside both. They are ignored, or the block is placed in the global scope |
+| `opaque-secrets` | The backup has a `#private-encryption-key=` line, so its secret fields are encrypted with that key; they are reported as present only |
 | `section-not-inventoried` | The backup has crypto sections the CBOM does not cover yet |
 | `plaintext-psk` | An IPsec PSK is stored in plaintext in the backup |
 | `plaintext-private-key` | A private key is, or may be, stored unencrypted (§4.2) |

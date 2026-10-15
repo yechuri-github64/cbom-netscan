@@ -50,12 +50,9 @@ type Emitter interface {
 
 // Warning is a non-fatal issue produced during parsing or collection.
 type Warning struct {
-	// Code is a machine-readable identifier.
-	// Known values: "default-assumed", "unknown-token", "encrypted-backup",
-	// "secret-redacted", "pem-truncated", "vdom-mode-unknown", "opaque-secrets",
-	// "vdom-mode-conflict", "unexpected-content", "implied-next", "no-default-table",
-	// "unknown-phase1", "addke-not-ikev2", "plaintext-psk", "section-not-inventoried",
-	// "addke-applies-unknown", "merge-conflict".
+	// Code is a machine-readable identifier, such as "unknown-token" or
+	// "vdom-mode-conflict". MAPPING.md §5 lists every code with its meaning;
+	// add a new code there when it is introduced.
 	Code    string
 	Message string
 	Ev      Evidence

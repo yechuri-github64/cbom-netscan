@@ -89,7 +89,8 @@ files.
 go install github.com/yechuri-github64/cbom-netscan/cmd/cbom-netscan@v0.1.0
 ```
 
-(`cbom-netscan version` then prints `dev`; release binaries carry the version.)
+(`cbom-netscan version` then reports the module version, for example
+`0.1.2`, as release binaries do.)
 
 **From source:**
 

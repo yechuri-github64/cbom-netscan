@@ -51,19 +51,9 @@ func TestMergeEvidenceDedupe(t *testing.T) {
 	}
 }
 
-// TestAddManyTunnels: 1.5 million tunnels sharing one algorithm, each its
-// own protocol component, must be inventoried quickly. With a linear scan
-// for duplicate evidence this was quadratic: 100,000 tunnels took 23 s, and
-// a crafted backup with millions of tunnels would not finish. Under -race or
-// -short it uses 200,000 tunnels, still far past where the quadratic version
-// was too slow. The limit is generous (about 10 s alone, 30 s alongside the
-// other packages' tests): it only has to tell linear from quadratic, which
-// takes over an hour.
-func TestAddManyTunnels(t *testing.T) {
-	n, limit := 1_500_000, 120*time.Second
-	if raceEnabled || testing.Short() {
-		n, limit = 200_000, 120*time.Second
-	}
+// addTunnels inventories n tunnels sharing one algorithm, each its own
+// protocol component, and returns the inventory and how long it took.
+func addTunnels(n int) (*Inventory, time.Duration) {
 	inv := NewInventory()
 	start := time.Now()
 	for i := 0; i < n; i++ {
@@ -72,13 +62,47 @@ func TestAddManyTunnels(t *testing.T) {
 		alg := inv.Add(&Asset{Type: AssetTypeAlgorithm, Name: "AES-256-GCM", Alg: &Algorithm{Primitive: "ae"}, Evidence: ev})
 		inv.Add(&Asset{Type: AssetTypeProtocol, Name: name, Proto: &Protocol{Type: "ike", Refs: []string{alg.ID}}, Evidence: ev})
 	}
-	elapsed := time.Since(start)
-	t.Logf("%d tunnels in %v", n, elapsed.Round(time.Millisecond))
-	if elapsed > limit {
-		t.Errorf("%d tunnels took %v, want under %v", n, elapsed, limit)
+	return inv, time.Since(start)
+}
+
+// TestAddScalesLinearly: inventorying 2n tunnels that share an algorithm
+// must take about twice as long as n, not four times. With a linear scan
+// for duplicate evidence it was quadratic (100,000 tunnels took 23 s), and a
+// crafted backup with millions of tunnels would not finish. The sizes are
+// run interleaved, three rounds, and the fastest time of each is compared,
+// so other tests running at the same time do not decide the result. Linear
+// code gives a ratio near 2 and the quadratic version near 4; the test fails
+// above 3.
+func TestAddScalesLinearly(t *testing.T) {
+	n := 100_000
+	if raceEnabled || testing.Short() {
+		n = 20_000
 	}
-	if len(inv.Assets) != n+1 || len(inv.Assets[0].Evidence) != n {
-		t.Errorf("assets %d, shared algorithm evidence %d; want %d and %d", len(inv.Assets), len(inv.Assets[0].Evidence), n+1, n)
+	best := map[int]time.Duration{}
+	for round := 0; round < 3; round++ {
+		for _, size := range []int{n, 2 * n} {
+			inv, d := addTunnels(size)
+			if len(inv.Assets) != size+1 || len(inv.Assets[0].Evidence) != size {
+				t.Fatalf("%d tunnels: assets %d, shared evidence %d", size, len(inv.Assets), len(inv.Assets[0].Evidence))
+			}
+			if b, ok := best[size]; !ok || d < b {
+				best[size] = d
+			}
+		}
+	}
+	ratio := float64(best[2*n]) / float64(best[n])
+	t.Logf("%d tunnels in %v, %d in %v: ratio %.2f", n, best[n].Round(time.Millisecond), 2*n, best[2*n].Round(time.Millisecond), ratio)
+	if ratio > 3 {
+		t.Errorf("doubling the tunnels multiplied the time by %.2f, want about 2 (linear); above 3 suggests quadratic growth", ratio)
+	}
+}
+
+// BenchmarkAdd1500kTunnels inventories 1.5 million tunnels sharing one
+// algorithm (about 10 s on the development machine), for a sense of scale:
+// go test -run '^$' -bench Add1500k ./pkg/model
+func BenchmarkAdd1500kTunnels(b *testing.B) {
+	for b.Loop() {
+		addTunnels(1_500_000)
 	}
 }
 

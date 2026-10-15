@@ -5,6 +5,44 @@ All notable changes to cbom-netscan are listed here. The format follows
 follow [Semantic Versioning](https://semver.org/); while the version is
 0.x, a minor release may change the output.
 
+## [0.1.2] - Unreleased
+
+### Security
+
+- A backup with very many tunnels could make cbom-netscan run for hours:
+  every tunnel merges a duplicate of its algorithms into one shared
+  component, and each merge scanned all of that component's evidence so
+  far, which is quadratic (100,000 tunnels took 23 s). Merging is now O(1)
+  per occurrence; 1.5 million tunnels sharing an algorithm take about 10 s.
+- Names from the backup (tunnels, certificates) and file names were printed
+  to stderr as they were, so a crafted name containing an ANSI escape
+  sequence could rewrite or clear the terminal, and a bidirectional override
+  could hide text in a warning. Everything printed to stderr, warnings and
+  errors, now has control characters, other non-printable characters, and
+  invalid UTF-8 escaped (for example `\x1b`, `\u202e`).
+
+### Added
+
+- `cbom-netscan version` reports the module version for a binary installed
+  with `go install`, and the commit and its time for a build in a Git
+  checkout, instead of `dev`.
+- GitHub issue forms that require confirming no real configuration is
+  attached; blank issues are disabled.
+- Dependabot also proposes Go module updates.
+
+### Changed
+
+- The help and the README say that the CBOM is confidential infrastructure
+  data, that only `-o` files are created with mode 0600 (stdout is not
+  protected), and that the output is an inventory, not a compliance
+  certification.
+- Release notes join the changelog's wrapped lines (GitHub shows each
+  newline in a release body as a line break), leave links inside code and
+  `<...>` alone, and the release workflow compares the whole published body
+  with them.
+- The README's verification commands use a `VERSION` placeholder instead of
+  a fixed release.
+
 ## [0.1.1] - 2026-10-15
 
 Release packaging fixes; the `cbom-netscan` program and its output are
@@ -116,5 +154,6 @@ never emitted until that commit. It should have been labelled `fix(emit)`.
 Tools that build release notes from commit types will file it under tests;
 this changelog is the reference. Published history is not rewritten.
 
+[0.1.2]: https://github.com/yechuri-github64/cbom-netscan/releases/tag/v0.1.2
 [0.1.1]: https://github.com/yechuri-github64/cbom-netscan/releases/tag/v0.1.1
 [0.1.0]: https://github.com/yechuri-github64/cbom-netscan/releases/tag/v0.1.0

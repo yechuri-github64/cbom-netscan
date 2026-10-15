@@ -1,10 +1,16 @@
 # SPDX-FileCopyrightText: 2026 contributors to cbom-netscan
 # SPDX-License-Identifier: Apache-2.0
 
-# Proposes updates to the SHA-pinned actions in .github/workflows.
+# Proposes updates to the SHA-pinned actions in .github/workflows and to the
+# Go modules in go.mod. Module updates are reviewed like any change: CI runs
+# go mod verify, govulncheck, and the tests on each pull request.
 version: 2
 updates:
   - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: gomod
     directory: /
     schedule:
       interval: weekly

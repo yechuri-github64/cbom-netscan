@@ -190,10 +190,11 @@ The last three are memory limits: a backup is untrusted input, and a small
 one can describe a huge inventory. The defaults keep peak memory at or
 below about 2 GB, enough for about 33,000 IPsec tunnels with phase2 and a
 pre-shared key, which covers Fortinet's documented maximum of 20,000
-tunnels on FortiGate 1800F-class models. A backup over a limit is refused
-with an error naming it, and no CBOM is written; raise the limit for a
-genuine larger backup (Fortinet's 3000F-class maximum of 40,000 tunnels
-needs about 2.3 GB). The measurements are in
+policy-based tunnels on FortiGate 1800F-class models (interface-mode
+tunnels have no fixed maximum in Fortinet's table). A backup over a limit
+is refused with an error naming it, and no CBOM is written; raise the limit
+for a genuine larger backup (Fortinet's 3000F-class maximum of 40,000
+policy-based tunnels needs about 2.3 GB). The measurements are in
 [SECURITY.md](SECURITY.md#resource-limits).
 
 Warnings go to stderr as `file:line: warning: message [code]`; the codes are

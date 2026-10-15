@@ -5,7 +5,7 @@ All notable changes to cbom-netscan are listed here. The format follows
 follow [Semantic Versioning](https://semver.org/); while the version is
 0.x, a minor release may change the output.
 
-## [0.1.0] - Unreleased
+## [0.1.0] - 2026-10-15
 
 First release. cbom-netscan reads a FortiOS configuration backup offline and
 writes a CycloneDX 1.6 CBOM. **FortiOS backups only; no live TLS scanning

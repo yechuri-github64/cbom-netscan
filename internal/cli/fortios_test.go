@@ -885,3 +885,22 @@ func TestFortiOS_ParserWarningsAddToEvidence(t *testing.T) {
 		t.Errorf("4 warnings + 10 occurrences with limit 13: err = %v, want refused naming 13", err)
 	}
 }
+
+// TestFortiOS_CoverageWarningCountsTowardLimit: the coverage warning
+// (section-not-inventoried) is the last thing added to the inventory, and
+// it counts like any warning: one tunnel's 10 evidence occurrences plus the
+// warning for a "config vpn qkd" section are 11, over --max-evidence 10.
+func TestFortiOS_CoverageWarningCountsTowardLimit(t *testing.T) {
+	in := filepath.Join(t.TempDir(), "cov.conf")
+	writeFile(t, in, "#config-version=FGVMH6-7.6.7-FW-build3704-260601:opmode=0:vdom=0:user=admin\n"+
+		"config vpn ipsec phase1-interface\n    edit \"r\"\n        set ike-version 2\n"+
+		"        set proposal aes256gcm-prfsha384 aes256-sha256\n        set dhgrp 20 21\n    next\nend\n"+
+		"config vpn qkd\nend\n")
+	if _, _, err := run(t, "fortios", in, "--max-evidence", "11"); err != nil {
+		t.Errorf("10 occurrences + 1 warning with limit 11: %v, want accepted", err)
+	}
+	_, _, err := run(t, "fortios", in, "--max-evidence", "10")
+	if err == nil || !strings.Contains(err.Error(), "needs more than 10 evidence occurrences and warnings") {
+		t.Errorf("10 occurrences + 1 warning with limit 10: err = %v, want refused", err)
+	}
+}

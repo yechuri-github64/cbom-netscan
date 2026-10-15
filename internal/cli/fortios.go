@@ -160,12 +160,14 @@ func runFortiOS(ctx context.Context, stdout, stderr io.Writer, in string, o fort
 	certs.Extract(tr, name, inv, now)
 	ipsec.Extract(tr, name, inv)
 	sslvpn.Extract(tr, name, inv)
-	if err := inv.Exceeded(); err != nil {
-		return limitErr(in, err)
-	}
 	cov := coverage.Check(tr)
 	if w := cov.Warning(name); w != nil {
 		inv.AddWarning(*w)
+	}
+	// Checked after the last addition, the coverage warning, so it is
+	// counted like every other warning.
+	if err := inv.Exceeded(); err != nil {
+		return limitErr(in, err)
 	}
 	meta.Properties = cov.Properties()
 

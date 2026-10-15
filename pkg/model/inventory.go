@@ -36,12 +36,38 @@ func NewInventory() *Inventory {
 // stored many times (see merge).
 func (inv *Inventory) Add(a *Asset) *Asset {
 	key := string(a.Type) + "\x00" + a.Name + "\x00" + a.OID
-	if existing, ok := inv.byKey[key]; ok {
+	existing, dup := inv.byKey[key]
+	if inv.exceeded != "" {
+		// Past a limit nothing more is stored, so memory stops growing;
+		// the caller checks Exceeded and does not emit a CBOM.
+		if dup {
+			return existing
+		}
+		inv.setID(a)
+		return a
+	}
+	if dup {
+		before := len(existing.Evidence)
 		inv.merge(existing, a)
+		inv.countEvidence(len(existing.Evidence) - before)
 		return existing
 	}
 
-	// Only a new asset needs a bom-ref; a duplicate keeps the stored one.
+	if inv.Limits.Components > 0 && len(inv.Assets) >= inv.Limits.Components {
+		inv.exceeded = "components"
+		inv.setID(a)
+		return a
+	}
+	inv.setID(a)
+	inv.byKey[key] = a
+	inv.Assets = append(inv.Assets, a)
+	inv.countEvidence(len(a.Evidence))
+	return a
+}
+
+// setID gives a new asset its bom-ref if it has none; a duplicate keeps the
+// stored asset's.
+func (inv *Inventory) setID(a *Asset) {
 	if a.ID == "" {
 		loc := ""
 		if len(a.Evidence) > 0 {
@@ -49,10 +75,41 @@ func (inv *Inventory) Add(a *Asset) *Asset {
 		}
 		a.ID = BOMRef(a.Type, a.Name, loc)
 	}
+}
 
-	inv.byKey[key] = a
-	inv.Assets = append(inv.Assets, a)
-	return a
+// countEvidence adds n stored evidence occurrences or warnings and notes when
+// Limits.Evidence is passed.
+func (inv *Inventory) countEvidence(n int) {
+	inv.evidence += n
+	if inv.Limits.Evidence > 0 && inv.evidence > inv.Limits.Evidence && inv.exceeded == "" {
+		inv.exceeded = "evidence"
+	}
+}
+
+// Exceeded reports whether a limit in inv.Limits was reached, as a
+// *LimitError. Once one is, later additions are not stored, so the inventory
+// is incomplete and must not be emitted.
+func (inv *Inventory) Exceeded() error {
+	switch inv.exceeded {
+	case "components":
+		return &LimitError{Kind: "components", Limit: inv.Limits.Components}
+	case "evidence":
+		return &LimitError{Kind: "evidence", Limit: inv.Limits.Evidence}
+	}
+	return nil
+}
+
+// LimitError says which inventory limit was reached.
+type LimitError struct {
+	Kind  string // "components" or "evidence"
+	Limit int
+}
+
+func (e *LimitError) Error() string {
+	if e.Kind == "components" {
+		return fmt.Sprintf("more than %d CBOM components", e.Limit)
+	}
+	return fmt.Sprintf("more than %d evidence occurrences and warnings", e.Limit)
 }
 
 // merge folds a duplicate into the stored asset so that the result does not
@@ -120,7 +177,11 @@ func (inv *Inventory) conflict(a *Asset, detail string) {
 
 // AddWarning appends a warning to the inventory.
 func (inv *Inventory) AddWarning(w Warning) {
+	if inv.exceeded != "" {
+		return
+	}
 	inv.Warnings = append(inv.Warnings, w)
+	inv.countEvidence(1)
 }
 
 // AddSource records a source artefact.  The Reader is not consumed here.

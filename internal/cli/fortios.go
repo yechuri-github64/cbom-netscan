@@ -78,20 +78,37 @@ certification.`,
 	cmd.Flags().BoolVar(&o.force, "force", false, "overwrite the output file if it already exists")
 	cmd.Flags().BoolVar(&o.reproducible, "reproducible", false, "derive serialNumber from the input and tool version; timestamp from SOURCE_DATE_EPOCH or omitted")
 	cmd.Flags().Int64Var(&o.maxSizeMiB, "max-size", 256, "refuse backups larger than this many MiB")
+	cmd.Flags().IntVar(&o.maxComponents, "max-components", defaultMaxComponents, "refuse backups that need more CBOM components than this (memory limit)")
+	cmd.Flags().IntVar(&o.maxEvidence, "max-evidence", defaultMaxEvidence, "refuse backups that need more evidence occurrences and warnings than this (memory limit)")
 	return cmd
 }
 
 type fortiosOpts struct {
-	out                 string
-	force, reproducible bool
-	maxSizeMiB          int64
-	version             string
+	out                        string
+	force, reproducible        bool
+	maxSizeMiB                 int64
+	maxComponents, maxEvidence int
+	version                    string
 }
+
+// Default inventory limits. Measured peak memory is about 19.5 KB per
+// component (a component with no evidence, the most per entry) and about
+// 1.2 KB per further evidence occurrence or warning, so a backup at both
+// limits peaks at about 2 GB. A real tunnel (phase1, phase2, pre-shared key)
+// is 3 components and about 15 evidence occurrences, so both limits allow
+// about 26,000 such tunnels. SECURITY.md has the measurements.
+const (
+	defaultMaxComponents = 100_000
+	defaultMaxEvidence   = 500_000
+)
 
 func runFortiOS(ctx context.Context, stdout, stderr io.Writer, in string, o fortiosOpts) error {
 	out, force, reproducible, version := o.out, o.force, o.reproducible, o.version
 	if o.maxSizeMiB <= 0 {
 		return fmt.Errorf("--max-size must be a positive number of MiB, got %d", o.maxSizeMiB)
+	}
+	if o.maxComponents <= 0 || o.maxEvidence <= 0 {
+		return fmt.Errorf("--max-components and --max-evidence must be positive, got %d and %d", o.maxComponents, o.maxEvidence)
 	}
 	if out != "" {
 		if err := checkOutput(in, out, force); err != nil {
@@ -128,11 +145,20 @@ func runFortiOS(ctx context.Context, stdout, stderr io.Writer, in string, o fort
 	}
 
 	name := filepath.Base(in)
+	// Parser warnings count toward the evidence limit too: a backup can
+	// produce one per line.
+	if len(tr.Warnings) > o.maxEvidence {
+		return limitErr(in, &model.LimitError{Kind: "evidence", Limit: o.maxEvidence})
+	}
 	inv := model.NewInventory()
+	inv.Limits = model.Limits{Components: o.maxComponents, Evidence: o.maxEvidence - len(tr.Warnings)}
 	global.Extract(tr, name, inv)
 	certs.Extract(tr, name, inv, now)
 	ipsec.Extract(tr, name, inv)
 	sslvpn.Extract(tr, name, inv)
+	if err := inv.Exceeded(); err != nil {
+		return limitErr(in, err)
+	}
 	cov := coverage.Check(tr)
 	if w := cov.Warning(name); w != nil {
 		inv.AddWarning(*w)
@@ -158,6 +184,13 @@ func runFortiOS(ctx context.Context, stdout, stderr io.Writer, in string, o fort
 		return err
 	}
 	return writeOutput(out, buf.Bytes(), force)
+}
+
+// limitErr explains a reached inventory limit. No CBOM is written: the
+// inventory stopped growing at the limit, so it would be incomplete.
+func limitErr(in string, err error) error {
+	return fmt.Errorf("%s: the backup needs %v; no CBOM was written. The limits keep peak memory near 2 GB "+
+		"(about 20 KB per component); if the backup is genuine, raise --max-components or --max-evidence", in, err)
 }
 
 // readLimited reads the whole backup but refuses one larger than maxMiB, so a

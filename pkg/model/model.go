@@ -172,11 +172,30 @@ type Inventory struct {
 	// must go through Add(); the emitter reads only Assets.
 	byKey map[string]*Asset
 
+	// Limits bounds what the inventory holds; see Limits and Exceeded.
+	Limits Limits
+	// evidence counts stored evidence occurrences and warnings, and
+	// exceeded names the limit that was reached, if any.
+	evidence int
+	exceeded string
+
 	// seen holds, for each stored asset that a duplicate was merged into,
 	// the set of its evidence occurrences, so a merge checks each new
 	// occurrence in O(1) instead of scanning all of them: an algorithm
 	// shared by every tunnel of a large backup is merged once per tunnel.
 	seen map[*Asset]*evidenceSet
+}
+
+// Limits caps the size of an inventory, so a crafted or unexpectedly large
+// backup cannot exhaust memory. A zero field means no limit.
+//
+// Components are the costly part: each needs about 20 KB at peak once the
+// CBOM is emitted. Evidence occurrences and warnings are counted separately
+// (about 1.2 KB each), because repeating one name in a backup grows them
+// without adding components.
+type Limits struct {
+	Components int // stored assets
+	Evidence   int // stored evidence occurrences plus warnings
 }
 
 // evidenceSet is the set of an asset's evidence occurrences. n is how many

@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -746,6 +747,52 @@ func TestHelp_MisuseGuidance(t *testing.T) {
 			if !strings.Contains(strings.Join(strings.Fields(stdout), " "), want) {
 				t.Errorf("%v help lacks %q", args, want)
 			}
+		}
+	}
+}
+
+// TestFortiOS_InventoryLimits: a backup that needs more components or
+// evidence than the limits allow fails with a message naming the limit and
+// the flags, and no CBOM file is written; within the limits it succeeds.
+func TestFortiOS_InventoryLimits(t *testing.T) {
+	dir := t.TempDir()
+	in := filepath.Join(dir, "many.conf")
+	var b strings.Builder
+	b.WriteString("#config-version=FGVMH6-7.6.7-FW-build3704-260601:opmode=0:vdom=0:user=admin\nconfig vpn ipsec phase1-interface\n")
+	for i := 0; i < 50; i++ {
+		b.WriteString("    edit \"t" + strconv.Itoa(i) + "\"\n        set proposal aes256-sha256\n    next\n")
+	}
+	b.WriteString("end\n")
+	writeFile(t, in, b.String())
+
+	for _, tc := range []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"components", []string{"--max-components", "10"}, "needs more than 10 CBOM components; no CBOM was written"},
+		{"evidence", []string{"--max-evidence", "20"}, "needs more than 20 evidence occurrences and warnings; no CBOM was written"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			out := filepath.Join(dir, tc.name+".cdx.json")
+			_, stderr, err := run(t, append([]string{"fortios", in, "-o", out}, tc.args...)...)
+			if err == nil || !strings.Contains(err.Error(), tc.want) || !strings.Contains(err.Error(), "raise --max-components or --max-evidence") {
+				t.Fatalf("err = %v, want %q", err, tc.want)
+			}
+			if !strings.Contains(stderr, "Error: ") {
+				t.Errorf("stderr = %q, want the error", stderr)
+			}
+			if _, statErr := os.Stat(out); statErr == nil {
+				t.Errorf("a CBOM was written despite the limit")
+			}
+		})
+	}
+	if _, _, err := run(t, "fortios", in, "-o", filepath.Join(dir, "ok.cdx.json"), "--max-components", "1000", "--max-evidence", "1000"); err != nil {
+		t.Errorf("within the limits: %v", err)
+	}
+	for _, args := range [][]string{{"--max-components", "0"}, {"--max-evidence", "-1"}} {
+		if _, _, err := run(t, append([]string{"fortios", in}, args...)...); err == nil || !strings.Contains(err.Error(), "must be positive") {
+			t.Errorf("%v: err = %v, want must be positive", args, err)
 		}
 	}
 }

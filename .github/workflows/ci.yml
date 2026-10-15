@@ -42,6 +42,24 @@ jobs:
       - name: gofmt
         run: test -z "$(gofmt -l .)"
 
+      # Bidirectional control characters can make source read differently
+      # from how it compiles or renders ("Trojan Source", CVE-2021-42574).
+      # Fail if any tracked text file contains U+202A-U+202E or
+      # U+2066-U+2069. The pattern matches their UTF-8 bytes (E2 80 AA-AE,
+      # E2 81 A6-A9), so it needs no PCRE support; -I skips binary files.
+      # Write such characters as escapes (\u202e) where they are needed.
+      - name: no bidi control characters
+        run: |
+          set +e
+          LC_ALL=C git grep -nIE $'\xe2\x80[\xaa-\xae]|\xe2\x81[\xa6-\xa9]' -- .
+          rc=$?
+          set -e
+          case $rc in
+            0) echo "::error::bidi control characters (U+202A-U+202E, U+2066-U+2069) in the lines above"; exit 1 ;;
+            1) echo "no bidi control characters in tracked files" ;;
+            *) echo "::error::git grep failed with status $rc"; exit 1 ;;
+          esac
+
       # go vet catches common correctness mistakes the compiler doesn't (e.g.
       # mismatched Printf format verbs, unreachable code, suspicious lock copies).
       - name: vet

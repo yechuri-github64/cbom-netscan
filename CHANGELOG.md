@@ -57,7 +57,8 @@ yet.**
 - CI: `go mod verify`, gofmt, vet, staticcheck, govulncheck, race-enabled
   tests, fuzz smoke runs, REUSE lint, and CycloneDX schema validation of
   every golden file. Releases for Linux, macOS, and Windows on amd64 and
-  arm64, with checksums, an SBOM per archive, and Sigstore keyless signing.
+  arm64, with checksums, an SBOM per archive, Sigstore keyless signing, and
+  build provenance attestations.
 
 ### Security
 

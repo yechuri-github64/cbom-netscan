@@ -63,7 +63,15 @@ tar -xzf cbom-netscan_0.1.0_linux_amd64.tar.gz cbom-netscan
 ```
 
 Each archive has a CycloneDX SBOM next to it
-(`cbom-netscan_0.1.0_linux_amd64.tar.gz.sbom.json`).
+(`cbom-netscan_0.1.0_linux_amd64.tar.gz.sbom.json`). Every archive and SBOM
+also has a SLSA build provenance attestation from the release workflow,
+which the GitHub CLI checks:
+
+```sh
+gh attestation verify cbom-netscan_0.1.0_linux_amd64.tar.gz \
+  --repo yechuri-github64/cbom-netscan \
+  --signer-workflow yechuri-github64/cbom-netscan/.github/workflows/release.yml
+```
 
 The archives are reproducible: rebuilding a release tag gives byte-identical
 archives (static build with `-trimpath`, the Go toolchain `go.mod` names,

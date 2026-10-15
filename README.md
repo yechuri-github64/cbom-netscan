@@ -65,7 +65,9 @@ tar -xzf cbom-netscan_0.1.0_linux_amd64.tar.gz cbom-netscan
 Each archive has a CycloneDX SBOM next to it
 (`cbom-netscan_0.1.0_linux_amd64.tar.gz.sbom.json`). Every archive and SBOM
 also has a SLSA build provenance attestation from the release workflow,
-which the GitHub CLI checks:
+which the GitHub CLI checks. `gh attestation verify` calls the GitHub API, so
+log in first with `gh auth login` (or set `GH_TOKEN`); logged out, it stops
+with "please run: gh auth login".
 
 ```sh
 gh attestation verify cbom-netscan_0.1.0_linux_amd64.tar.gz \

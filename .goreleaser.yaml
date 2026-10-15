@@ -105,8 +105,8 @@ release:
     name: cbom-netscan
   draft: true
 
-# Release notes come from CHANGELOG.md (see release.yml), not from commit
-# subjects: a commit's type does not always describe it (CHANGELOG.md notes
-# a6e40e8).
-changelog:
-  disable: true
+# Release notes come from CHANGELOG.md, passed by release.yml with
+# --release-notes; GoReleaser then uses that file and does not build notes
+# from commit subjects (a commit's type does not always describe it, see
+# a6e40e8 in CHANGELOG.md). Do not set changelog.disable: it skips the step
+# that reads --release-notes, which is why v0.1.0 had an empty body.

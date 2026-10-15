@@ -5,7 +5,7 @@ cbom-netscan turns a network appliance's configuration backup into a
 Materials (CBOM): the protocols, algorithms, certificates, and keys the
 device is configured to use, with the config line each one comes from.
 
-> **Status: v0.1.0 supports FortiOS configuration backups only.** It reads the
+> **Status: cbom-netscan 0.1.x supports FortiOS configuration backups only.** It reads the
 > backup file offline. There is **no live TLS scanning yet**, and no other
 > vendors. See [what it does not do](#limitations).
 
@@ -53,24 +53,25 @@ archive for your platform and `checksums.txt` from the
 then verify them:
 
 ```sh
+VERSION=X.Y.Z   # the release you downloaded, without the "v"
 # The checksums file is signed with Sigstore keyless signing (cosign v3).
 cosign verify-blob checksums.txt \
   --bundle checksums.txt.sigstore.json \
-  --certificate-identity "https://github.com/yechuri-github64/cbom-netscan/.github/workflows/release.yml@refs/tags/v0.1.0" \
+  --certificate-identity "https://github.com/yechuri-github64/cbom-netscan/.github/workflows/release.yml@refs/tags/v${VERSION}" \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 sha256sum --ignore-missing -c checksums.txt
-tar -xzf cbom-netscan_0.1.0_linux_amd64.tar.gz cbom-netscan
+tar -xzf "cbom-netscan_${VERSION}_linux_amd64.tar.gz" cbom-netscan
 ```
 
 Each archive has a CycloneDX SBOM next to it
-(`cbom-netscan_0.1.0_linux_amd64.tar.gz.sbom.json`). Every archive and SBOM
+(`cbom-netscan_${VERSION}_linux_amd64.tar.gz.sbom.json`). Every archive and SBOM
 also has a SLSA build provenance attestation from the release workflow,
 which the GitHub CLI checks. `gh attestation verify` calls the GitHub API, so
 log in first with `gh auth login` (or set `GH_TOKEN`); logged out, it stops
 with "please run: gh auth login".
 
 ```sh
-gh attestation verify cbom-netscan_0.1.0_linux_amd64.tar.gz \
+gh attestation verify "cbom-netscan_${VERSION}_linux_amd64.tar.gz" \
   --repo yechuri-github64/cbom-netscan \
   --signer-workflow yechuri-github64/cbom-netscan/.github/workflows/release.yml
 ```
@@ -86,7 +87,7 @@ files.
 **With Go 1.26 or later:**
 
 ```sh
-go install github.com/yechuri-github64/cbom-netscan/cmd/cbom-netscan@v0.1.0
+go install github.com/yechuri-github64/cbom-netscan/cmd/cbom-netscan@latest
 ```
 
 (`cbom-netscan version` then reports the module version, for example

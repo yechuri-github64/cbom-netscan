@@ -1,7 +1,8 @@
 # SPDX-FileCopyrightText: 2026 contributors to cbom-netscan
 # SPDX-License-Identifier: Apache-2.0
 
-# Release: on a v* tag, run the tests, then build and publish a draft GitHub
+# Release: on a v* tag, run the tests in a job without permissions, check
+# that the tagged commit is on main, then build and publish a draft GitHub
 # release with GoReleaser (.goreleaser.yaml): binaries for Linux, macOS, and
 # Windows on amd64 and arm64, checksums.txt, a CycloneDX SBOM per archive,
 # and a Sigstore keyless signature of checksums.txt
@@ -19,21 +20,52 @@ on:
   push:
     tags: ["v*"]
 
-# Nothing by default; the job asks for exactly what it needs.
+# Nothing by default; each job asks for exactly what it needs.
 permissions: {}
 
 jobs:
+  # The tests run in a job with no token permissions at all, so test code
+  # never runs with write access. (Checking out a private repository needs
+  # contents: read; this repository is public when it releases.)
+  test:
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      # Never release code that fails its tests (CI ran them on the commit,
+      # but the tag could point anywhere).
+      - name: test
+        run: go test -race ./...
+
   release:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: write # create the draft release and upload its files
       id-token: write # OIDC token that Sigstore keyless signing exchanges for a certificate
     steps:
-      # fetch-depth 0: GoReleaser reads the tags and the commit history.
+      # fetch-depth 0: GoReleaser reads the tags and the commit history, and
+      # the next step needs origin/main.
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
           persist-credentials: false
+
+      # Only release commits that are on main: a tag pushed on a side branch
+      # or an unmerged commit is refused.
+      - name: tagged commit is on main
+        run: |
+          tagged="$(git rev-parse "${GITHUB_REF}^{commit}")"
+          git rev-parse --verify --quiet refs/remotes/origin/main >/dev/null \
+            || { echo "::error::origin/main is not available in the checkout"; exit 1; }
+          git merge-base --is-ancestor "$tagged" refs/remotes/origin/main \
+            || { echo "::error::${GITHUB_REF_NAME} (${tagged}) is not an ancestor of origin/main"; exit 1; }
 
       # No module cache in the release job, so nothing restored from another
       # workflow's cache can end up in a release binary.
@@ -41,11 +73,6 @@ jobs:
         with:
           go-version-file: go.mod
           cache: false
-
-      # Never release code that fails its tests (CI ran them on the commit,
-      # but the tag could point anywhere).
-      - name: test
-        run: go test -race ./...
 
       - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
         with:

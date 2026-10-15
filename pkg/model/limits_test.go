@@ -123,3 +123,24 @@ func TestLimitsZeroAllowsNothing(t *testing.T) {
 		})
 	}
 }
+
+// TestCountExternalWarnings: warnings kept outside the inventory count
+// toward the evidence limit without being stored, and a LimitError reports
+// the configured limit.
+func TestCountExternalWarnings(t *testing.T) {
+	inv := NewInventory()
+	inv.Limits.Evidence = 5
+	inv.CountExternalWarnings(4)
+	inv.Add(tunnel(0)) // 5: at the limit
+	if err := inv.Exceeded(); err != nil {
+		t.Fatalf("at the limit: %v", err)
+	}
+	inv.Add(tunnel(1)) // 6
+	var le *LimitError
+	if err := inv.Exceeded(); !errors.As(err, &le) || le.Kind != "evidence" || le.Limit != 5 {
+		t.Fatalf("Exceeded() = %v, want an evidence LimitError reporting 5", err)
+	}
+	if len(inv.Warnings) != 0 {
+		t.Errorf("external warnings were stored: %v", inv.Warnings)
+	}
+}

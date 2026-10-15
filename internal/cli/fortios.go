@@ -152,7 +152,8 @@ func runFortiOS(ctx context.Context, stdout, stderr io.Writer, in string, o fort
 		return limitErr(in, &model.LimitError{Kind: "evidence", Limit: o.maxEvidence})
 	}
 	inv := model.NewInventory()
-	inv.Limits = model.Limits{Components: o.maxComponents, Evidence: o.maxEvidence - len(tr.Warnings)}
+	inv.Limits = model.Limits{Components: o.maxComponents, Evidence: o.maxEvidence}
+	inv.CountExternalWarnings(len(tr.Warnings))
 	global.Extract(tr, name, inv)
 	certs.Extract(tr, name, inv, now)
 	ipsec.Extract(tr, name, inv)

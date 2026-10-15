@@ -81,6 +81,13 @@ func (inv *Inventory) setID(a *Asset) {
 	}
 }
 
+// CountExternalWarnings counts n warnings that are kept outside the
+// inventory, such as the parser's, toward Limits.Evidence. The limit itself
+// stays the configured value, so a LimitError reports that value.
+func (inv *Inventory) CountExternalWarnings(n int) {
+	inv.countEvidence(n)
+}
+
 // countEvidence adds n stored evidence occurrences or warnings and notes when
 // Limits.Evidence is passed.
 func (inv *Inventory) countEvidence(n int) {

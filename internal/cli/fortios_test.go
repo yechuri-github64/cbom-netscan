@@ -850,12 +850,38 @@ func TestFortiOS_ParserWarningsAndEvidenceLimit(t *testing.T) {
 				}
 				return
 			}
-			if err == nil || !strings.Contains(err.Error(), "evidence occurrences and warnings; no CBOM was written") {
-				t.Fatalf("err = %v, want the evidence limit error", err)
+			// The error reports the flag's value, not what the parser
+			// warnings left of it.
+			if err == nil || !strings.Contains(err.Error(), "needs more than "+limit+" evidence occurrences and warnings; no CBOM was written") {
+				t.Fatalf("err = %v, want the evidence limit error naming %s", err, limit)
 			}
 			if statErr == nil {
 				t.Errorf("a CBOM was written despite the limit")
 			}
 		})
+	}
+}
+
+// TestFortiOS_EvidenceLimitErrorNamesTheFlagValue: with --max-evidence 30
+// and five parser warnings, the error says "more than 30", the value given,
+// not "more than 25", the budget left after the warnings.
+func TestFortiOS_EvidenceLimitErrorNamesTheFlagValue(t *testing.T) {
+	_, _, err := run(t, "fortios", limitBackup(t, 5, 50), "--max-evidence", "30")
+	if err == nil || !strings.Contains(err.Error(), "needs more than 30 evidence occurrences and warnings") || strings.Contains(err.Error(), "more than 25") {
+		t.Fatalf("err = %v, want it to name the limit 30", err)
+	}
+}
+
+// TestFortiOS_ParserWarningsAddToEvidence pins the arithmetic: one tunnel
+// gives 10 evidence occurrences, so with --max-evidence 13, three parser
+// warnings bring the total to exactly 13 (accepted) and four to 14
+// (refused, naming 13). If the warnings were not counted, both would pass.
+func TestFortiOS_ParserWarningsAddToEvidence(t *testing.T) {
+	if _, _, err := run(t, "fortios", limitBackup(t, 3, 1), "--max-evidence", "13"); err != nil {
+		t.Errorf("3 warnings + 10 occurrences with limit 13: %v, want accepted", err)
+	}
+	_, _, err := run(t, "fortios", limitBackup(t, 4, 1), "--max-evidence", "13")
+	if err == nil || !strings.Contains(err.Error(), "needs more than 13 evidence occurrences and warnings") {
+		t.Errorf("4 warnings + 10 occurrences with limit 13: err = %v, want refused naming 13", err)
 	}
 }

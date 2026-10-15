@@ -199,13 +199,16 @@ func sourceDateEpoch() (t time.Time, ok bool, err error) {
 }
 
 // printWarning writes one warning line. Warning messages are built by the
-// lexer, tree, and extractors without secret values, so they are safe to print.
+// lexer, tree, and extractors without secret values; the file name, message,
+// and code are passed through terminalSafe, since names in a message come
+// from the backup.
 func printWarning(w io.Writer, file string, wr model.Warning) {
+	file, msg, code := terminalSafe(file), terminalSafe(wr.Message), terminalSafe(wr.Code)
 	if wr.Ev.Line > 0 {
-		fmt.Fprintf(w, "%s:%d: warning: %s [%s]\n", file, wr.Ev.Line, wr.Message, wr.Code)
+		fmt.Fprintf(w, "%s:%d: warning: %s [%s]\n", file, wr.Ev.Line, msg, code)
 		return
 	}
-	fmt.Fprintf(w, "%s: warning: %s [%s]\n", file, wr.Message, wr.Code)
+	fmt.Fprintf(w, "%s: warning: %s [%s]\n", file, msg, code)
 }
 
 // checkOutput fails early, before any parsing, when the output would replace

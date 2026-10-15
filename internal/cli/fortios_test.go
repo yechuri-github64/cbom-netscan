@@ -36,7 +36,7 @@ func runVersion(t *testing.T, version string, args ...string) (string, string, e
 	root.SetOut(&stdout)
 	root.SetErr(&stderr)
 	root.SetArgs(args)
-	err := root.Execute()
+	err := execute(root)
 	return stdout.String(), stderr.String(), err
 }
 
@@ -678,5 +678,57 @@ func TestFortiOS_ForceSyncsDirectoryAfterRename(t *testing.T) {
 	}
 	if len(synced) != 1 || synced[0] != dir {
 		t.Errorf("synced directories = %q, want [%s]", synced, dir)
+	}
+}
+
+// TestTerminalSafe: control characters, other non-printable runes, and
+// invalid UTF-8 are escaped; printable text, quotes, and non-ASCII letters
+// are kept.
+func TestTerminalSafe(t *testing.T) {
+	for in, want := range map[string]string{
+		"plain text":                     "plain text",
+		`certificate "Fortinet_Factory"`: `certificate "Fortinet_Factory"`,
+		"vdom café, 日本":                  "vdom café, 日本",
+		"\x1b[31mred\x1b[0m":             `\x1b[31mred\x1b[0m`,
+		"title\x1b]0;pwned\x07":          `title\x1b]0;pwned\a`,
+		"line\nbreak\rreturn\ttab":       `line\nbreak\rreturn\ttab`,
+		"bidi \u202eevil":                "bidi \\u202eevil",
+		"del\x7f c1\u0085":               `del\x7f c1\u0085`,
+		"bad \xff utf8":                  `bad \xff utf8`,
+	} {
+		if got := terminalSafe(in); got != want {
+			t.Errorf("terminalSafe(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+// TestFortiOS_StderrEscapesControlCharacters: a tunnel name with an ANSI
+// escape sequence (from the backup) and a file name with one (from the
+// command line) reach stderr escaped, in warnings and in errors, so they
+// cannot change what the terminal shows.
+func TestFortiOS_StderrEscapesControlCharacters(t *testing.T) {
+	dir := t.TempDir()
+	in := filepath.Join(dir, "fw\x1b[2J.conf")
+	writeFile(t, in, "#config-version=FGVMH6-7.6.7-FW-build3704-260601:opmode=0:vdom=0:user=admin\n"+
+		"config vpn ipsec phase1-interface\n"+
+		"    edit \"\x1b[31mevil\x1b[0m\u202e\"\n"+
+		"        set psksecret c3ludGhldGljLXBsYWluLXBzaw\n"+
+		"    next\nend\n")
+	_, stderr, err := run(t, "fortios", in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stderr, "fw\\x1b[2J.conf:4: warning: FortiOS IPsec phase1-interface \\x1b[31mevil\\x1b[0m\\u202e has a plaintext pre-shared key") {
+		t.Errorf("warning not escaped as expected:\n%q", stderr)
+	}
+	// An error names the input path.
+	_, stderr2, err := run(t, "fortios", filepath.Join(dir, "missing\x1b[2J.conf"))
+	if err == nil || !strings.Contains(stderr2, `Error: `) || !strings.Contains(stderr2, `missing\x1b[2J.conf`) {
+		t.Errorf("error not printed escaped: err=%v stderr=%q", err, stderr2)
+	}
+	for _, s := range []string{stderr, stderr2} {
+		if strings.ContainsAny(s, "\x1b\u202e") {
+			t.Errorf("stderr contains a raw escape or bidi control: %q", s)
+		}
 	}
 }

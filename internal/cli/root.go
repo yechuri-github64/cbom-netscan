@@ -7,6 +7,8 @@
 package cli
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 )
 
@@ -41,6 +43,8 @@ CBOM or printed in warnings.`,
 		// Usage is for argument mistakes; runtime errors such as a parse
 		// failure print only the error.
 		SilenceUsage: true,
+		// Errors are printed by execute, escaped for the terminal.
+		SilenceErrors: true,
 	}
 	root.AddCommand(newVersionCmd(version, commit, date))
 	root.AddCommand(newFortiOSCmd(version))
@@ -50,5 +54,15 @@ CBOM or printed in warnings.`,
 // Execute builds the command tree and runs it with the process arguments.
 // It returns the error instead of calling os.Exit so main decides the exit code.
 func Execute(version, commit, date string) error {
-	return newRootCmd(version, commit, date).Execute()
+	return execute(newRootCmd(version, commit, date))
+}
+
+// execute runs root and prints a returned error to its stderr, escaped with
+// terminalSafe: an error can include a path from the command line.
+func execute(root *cobra.Command) error {
+	err := root.Execute()
+	if err != nil {
+		fmt.Fprintln(root.ErrOrStderr(), "Error:", terminalSafe(err.Error()))
+	}
+	return err
 }

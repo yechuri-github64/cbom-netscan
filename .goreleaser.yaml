@@ -69,6 +69,14 @@ archives:
         info: *fileinfo
       - src: MAPPING.md
         info: *fileinfo
+      # REUSE.toml and the license text, so each archive is REUSE compliant
+      # on its own (REUSE.toml also covers the binary, which has no header).
+      # Only Apache-2.0: nothing in an archive is CC0-1.0 (that covers test
+      # fixtures and go.mod), and REUSE rejects a license text no file uses.
+      - src: REUSE.toml
+        info: *fileinfo
+      - src: LICENSES/Apache-2.0.txt
+        info: *fileinfo
 
 checksum:
   name_template: checksums.txt

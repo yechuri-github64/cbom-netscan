@@ -30,3 +30,11 @@ SPDX-License-Identifier = "CC0-1.0"
 path = ["docs/**", "*.md", "NOTICE"]
 SPDX-FileCopyrightText = "2026 contributors to cbom-netscan"
 SPDX-License-Identifier = "Apache-2.0"
+
+# The cbom-netscan binary, built from this source (go build or a release
+# archive). It cannot carry a header, so this entry covers it in a checkout
+# and in each release archive, which ships this file.
+[[annotations]]
+path = ["cbom-netscan", "cbom-netscan.exe"]
+SPDX-FileCopyrightText = "2026 contributors to cbom-netscan"
+SPDX-License-Identifier = "Apache-2.0"

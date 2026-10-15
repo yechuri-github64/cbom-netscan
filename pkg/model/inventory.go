@@ -14,7 +14,11 @@ import (
 // Always use this constructor; the zero value of Inventory has a nil map
 // and will panic on Add().
 func NewInventory() *Inventory {
-	return &Inventory{byKey: make(map[string]*Asset), seen: make(map[*Asset]*evidenceSet)}
+	return &Inventory{
+		byKey:  make(map[string]*Asset),
+		seen:   make(map[*Asset]*evidenceSet),
+		Limits: Limits{Components: NoLimit, Evidence: NoLimit},
+	}
 }
 
 // Add inserts an asset into the inventory and returns the asset that is
@@ -53,7 +57,7 @@ func (inv *Inventory) Add(a *Asset) *Asset {
 		return existing
 	}
 
-	if inv.Limits.Components > 0 && len(inv.Assets) >= inv.Limits.Components {
+	if len(inv.Assets) >= inv.Limits.Components {
 		inv.exceeded = "components"
 		inv.setID(a)
 		return a
@@ -81,7 +85,7 @@ func (inv *Inventory) setID(a *Asset) {
 // Limits.Evidence is passed.
 func (inv *Inventory) countEvidence(n int) {
 	inv.evidence += n
-	if inv.Limits.Evidence > 0 && inv.evidence > inv.Limits.Evidence && inv.exceeded == "" {
+	if inv.evidence > inv.Limits.Evidence && inv.exceeded == "" {
 		inv.exceeded = "evidence"
 	}
 }

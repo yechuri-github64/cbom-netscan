@@ -19,7 +19,7 @@ func tunnel(i int) *Asset {
 // Exceeded reports it.
 func TestLimitsComponents(t *testing.T) {
 	inv := NewInventory()
-	inv.Limits = Limits{Components: 3}
+	inv.Limits.Components = 3 // evidence stays NoLimit
 	for i := 0; i < 3; i++ {
 		inv.Add(tunnel(i))
 	}
@@ -79,14 +79,47 @@ func TestLimitsEvidence(t *testing.T) {
 	}
 }
 
-// TestLimitsZeroMeansNone: an inventory without limits never reports one.
-func TestLimitsZeroMeansNone(t *testing.T) {
+// TestLimitsNoLimitByDefault: a new inventory has NoLimit in both fields
+// and never reports a limit.
+func TestLimitsNoLimitByDefault(t *testing.T) {
 	inv := NewInventory()
+	if inv.Limits != (Limits{Components: NoLimit, Evidence: NoLimit}) {
+		t.Fatalf("NewInventory().Limits = %+v, want NoLimit in both", inv.Limits)
+	}
 	for i := 0; i < 1000; i++ {
 		inv.Add(tunnel(i))
 		inv.AddWarning(Warning{Code: "w"})
 	}
 	if err := inv.Exceeded(); err != nil || len(inv.Assets) != 1000 {
 		t.Errorf("Exceeded() = %v with %d assets, want nil and 1000", err, len(inv.Assets))
+	}
+}
+
+// TestLimitsZeroAllowsNothing: zero is a limit like any other, not "no
+// limit", so a limit computed down to zero (for example a budget used up by
+// parser warnings) fails closed instead of switching the limit off.
+func TestLimitsZeroAllowsNothing(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		limits Limits
+		kind   string
+	}{
+		{"evidence", Limits{Components: NoLimit, Evidence: 0}, "evidence"},
+		{"components", Limits{Components: 0, Evidence: NoLimit}, "components"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			inv := NewInventory()
+			inv.Limits = tc.limits
+			for i := 0; i < 100; i++ {
+				inv.Add(tunnel(i))
+			}
+			var le *LimitError
+			if err := inv.Exceeded(); !errors.As(err, &le) || le.Kind != tc.kind || le.Limit != 0 {
+				t.Fatalf("Exceeded() = %v, want a %s LimitError at 0", err, tc.kind)
+			}
+			if len(inv.Assets) > 1 {
+				t.Errorf("%d assets stored under a zero limit", len(inv.Assets))
+			}
+		})
 	}
 }

@@ -9,7 +9,10 @@
 // certificateProperties.fingerprint in 1.7).
 package model
 
-import "time"
+import (
+	"math"
+	"time"
+)
 
 // AssetType values equal the CycloneDX cryptoProperties.assetType enum.
 type AssetType string
@@ -187,7 +190,9 @@ type Inventory struct {
 }
 
 // Limits caps the size of an inventory, so a crafted or unexpectedly large
-// backup cannot exhaust memory. A zero field means no limit.
+// backup cannot exhaust memory. Each field is a maximum: NoLimit allows any
+// number, and NewInventory starts with NoLimit in both. Zero allows nothing;
+// it never means "no limit", so a limit computed down to zero fails closed.
 //
 // Components are the costly part: each needs about 20 KB at peak once the
 // CBOM is emitted. Evidence occurrences and warnings are counted separately
@@ -197,6 +202,9 @@ type Limits struct {
 	Components int // stored assets
 	Evidence   int // stored evidence occurrences plus warnings
 }
+
+// NoLimit as a Limits field allows any number.
+const NoLimit = math.MaxInt
 
 // evidenceSet is the set of an asset's evidence occurrences. n is how many
 // of the asset's Evidence entries it covers, so occurrences appended to the

@@ -796,3 +796,66 @@ func TestFortiOS_InventoryLimits(t *testing.T) {
 		}
 	}
 }
+
+// limitBackup is a synthetic backup with warnings parser warnings (each
+// "config global" block in a single-VDOM backup gives one) and, if repeats is
+// above zero, one tunnel name repeated that many times, which adds evidence
+// occurrences without adding components.
+func limitBackup(t *testing.T, warnings, repeats int) string {
+	t.Helper()
+	var b strings.Builder
+	b.WriteString("#config-version=FGVMH6-7.6.7-FW-build3704-260601:opmode=0:vdom=0:user=admin\n")
+	b.WriteString(strings.Repeat("config global\nend\n", warnings))
+	if repeats > 0 {
+		b.WriteString("config vpn ipsec phase1-interface\n")
+		for i := 0; i < repeats; i++ {
+			b.WriteString("    edit \"r\"\n        set ike-version 2\n        set proposal aes256gcm-prfsha384 aes256-sha256\n        set dhgrp 20 21\n    next\n")
+		}
+		b.WriteString("end\n")
+	}
+	path := filepath.Join(t.TempDir(), "limit.conf")
+	writeFile(t, path, b.String())
+	return path
+}
+
+// TestFortiOS_ParserWarningsAndEvidenceLimit: parser warnings count toward
+// --max-evidence. As many warnings as the limit used to leave an evidence
+// budget of zero, which the inventory read as "no limit", so the backup was
+// accepted with any amount of evidence. Now exactly as many warnings as the
+// limit is refused, and one fewer leaves room for one occurrence, so the
+// evidence of a few tunnels still hits the limit.
+func TestFortiOS_ParserWarningsAndEvidenceLimit(t *testing.T) {
+	const limit = "5"
+	for _, tc := range []struct {
+		name              string
+		warnings, repeats int
+		refused           bool
+	}{
+		{"warnings equal the limit, no evidence", 5, 0, true},
+		{"warnings equal the limit, with evidence (the bypass)", 5, 50, true},
+		{"warnings one below, with evidence", 4, 50, true},
+		{"warnings one below, no evidence", 4, 0, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			in := limitBackup(t, tc.warnings, tc.repeats)
+			out := filepath.Join(t.TempDir(), "out.cdx.json")
+			_, stderr, err := run(t, "fortios", in, "-o", out, "--max-evidence", limit)
+			_, statErr := os.Stat(out)
+			if !tc.refused {
+				if err != nil || statErr != nil {
+					t.Fatalf("refused (err %v, output %v), want a CBOM", err, statErr)
+				}
+				if n := strings.Count(stderr, "[vdom-mode-conflict]"); n != tc.warnings {
+					t.Errorf("%d parser warnings printed, want %d", n, tc.warnings)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), "evidence occurrences and warnings; no CBOM was written") {
+				t.Fatalf("err = %v, want the evidence limit error", err)
+			}
+			if statErr == nil {
+				t.Errorf("a CBOM was written despite the limit")
+			}
+		})
+	}
+}

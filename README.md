@@ -78,9 +78,8 @@ gh attestation verify cbom-netscan_0.1.0_linux_amd64.tar.gz \
 The archives are reproducible: rebuilding a release tag gives byte-identical
 archives (static build with `-trimpath`, the Go toolchain `go.mod` names,
 fixed file owner, and the commit time as every timestamp). The SBOMs and
-`checksums.txt` are not: each SBOM records when it was generated, a random
-serial number, and the random temporary directory syft unpacked the archive
-into, and `checksums.txt` lists the SBOMs' hashes too. To check a
+`checksums.txt` are not: each SBOM records when it was generated and a
+random serial number, and `checksums.txt` lists the SBOMs' hashes too. To check a
 rebuild, compare the archives' own SHA-256 hashes, not two `checksums.txt`
 files.
 

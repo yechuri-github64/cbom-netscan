@@ -74,18 +74,19 @@ checksum:
   name_template: checksums.txt
   algorithm: sha256
 
-# One SBOM per archive, written by syft next to it as
-# <archive>.sbom.json. CycloneDX instead of goreleaser's SPDX default, and
-# without syft's --enrich, which looks things up online.
+# One CycloneDX 1.6 SBOM per archive, next to it as <archive>.sbom.json,
+# written by .github/scripts/sbom.sh with syft: the subject is named
+# cbom-netscan at the release version, and the binary is listed by its name
+# in the archive, without syft's temporary unpacking directory. GoReleaser
+# runs the command from dist/, hence the ../ path.
 sboms:
   - id: archive-sbom
     artifacts: archive
+    cmd: sh
     documents:
       - "{{ .ArtifactName }}.sbom.json"
-    args: ["$artifact", "--output", "cyclonedx-json=$document"]
+    args: ["../.github/scripts/sbom.sh", "$artifact", "$document", "{{ .Version }}"]
     env:
-      # goreleaser's default, kept: setting env replaces the defaults.
-      - SYFT_FILE_METADATA_CATALOGER_ENABLED=true
       # No call to syft's update server during a release build.
       - SYFT_CHECK_FOR_APP_UPDATE=false
 

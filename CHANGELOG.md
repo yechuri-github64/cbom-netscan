@@ -5,7 +5,7 @@ All notable changes to cbom-netscan are listed here. The format follows
 follow [Semantic Versioning](https://semver.org/); while the version is
 0.x, a minor release may change the output.
 
-## [0.1.1] - Unreleased
+## [0.1.1] - 2026-10-15
 
 Release packaging fixes; the `cbom-netscan` program and its output are
 unchanged.

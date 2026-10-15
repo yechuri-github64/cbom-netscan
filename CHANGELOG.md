@@ -12,8 +12,11 @@ follow [Semantic Versioning](https://semver.org/); while the version is
 - A backup with very many tunnels could make cbom-netscan run for hours:
   every tunnel merges a duplicate of its algorithms into one shared
   component, and each merge scanned all of that component's evidence so
-  far, which is quadratic (100,000 tunnels took 23 s). Merging is now O(1)
-  per occurrence; 1.5 million tunnels sharing an algorithm take about 10 s.
+  far, which is quadratic. Merging is now O(1) per occurrence. Measured with
+  the `fortios` command on a synthetic backup of 25,000 IPsec tunnels
+  (phase1, phase2, pre-shared key; 75,000 components), the median of
+  several runs is about 6 s, against about 34 s with 0.1.1; for 10,000
+  tunnels, about 2 s against about 6 s.
 - Names from the backup (tunnels, certificates) and file names were printed
   to stderr as they were, so a crafted name containing an ANSI escape
   sequence could rewrite or clear the terminal, and a bidirectional override

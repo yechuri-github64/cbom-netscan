@@ -144,3 +144,21 @@ func TestCountExternalWarnings(t *testing.T) {
 		t.Errorf("external warnings were stored: %v", inv.Warnings)
 	}
 }
+
+// TestLimitErrorMessage: a passed limit says "more than N"; one that is only
+// reached (AtLeast) says "N or more".
+func TestLimitErrorMessage(t *testing.T) {
+	for _, tc := range []struct {
+		err  LimitError
+		want string
+	}{
+		{LimitError{Kind: "components", Limit: 10}, "more than 10 CBOM components"},
+		{LimitError{Kind: "evidence", Limit: 5}, "more than 5 evidence occurrences and warnings"},
+		{LimitError{Kind: "evidence", Limit: 5, AtLeast: true}, "5 or more evidence occurrences and warnings"},
+		{LimitError{Kind: "components", Limit: 10, AtLeast: true}, "10 or more CBOM components"},
+	} {
+		if got := tc.err.Error(); got != tc.want {
+			t.Errorf("%+v: %q, want %q", tc.err, got, tc.want)
+		}
+	}
+}

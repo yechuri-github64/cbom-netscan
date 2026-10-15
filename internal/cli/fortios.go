@@ -149,9 +149,9 @@ func runFortiOS(ctx context.Context, stdout, stderr io.Writer, in string, o fort
 	name := filepath.Base(in)
 	// Parser warnings count toward the evidence limit too: a backup can
 	// produce one per line. As many as the limit leave no room for any
-	// evidence, so that is refused as well.
+	// evidence, so that is refused as well ("N or more").
 	if len(tr.Warnings) >= o.maxEvidence {
-		return limitErr(in, &model.LimitError{Kind: "evidence", Limit: o.maxEvidence})
+		return limitErr(in, &model.LimitError{Kind: "evidence", Limit: o.maxEvidence, AtLeast: true})
 	}
 	inv := model.NewInventory()
 	inv.Limits = model.Limits{Components: o.maxComponents, Evidence: o.maxEvidence}

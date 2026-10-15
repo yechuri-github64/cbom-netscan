@@ -829,19 +829,22 @@ func TestFortiOS_ParserWarningsAndEvidenceLimit(t *testing.T) {
 	for _, tc := range []struct {
 		name              string
 		warnings, repeats int
-		refused           bool
+		refused           string // the limit as the error states it; "" if accepted
 	}{
-		{"warnings equal the limit, no evidence", 5, 0, true},
-		{"warnings equal the limit, with evidence (the bypass)", 5, 50, true},
-		{"warnings one below, with evidence", 4, 50, true},
-		{"warnings one below, no evidence", 4, 0, false},
+		// Warnings alone reach the limit: refused, and said as "5 or more".
+		{"warnings equal the limit, no evidence", 5, 0, "5 or more"},
+		{"warnings equal the limit, with evidence (the bypass)", 5, 50, "5 or more"},
+		{"warnings above the limit", 6, 0, "5 or more"},
+		// The evidence passes the limit: "more than 5".
+		{"warnings one below, with evidence", 4, 50, "more than 5"},
+		{"warnings one below, no evidence", 4, 0, ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			in := limitBackup(t, tc.warnings, tc.repeats)
 			out := filepath.Join(t.TempDir(), "out.cdx.json")
 			_, stderr, err := run(t, "fortios", in, "-o", out, "--max-evidence", limit)
 			_, statErr := os.Stat(out)
-			if !tc.refused {
+			if tc.refused == "" {
 				if err != nil || statErr != nil {
 					t.Fatalf("refused (err %v, output %v), want a CBOM", err, statErr)
 				}
@@ -851,9 +854,9 @@ func TestFortiOS_ParserWarningsAndEvidenceLimit(t *testing.T) {
 				return
 			}
 			// The error reports the flag's value, not what the parser
-			// warnings left of it.
-			if err == nil || !strings.Contains(err.Error(), "needs more than "+limit+" evidence occurrences and warnings; no CBOM was written") {
-				t.Fatalf("err = %v, want the evidence limit error naming %s", err, limit)
+			// warnings left of it, and says whether it was reached or passed.
+			if err == nil || !strings.Contains(err.Error(), "needs "+tc.refused+" evidence occurrences and warnings; no CBOM was written") {
+				t.Fatalf("err = %v, want the evidence limit error saying %q", err, tc.refused)
 			}
 			if statErr == nil {
 				t.Errorf("a CBOM was written despite the limit")

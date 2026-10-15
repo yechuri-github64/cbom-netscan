@@ -114,13 +114,21 @@ func (inv *Inventory) Exceeded() error {
 type LimitError struct {
 	Kind  string // "components" or "evidence"
 	Limit int
+	// AtLeast is set when the count already equals the limit, not above it,
+	// and the caller refuses that too (as the fortios command does for
+	// parser warnings alone); the message then says "N or more".
+	AtLeast bool
 }
 
 func (e *LimitError) Error() string {
+	what := "evidence occurrences and warnings"
 	if e.Kind == "components" {
-		return fmt.Sprintf("more than %d CBOM components", e.Limit)
+		what = "CBOM components"
 	}
-	return fmt.Sprintf("more than %d evidence occurrences and warnings", e.Limit)
+	if e.AtLeast {
+		return fmt.Sprintf("%d or more %s", e.Limit, what)
+	}
+	return fmt.Sprintf("more than %d %s", e.Limit, what)
 }
 
 // merge folds a duplicate into the stored asset so that the result does not

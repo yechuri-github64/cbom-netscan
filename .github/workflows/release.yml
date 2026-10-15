@@ -93,13 +93,14 @@ jobs:
         run: echo "$(dirname "$SYFT_CMD")" >> "$GITHUB_PATH"
 
       # The release notes are the "## [X.Y.Z]" section of CHANGELOG.md for
-      # tag vX.Y.Z, with relative links made absolute. The script fails if
-      # the section is missing, still Unreleased, or empty apart from the tag
-      # name, so the changelog is dated and filled in before a release.
+      # tag vX.Y.Z, with wrapped lines joined and relative links made
+      # absolute (internal/tools/releasenotes). It fails if the section is
+      # missing, still Unreleased, or empty apart from the tag name, so the
+      # changelog is dated and filled in before a release.
       - name: release notes from CHANGELOG.md
         env:
           TAG: ${{ github.ref_name }}
-        run: .github/scripts/release-notes.sh "$TAG" "$GITHUB_REPOSITORY" > "$RUNNER_TEMP/notes.md"
+        run: go run ./internal/tools/releasenotes "$TAG" "$GITHUB_REPOSITORY" > "$RUNNER_TEMP/notes.md"
 
       - uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
         with:
@@ -110,20 +111,19 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # v0.1.0 was published with an empty body (GitHub showed only the tag
-      # name) because GoReleaser dropped the notes. Check that the release
-      # body is the changelog section before anything else happens.
+      # name) because GoReleaser dropped the notes. Check that the published
+      # body is exactly the notes (GoReleaser adds only a trailing newline;
+      # line endings and trailing newlines are normalised before comparing).
       - name: release body is the changelog section
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.ref_name }}
         run: |
-          body="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body)"
-          trimmed="$(printf '%s' "$body" | tr -d '[:space:]')"
-          first="$(grep -m1 '[^[:space:]]' "$RUNNER_TEMP/notes.md")"
-          if [ -z "$trimmed" ] || [ "$trimmed" = "$TAG" ] || [ "$trimmed" = "${TAG#v}" ]; then
-            echo "::error::the release body is empty or only the tag name"; exit 1
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body > "$RUNNER_TEMP/body.md"
+          normalise() { tr -d '\r' < "$1" | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}'; }
+          if ! diff <(normalise "$RUNNER_TEMP/notes.md") <(normalise "$RUNNER_TEMP/body.md"); then
+            echo "::error::the release body differs from the CHANGELOG.md section (diff above)"; exit 1
           fi
-          grep -qF -- "$first" <<<"$body" || { echo "::error::the release body is not the CHANGELOG.md section"; exit 1; }
 
       # SLSA build provenance for every file in checksums.txt (archives and
       # SBOMs), signed with Sigstore and stored as GitHub attestations.

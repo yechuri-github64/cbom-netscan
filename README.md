@@ -169,6 +169,19 @@ timestamp and certificate-expiry reference time come from
 
 Evidence records the backup's file name only, never its full path.
 
+### Treat the CBOM as confidential
+
+A CBOM holds no secret values, but it is still confidential infrastructure
+data: it names the device's VPN tunnels and certificates, gives certificate
+subjects and issuers, and shows exactly which weak or quantum-vulnerable
+algorithms are enabled where, which is a map for an attacker. Store and
+share it like the device's configuration, not like public documentation.
+Files written with `-o` are created with mode `0600` (owner only). With
+`--force`, the new CBOM is written to a temporary file in the same directory
+and renamed over the old one, so the replacement is atomic, a failed write
+leaves the old file intact, and a symlink at the output path is replaced
+rather than followed.
+
 ## Limitations
 
 - FortiOS configuration backups only. No live TLS scanning, no other vendors

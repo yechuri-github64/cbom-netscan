@@ -66,6 +66,10 @@ yet.**
   reported. Private keys are classified by their PEM header lines and never
   decoded; only CERTIFICATE blocks are decoded.
 - Evidence records the backup's file name only, not its path.
+- CBOM files written with `-o` have mode 0600, since a CBOM is confidential
+  infrastructure data. `--force` replaces the file atomically through a
+  temporary file and a rename, without following a symlink at the output
+  path.
 
 ### Known limitations
 

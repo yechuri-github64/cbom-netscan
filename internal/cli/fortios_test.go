@@ -12,6 +12,7 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -525,5 +526,119 @@ func TestFortiOS_ExpiryReferenceTime(t *testing.T) {
 	}
 	if !strings.Contains(stderr, "old-expired expired on 2024-12-31 [cert-expired]") || !strings.Contains(out, "cbom-netscan:cert:expiry-checked-at") {
 		t.Errorf("default run did not check expiry against the clock:\n%s", stderr)
+	}
+}
+
+// TestFortiOS_OutputMode0600: a CBOM written with -o is readable by its owner
+// only, whether it is a new file or replaces one with --force.
+func TestFortiOS_OutputMode0600(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix permission bits")
+	}
+	dir := t.TempDir()
+	fresh := filepath.Join(dir, "new.cdx.json")
+	if _, _, err := run(t, "fortios", fixture, "-o", fresh); err != nil {
+		t.Fatal(err)
+	}
+	replaced := filepath.Join(dir, "old.cdx.json")
+	writeFile(t, replaced, "old")
+	if err := os.Chmod(replaced, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := run(t, "fortios", fixture, "-o", replaced, "--force"); err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range []string{fresh, replaced} {
+		fi, err := os.Stat(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if mode := fi.Mode().Perm(); mode != 0o600 {
+			t.Errorf("%s: mode %o, want 600", filepath.Base(p), mode)
+		}
+	}
+}
+
+// TestFortiOS_ForceReplacesSymlink: --force replaces a symlink at the output
+// path with the CBOM file; the file the link pointed to is not touched.
+func TestFortiOS_ForceReplacesSymlink(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, "precious.txt")
+	writeFile(t, target, "do not overwrite")
+	out := filepath.Join(dir, "out.cdx.json")
+	if err := os.Symlink(target, out); err != nil {
+		t.Skipf("cannot create symlinks here: %v", err)
+	}
+	if _, _, err := run(t, "fortios", fixture, "-o", out); err == nil {
+		t.Errorf("without --force, writing over a symlink succeeded")
+	}
+	t.Setenv("SOURCE_DATE_EPOCH", "1791676800")
+	if _, _, err := run(t, "fortios", fixture, "-o", out, "--force", "--reproducible"); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := os.ReadFile(target); string(got) != "do not overwrite" {
+		t.Errorf("the symlink's target was overwritten: %q", got)
+	}
+	fi, err := os.Lstat(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !fi.Mode().IsRegular() {
+		t.Errorf("output is %v, want a regular file replacing the symlink", fi.Mode().Type())
+	}
+	if got, _ := os.ReadFile(out); !bytes.Equal(got, readGolden(t)) {
+		t.Errorf("output is not the golden CBOM")
+	}
+	noTempFiles(t, dir)
+}
+
+// TestFortiOS_ForceFailureKeepsOldFile: when --force cannot write the new
+// file, the existing one is left as it was and no temporary file remains.
+func TestFortiOS_ForceFailureKeepsOldFile(t *testing.T) {
+	// The output path is a non-empty directory: the rename fails.
+	dir := t.TempDir()
+	out := filepath.Join(dir, "out.cdx.json")
+	if err := os.MkdirAll(filepath.Join(out, "inside"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := run(t, "fortios", fixture, "-o", out, "--force"); err == nil {
+		t.Errorf("--force over a directory succeeded")
+	}
+	if fi, err := os.Stat(filepath.Join(out, "inside")); err != nil || !fi.IsDir() {
+		t.Errorf("the directory at the output path was changed: %v", err)
+	}
+	noTempFiles(t, dir)
+
+	// The directory is not writable: the temporary file cannot be created.
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		return // permission bits are not enforced
+	}
+	ro := t.TempDir()
+	old := filepath.Join(ro, "old.cdx.json")
+	writeFile(t, old, "previous CBOM")
+	if err := os.Chmod(ro, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(ro, 0o700) })
+	if _, _, err := run(t, "fortios", fixture, "-o", old, "--force"); err == nil {
+		t.Errorf("--force in a read-only directory succeeded")
+	}
+	if got, _ := os.ReadFile(old); string(got) != "previous CBOM" {
+		t.Errorf("the existing file was changed: %q", got)
+	}
+	noTempFiles(t, ro)
+}
+
+// noTempFiles fails if dir holds a leftover temporary file from replaceFile.
+func noTempFiles(t *testing.T, dir string) {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range entries {
+		if strings.HasSuffix(e.Name(), ".tmp") {
+			t.Errorf("temporary file left behind: %s", e.Name())
+		}
 	}
 }

@@ -225,13 +225,18 @@ func checkOutput(in, out string, force bool) error {
 	return nil
 }
 
-// writeOutput writes data to path. Without force the file is created with
-// O_EXCL, so a file that appeared after checkOutput is still not replaced.
+// outputMode is the permission for CBOM files: a CBOM describes a device's
+// crypto, certificates, and VPN tunnels, so it is readable by its owner only.
+const outputMode = 0o600
+
+// writeOutput writes data to path with mode 0600. Without force the file is
+// created with O_EXCL, so a file (or symlink) that appeared after
+// checkOutput is still not replaced. With force, see replaceFile.
 func writeOutput(path string, data []byte, force bool) error {
 	if force {
-		return os.WriteFile(path, data, 0o644)
+		return replaceFile(path, data)
 	}
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, outputMode)
 	if errors.Is(err, fs.ErrExist) {
 		return fmt.Errorf("output file %s already exists; use --force to overwrite it", path)
 	}
@@ -243,4 +248,38 @@ func writeOutput(path string, data []byte, force bool) error {
 		return err
 	}
 	return f.Close()
+}
+
+// replaceFile writes data to a new temporary file (mode 0600) in path's
+// directory and renames it over path. The replacement is atomic: readers see
+// the old file or the complete new one, and a failed write leaves the old
+// file as it was. A symlink at path is replaced by the new file, not
+// followed, so --force cannot be used to overwrite whatever it points to.
+func replaceFile(path string, data []byte) (err error) {
+	f, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".*.tmp")
+	if err != nil {
+		return err
+	}
+	tmp := f.Name()
+	defer func() {
+		if err != nil {
+			os.Remove(tmp)
+		}
+	}()
+	if err := f.Chmod(outputMode); err != nil {
+		f.Close()
+		return err
+	}
+	if _, err := f.Write(data); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Sync(); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmp, path)
 }

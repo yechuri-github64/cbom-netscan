@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 contributors to cbom-netscan
 # SPDX-License-Identifier: Apache-2.0
 
-# Release: on a v* tag, run the tests in a job without permissions, check
+# Release: on a v* tag, run the tests in a read-only job, check
 # that the tagged commit is on main, then build and publish a draft GitHub
 # release with GoReleaser (.goreleaser.yaml): binaries for Linux, macOS, and
 # Windows on amd64 and arm64, checksums.txt, a CycloneDX SBOM per archive,
@@ -25,12 +25,13 @@ on:
 permissions: {}
 
 jobs:
-  # The tests run in a job with no token permissions at all, so test code
-  # never runs with write access. (Checking out a private repository needs
-  # contents: read; this repository is public when it releases.)
+  # The tests run in a job whose token can only read the repository (enough
+  # for checkout, also while the repository is private), so test code never
+  # runs with write access.
   test:
     runs-on: ubuntu-latest
-    permissions: {}
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:

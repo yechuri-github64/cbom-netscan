@@ -23,7 +23,6 @@ follow [Semantic Versioning](https://semver.org/); while the version is
   could hide text in a warning. Everything printed to stderr, warnings and
   errors, now has control characters, other non-printable characters, and
   invalid UTF-8 escaped (for example `\x1b`, `\u202e`).
-
 - New memory limits: a backup that needs more than 100,000 CBOM components
   (`--max-components`) or 500,000 evidence occurrences and warnings
   (`--max-evidence`) is refused with an error and no CBOM, so a small crafted

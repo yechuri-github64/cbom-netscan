@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 contributors to cbom-netscan
+# SPDX-License-Identifier: Apache-2.0
+
+# Issues use the forms in this directory, which ask you to confirm that no
+# real configuration is attached. Vulnerabilities are reported privately.
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/yechuri-github64/cbom-netscan/security/advisories/new
+    about: Please report vulnerabilities privately, never in a public issue (see SECURITY.md).

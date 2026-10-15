@@ -1,0 +1,49 @@
+# SPDX-FileCopyrightText: 2026 contributors to cbom-netscan
+# SPDX-License-Identifier: Apache-2.0
+
+name: Bug report
+description: Something cbom-netscan gets wrong. Never attach a real configuration.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Do not attach, paste, or link a real configuration backup, a CBOM made from a real device, or any part of either, even redacted.** They hold secrets and describe a real network. Reproduce the problem with a synthetic backup instead: start from a fixture under `pkg/**/testdata/`, use made-up names, documentation addresses (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24), and fake secrets. Issues with real configurations are deleted.
+
+        Security vulnerabilities go to [private reporting](https://github.com/yechuri-github64/cbom-netscan/security/advisories/new), not here.
+  - type: checkboxes
+    id: no-real-config
+    attributes:
+      label: No real configuration
+      options:
+        - label: I have not attached, pasted, or linked a real configuration backup or a CBOM from a real device, and the snippets below are synthetic.
+          required: true
+        - label: This is not a security vulnerability (those go to private reporting).
+          required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `cbom-netscan version`.
+      placeholder: cbom-netscan 0.1.2 (commit ..., built ...)
+    validations:
+      required: true
+  - type: input
+    id: fortios
+    attributes:
+      label: FortiOS version of the backup
+      description: From the backup's first line, for example 7.6.7 build 3704. The version only, not the line.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Synthetic reproduction
+      description: A minimal made-up backup snippet and the command you ran.
+      render: text
+    validations:
+      required: true

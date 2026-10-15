@@ -43,6 +43,11 @@ decrypted.
 (Table 9) and CycloneDX 1.6: 19 of the 30 elements fully and 5 partially from
 a backup alone.
 
+**The output is an inventory, not a compliance certification.** It records
+what a configuration backup says; it does not certify conformance with
+CERT-In's guidelines, the CA/Browser Forum Baseline Requirements, or any
+other standard, and it does not show what a device negotiates at run time.
+
 ## Install
 
 Requires nothing at run time; one static binary.
@@ -196,7 +201,10 @@ data: it names the device's VPN tunnels and certificates, gives certificate
 subjects and issuers, and shows exactly which weak or quantum-vulnerable
 algorithms are enabled where, which is a map for an attacker. Store and
 share it like the device's configuration, not like public documentation.
-Files written with `-o` are created with mode `0600` (owner only). With
+Files written with `-o` are created with mode `0600` (owner only). Output
+written to stdout is not protected that way: a shell redirection such as
+`> fw.cdx.json` creates the file with your umask's permissions (often
+world-readable), so use `-o` when writing a file. With
 `--force`, the new CBOM is written to a temporary file in the same directory
 and renamed over the old one. On Linux and macOS the replacement is atomic
 (and the directory is synced so it survives a crash); on Windows, where a
@@ -208,6 +216,9 @@ at the output path is replaced rather than followed.
 
 - FortiOS configuration backups only. No live TLS scanning, no other vendors
   yet.
+- Not a compliance certification: the CBOM describes the configuration, and
+  the CERT-In and CA/Browser Forum fields in it are information for a
+  reviewer, not a verdict.
 - TLS 1.2 cipher suites are not derivable from a backup and are reported as
   unknown; a live scan is needed for those.
 - Firmware defaults are known for FortiOS 7.4.12, 7.6.3–7.6.7, and 8.0.1.

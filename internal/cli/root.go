@@ -39,7 +39,11 @@ It currently reports:
 
 Only configuration backups are read; there is no live TLS scanning yet.
 Secret values (passwords, ENC values, private keys) are never written to the
-CBOM or printed in warnings.`,
+CBOM or printed in warnings.
+
+Treat the CBOM as confidential: it maps the device's tunnels, certificates,
+and weak algorithms. -o writes it with mode 0600; stdout is not protected.
+The output is an inventory, not a compliance certification.`,
 		// Usage is for argument mistakes; runtime errors such as a parse
 		// failure print only the error.
 		SilenceUsage: true,

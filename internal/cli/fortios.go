@@ -58,9 +58,17 @@ same backup produce byte-identical output.
 
 Certificates are checked for expiry against the current time, or under
 --reproducible against SOURCE_DATE_EPOCH; with --reproducible and no
-SOURCE_DATE_EPOCH, expiry is recorded as not evaluated.`,
-		Example: `  cbom-netscan fortios fw01.conf -o fw01.cdx.json
-  cbom-netscan fortios fw01.conf > fw01.cdx.json`,
+SOURCE_DATE_EPOCH, expiry is recorded as not evaluated.
+
+The CBOM holds no secret values but is confidential infrastructure data: it
+names tunnels and certificates and shows which weak or quantum-vulnerable
+algorithms are enabled where. Files written with -o are created with mode
+0600; output written to stdout is not protected that way, so a shell
+redirection creates the file with your umask's permissions. The CBOM
+inventories what the configuration says; it is not a compliance
+certification.`,
+		Example: `  cbom-netscan fortios fw01.conf -o fw01.cdx.json   # file readable by you only
+  cbom-netscan fortios fw01.conf | jq .              # stdout, e.g. into another tool`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runFortiOS(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), args[0], o)

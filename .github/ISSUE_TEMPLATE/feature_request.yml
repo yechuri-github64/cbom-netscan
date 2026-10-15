@@ -1,0 +1,30 @@
+# SPDX-FileCopyrightText: 2026 contributors to cbom-netscan
+# SPDX-License-Identifier: Apache-2.0
+
+name: Feature request
+description: A configuration section, field, or output cbom-netscan should support.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Do not attach, paste, or link a real configuration backup or a CBOM from a real device.** Describe the configuration with a synthetic example, and cite the vendor documentation for the fields if you can.
+  - type: checkboxes
+    id: no-real-config
+    attributes:
+      label: No real configuration
+      options:
+        - label: I have not attached, pasted, or linked a real configuration backup or a CBOM from a real device.
+          required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What should cbom-netscan support, and why?
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: Synthetic example and documentation
+      description: A made-up configuration snippet, and links to the vendor documentation for the fields.
+      render: text

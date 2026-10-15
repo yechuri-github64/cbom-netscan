@@ -732,3 +732,20 @@ func TestFortiOS_StderrEscapesControlCharacters(t *testing.T) {
 		}
 	}
 }
+
+// TestHelp_MisuseGuidance: the help says the CBOM is confidential, that
+// stdout is not protected like -o files, and that the output is not a
+// compliance certification.
+func TestHelp_MisuseGuidance(t *testing.T) {
+	for _, args := range [][]string{{"--help"}, {"fortios", "--help"}} {
+		stdout, _, err := run(t, args...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, want := range []string{"confidential", "0600", "stdout", "not a compliance certification"} {
+			if !strings.Contains(strings.Join(strings.Fields(stdout), " "), want) {
+				t.Errorf("%v help lacks %q", args, want)
+			}
+		}
+	}
+}

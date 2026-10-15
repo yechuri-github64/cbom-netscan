@@ -69,14 +69,16 @@ in a backup adds evidence and warnings without adding components. Once a
 limit is reached nothing more is stored, so memory stops growing, and the
 run ends with an error.
 
-The defaults keep peak memory at or below about 2 GB. Measured with
-cbom-netscan 0.1.2 (Linux amd64) on synthetic backups at the limits:
+The defaults keep peak memory around 2 GB. Peak memory varies between runs
+(with garbage-collection timing), so these are ranges over at least five
+runs each, measured with cbom-netscan 0.1.2 (Linux amd64) on synthetic
+backups at the limits; the highest single run was 2.16 GB:
 
 | Backup | Components | Evidence + warnings | Peak memory |
 |---|---|---|---|
-| 33,000 tunnels (phase1, phase2, pre-shared key) | 99,026 | 495,000 | 1.76 GB |
-| 99,970 tunnels with nothing set, plus one name repeated 33,000 times | 99,998 | 494,996 | 1.86 GB |
-| 16,100 tunnels with many proposals, DH groups, and additional key exchanges | 48,335 | 499,100 | 1.27 GB |
+| 33,000 tunnels (phase1, phase2, pre-shared key) | 99,026 | 495,000 | about 1.5–2.0 GB |
+| 99,970 tunnels with nothing set, plus one name repeated 33,000 times | 99,998 | 494,996 | about 1.8–2.2 GB |
+| 16,100 tunnels with many proposals, DH groups, and additional key exchanges | 48,335 | 499,100 | about 1.1–1.3 GB |
 | One component or occurrence over a limit | — | — | refused in about 1–2 s, 180–340 MB |
 
 Most of the memory goes to emitting the CBOM (about 18–20 KB per component

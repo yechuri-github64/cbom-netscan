@@ -27,8 +27,9 @@ follow [Semantic Versioning](https://semver.org/); while the version is
 - New memory limits: a backup that needs more than 100,000 CBOM components
   (`--max-components`) or 500,000 evidence occurrences and warnings
   (`--max-evidence`) is refused with an error and no CBOM, so a small crafted
-  backup cannot exhaust memory. The defaults keep peak memory at or below
-  about 2 GB (measured in SECURITY.md) and cover about 33,000 IPsec tunnels.
+  backup cannot exhaust memory. The defaults keep peak memory around 2 GB
+  (up to about 2.2 GB measured; see SECURITY.md) and cover about 33,000
+  IPsec tunnels.
 
 ### Added
 

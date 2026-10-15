@@ -91,12 +91,12 @@ type fortiosOpts struct {
 	version                    string
 }
 
-// Default inventory limits, chosen so a backup at them peaks at or below
-// about 2 GB. Measured at these values (SECURITY.md): 33,000 tunnels with
-// phase2 and a pre-shared key (99,026 components, 495,000 evidence
-// occurrences) peak at 1.76 GB, and the most memory per entry we could
-// build, 99,970 tunnels with nothing set plus one name repeated, at
-// 1.86 GB. A real tunnel (phase1, phase2, pre-shared key) is 3 components
+// Default inventory limits, chosen so a backup at them peaks around 2 GB.
+// Measured at these values over at least five runs each (SECURITY.md; peak
+// memory varies between runs): 33,000 tunnels with phase2 and a pre-shared
+// key (99,026 components, 495,000 evidence occurrences) peak at about
+// 1.5-2.0 GB, and the most memory per entry we could build, 99,970 tunnels
+// with nothing set plus one name repeated, at about 1.8-2.2 GB. A real tunnel (phase1, phase2, pre-shared key) is 3 components
 // and about 15 evidence occurrences, so both limits allow about 33,000 such
 // tunnels.
 const (

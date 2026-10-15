@@ -27,6 +27,10 @@ builds:
     binary: cbom-netscan
     env:
       - CGO_ENABLED=0 # static binaries, no C toolchain needed
+      # Build with the toolchain go.mod names, whatever Go runs goreleaser:
+      # "go run ...goreleaser@v2.18.3" switches itself to Go 1.27, and its
+      # builds would otherwise use that. Keep in step with go.mod.
+      - GOTOOLCHAIN=go1.26.9
     goos: [linux, darwin, windows]
     goarch: [amd64, arm64]
     flags:

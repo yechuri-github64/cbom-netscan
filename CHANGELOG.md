@@ -5,6 +5,33 @@ All notable changes to cbom-netscan are listed here. The format follows
 follow [Semantic Versioning](https://semver.org/); while the version is
 0.x, a minor release may change the output.
 
+## [0.1.1] - Unreleased
+
+Release packaging fixes; the `cbom-netscan` program and its output are
+unchanged.
+
+### Fixed
+
+- The GitHub release body is now the version's section of this changelog.
+  v0.1.0 was published with an empty body (GitHub showed only "v0.1.0"):
+  GoReleaser's `changelog.disable` setting also skipped reading the
+  `--release-notes` file. Relative links in the notes are rewritten to
+  absolute `blob/<tag>/` URLs, and the release workflow fails if the body
+  would be empty or only the tag name, and checks the published body.
+- Release SBOMs are CycloneDX 1.6, the version cbom-netscan itself emits
+  (they were 1.7). Their subject is named `cbom-netscan` at the release
+  version, and the binary is listed by its name in the archive, with its
+  hashes, instead of syft's temporary unpacking path
+  (`/tmp/syft-archive-contents-…`).
+- Each release archive includes `REUSE.toml` and `LICENSES/Apache-2.0.txt`,
+  and `REUSE.toml` covers the binary, so an extracted archive passes
+  `reuse lint` on its own.
+
+### Documentation
+
+- README: `gh attestation verify` needs `gh auth login` (or `GH_TOKEN`)
+  first.
+
 ## [0.1.0] - 2026-10-15
 
 First release. cbom-netscan reads a FortiOS configuration backup offline and
@@ -89,4 +116,5 @@ never emitted until that commit. It should have been labelled `fix(emit)`.
 Tools that build release notes from commit types will file it under tests;
 this changelog is the reference. Published history is not rewritten.
 
+[0.1.1]: https://github.com/yechuri-github64/cbom-netscan/releases/tag/v0.1.1
 [0.1.0]: https://github.com/yechuri-github64/cbom-netscan/releases/tag/v0.1.0

@@ -15,7 +15,9 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -251,10 +253,14 @@ func writeOutput(path string, data []byte, force bool) error {
 }
 
 // replaceFile writes data to a new temporary file (mode 0600) in path's
-// directory and renames it over path. The replacement is atomic: readers see
-// the old file or the complete new one, and a failed write leaves the old
-// file as it was. A symlink at path is replaced by the new file, not
-// followed, so --force cannot be used to overwrite whatever it points to.
+// directory, syncs it, and renames it over path. On Linux and macOS the
+// rename is atomic (readers see the old file or the complete new one), and
+// the directory is synced afterwards so the rename survives a crash. On
+// Windows, where a rename over an existing file is not guaranteed atomic
+// and a directory cannot be synced, it is best-effort. Either way a failed
+// write leaves the old file as it was, and a symlink at path is replaced by
+// the new file, not followed, so --force cannot be used to overwrite
+// whatever it points to.
 func replaceFile(path string, data []byte) (err error) {
 	f, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".*.tmp")
 	if err != nil {
@@ -281,5 +287,36 @@ func replaceFile(path string, data []byte) (err error) {
 	if err := f.Close(); err != nil {
 		return err
 	}
-	return os.Rename(tmp, path)
+	if err := os.Rename(tmp, path); err != nil {
+		return err
+	}
+	return syncDirAfterRename(filepath.Dir(path))
+}
+
+// syncDirAfterRename is syncDir; tests replace it to check that it runs, on
+// the right directory, after the rename.
+var syncDirAfterRename = syncDir
+
+// syncDir flushes a directory's entries to disk, so a rename in it is
+// durable. Windows cannot open a directory for syncing, so it is skipped
+// there, as are file systems that do not support syncing a directory.
+func syncDir(dir string) error {
+	if runtime.GOOS == "windows" {
+		return nil
+	}
+	d, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	err = d.Sync()
+	if cerr := d.Close(); err == nil {
+		err = cerr
+	}
+	if errors.Is(err, errors.ErrUnsupported) || errors.Is(err, syscall.EINVAL) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("output written, but syncing its directory failed: %w", err)
+	}
+	return nil
 }

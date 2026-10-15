@@ -68,9 +68,9 @@ yet.**
   decoded; only CERTIFICATE blocks are decoded.
 - Evidence records the backup's file name only, not its path.
 - CBOM files written with `-o` have mode 0600, since a CBOM is confidential
-  infrastructure data. `--force` replaces the file atomically through a
-  temporary file and a rename, without following a symlink at the output
-  path.
+  infrastructure data. `--force` replaces the file through a temporary file
+  and a rename (atomic on Linux and macOS, best-effort on Windows), without
+  following a symlink at the output path.
 
 ### Known limitations
 

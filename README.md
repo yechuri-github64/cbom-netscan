@@ -195,9 +195,11 @@ algorithms are enabled where, which is a map for an attacker. Store and
 share it like the device's configuration, not like public documentation.
 Files written with `-o` are created with mode `0600` (owner only). With
 `--force`, the new CBOM is written to a temporary file in the same directory
-and renamed over the old one, so the replacement is atomic, a failed write
-leaves the old file intact, and a symlink at the output path is replaced
-rather than followed.
+and renamed over the old one. On Linux and macOS the replacement is atomic
+(and the directory is synced so it survives a crash); on Windows, where a
+rename over an existing file is not guaranteed atomic, it is best-effort.
+On every platform a failed write leaves the old file intact, and a symlink
+at the output path is replaced rather than followed.
 
 ## Limitations
 

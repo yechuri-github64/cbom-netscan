@@ -642,3 +642,41 @@ func noTempFiles(t *testing.T, dir string) {
 		}
 	}
 }
+
+// TestSyncDir: syncing a directory works where it is supported, and an
+// error for a directory that cannot be opened is reported, not hidden.
+func TestSyncDir(t *testing.T) {
+	if err := syncDir(t.TempDir()); err != nil {
+		t.Errorf("syncDir(temp dir) = %v", err)
+	}
+	if runtime.GOOS == "windows" {
+		return // skipped on Windows
+	}
+	if err := syncDir(filepath.Join(t.TempDir(), "missing")); err == nil {
+		t.Errorf("syncDir(missing dir) = nil, want an error")
+	}
+}
+
+// TestFortiOS_ForceSyncsDirectoryAfterRename: --force syncs the output's
+// directory once the new file is in place, so the rename is durable.
+func TestFortiOS_ForceSyncsDirectoryAfterRename(t *testing.T) {
+	dir := t.TempDir()
+	out := filepath.Join(dir, "out.cdx.json")
+	writeFile(t, out, "old")
+	var synced []string
+	orig := syncDirAfterRename
+	syncDirAfterRename = func(d string) error {
+		if got, _ := os.ReadFile(out); string(got) == "old" {
+			t.Errorf("directory synced before the rename")
+		}
+		synced = append(synced, d)
+		return orig(d)
+	}
+	t.Cleanup(func() { syncDirAfterRename = orig })
+	if _, _, err := run(t, "fortios", fixture, "-o", out, "--force"); err != nil {
+		t.Fatal(err)
+	}
+	if len(synced) != 1 || synced[0] != dir {
+		t.Errorf("synced directories = %q, want [%s]", synced, dir)
+	}
+}

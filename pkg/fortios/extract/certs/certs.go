@@ -65,6 +65,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"math"
+	"math/big"
 	"slices"
 	"strconv"
 	"strings"
@@ -242,9 +243,10 @@ func scopeContext(scope tree.Scope) string {
 // parsed is a certificate plus the algorithm OIDs read from its ASN.1, so
 // algorithms crypto/x509 does not know still get an OID.
 type parsed struct {
-	cert   *x509.Certificate
-	sigOID string
-	keyOID string
+	cert    *x509.Certificate
+	sigOID  string
+	keyOID  string
+	dsaBits int // size of a DSA key's prime p; 0 for other keys
 }
 
 // pemText is the certificate field's value, or "" if it is not set.
@@ -293,6 +295,16 @@ func parsePEM(attr *tree.Attr) (*parsed, error) {
 	}
 	if _, err := asn1.Unmarshal(c.RawSubjectPublicKeyInfo, &spki); err == nil {
 		p.keyOID = spki.Alg.Algorithm.String()
+		if c.PublicKeyAlgorithm == x509.DSA {
+			// The size of a DSA key is that of the prime p in its
+			// parameters (Dss-Parms, RFC 3279 §2.3.2), which crypto/x509
+			// has already checked. Reading them here avoids crypto/dsa,
+			// which is deprecated.
+			var params struct{ P, Q, G *big.Int }
+			if _, err := asn1.Unmarshal(spki.Alg.Parameters.FullBytes, &params); err == nil {
+				p.dsaBits = params.P.BitLen()
+			}
+		}
 	}
 	return p, nil
 }
@@ -314,10 +326,24 @@ func ed25519Alg(oid string) alg {
 	return alg{name: "Ed25519", oid: oid, bits: 256, a: model.Algorithm{Primitive: "signature", Curve: "ed25519"}}
 }
 
+// oidEd448 is id-Ed448 (RFC 8410). crypto/x509 does not know Ed448, so it is
+// recognised by this OID, as a key and as a signature algorithm.
+const oidEd448 = "1.3.101.113"
+
+// ed448Alg is Ed448 as both a key algorithm and a signature algorithm. Like
+// Ed25519 it uses one OID for the key and the signature, so both uses must
+// give the same definition. Its size is 448 bits, that of the curve
+// (edwards448, RFC 8032 §5.2).
+func ed448Alg(oid string) alg {
+	return alg{name: "Ed448", oid: oid, bits: 448, a: model.Algorithm{Primitive: "signature", Curve: "ed448"}}
+}
+
 var curveNames = map[string]string{"P-224": "secp224r1", "P-256": "secp256r1", "P-384": "secp384r1", "P-521": "secp521r1"}
 
 // keyAlgorithm names the certificate key's algorithm. RSA keys are pke (they
-// can encrypt as well as sign); EC and Ed25519 keys are signature keys.
+// can encrypt as well as sign); EC, Ed25519, DSA, and Ed448 keys are
+// signature keys. DSA is named by the size of its prime p, as RSA is by the
+// size of its modulus.
 func keyAlgorithm(p *parsed) alg {
 	switch k := p.cert.PublicKey.(type) {
 	case *rsa.PublicKey:
@@ -331,12 +357,23 @@ func keyAlgorithm(p *parsed) alg {
 	case ed25519.PublicKey:
 		return ed25519Alg(p.keyOID)
 	}
+	switch {
+	case p.dsaBits > 0:
+		bits := strconv.Itoa(p.dsaBits)
+		return alg{name: "DSA-" + bits, oid: p.keyOID, bits: p.dsaBits,
+			a: model.Algorithm{Primitive: "signature", ParameterSetIdentifier: bits}}
+	case p.keyOID == oidEd448:
+		return ed448Alg(p.keyOID)
+	}
 	return alg{name: "OID " + p.keyOID, oid: p.keyOID, a: model.Algorithm{Primitive: "unknown"}}
 }
 
 func signatureAlgorithm(p *parsed) alg {
 	sa := p.cert.SignatureAlgorithm
 	if sa == x509.UnknownSignatureAlgorithm {
+		if p.sigOID == oidEd448 {
+			return ed448Alg(p.sigOID)
+		}
 		return alg{name: "OID " + p.sigOID, oid: p.sigOID, a: model.Algorithm{Primitive: "unknown"}}
 	}
 	if sa == x509.PureEd25519 {

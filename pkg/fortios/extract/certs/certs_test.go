@@ -8,6 +8,7 @@ package certs_test
 // The certificates come from testdata/gencerts.go; their keys were discarded.
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -595,6 +596,99 @@ end
 		t.Errorf("public key size = %v, want 256", pub.Mat.Size)
 	}
 	prop(t, c, "cbom-netscan:cert:validity-days", "366")
+}
+
+// TestDSAAndEd448: FortiOS's factory DSA and Ed448 certificates get named
+// algorithms with the signature primitive and a key size. DSA keys are named
+// by the size of their prime p, read from the key, and Ed448, which
+// crypto/x509 does not know, by its OID. Both used to be bare OIDs with
+// primitive unknown and no size (issue #3).
+func TestDSAAndEd448(t *testing.T) {
+	cfg := hdr + `config vpn certificate local
+    edit "Fortinet_SSL_DSA1024"
+        set private-key ENC c3ludGhldGljLWRzYTEwMjQta2V5
+        set certificate "` + pemFile(t, "dsa1024-self.pem") + `"
+        set source factory
+    next
+    edit "Fortinet_SSL_DSA2048"
+        set private-key ENC c3ludGhldGljLWRzYTIwNDgta2V5
+        set certificate "` + pemFile(t, "dsa2048-self.pem") + `"
+        set source factory
+    next
+    edit "Fortinet_SSL_ED448"
+        set private-key ENC c3ludGhldGljLWVkNDQ4LWtleQ==
+        set certificate "` + pemFile(t, "ed448-self.pem") + `"
+        set source factory
+    next
+end
+`
+	_, inv := extract(t, cfg, now)
+	if len(inv.Warnings) != 0 {
+		t.Errorf("warnings = %+v, want none", inv.Warnings)
+	}
+	for _, tc := range []struct {
+		cert, keyAlg, keyOID, psi, curve string
+		size                             int
+		sigAlg, sigOID                   string
+	}{
+		{"Fortinet_SSL_DSA1024", "DSA-1024", "1.2.840.10040.4.1", "1024", "", 1024, "DSA-SHA1", "1.2.840.10040.4.3"},
+		{"Fortinet_SSL_DSA2048", "DSA-2048", "1.2.840.10040.4.1", "2048", "", 2048, "DSA-SHA256", "2.16.840.1.101.3.4.3.2"},
+		{"Fortinet_SSL_ED448", "Ed448", "1.3.101.113", "", "ed448", 448, "Ed448", "1.3.101.113"},
+	} {
+		c := find(t, inv, local+tc.cert)
+		pub := byID(t, inv, c.Cert.SubjectPublicKeyRef)
+		key := byID(t, inv, pub.Mat.AlgorithmRef)
+		if key.Name != tc.keyAlg || key.OID != tc.keyOID || key.Alg.Primitive != "signature" ||
+			key.Alg.ParameterSetIdentifier != tc.psi || key.Alg.Curve != tc.curve || level(key) != "0" {
+			t.Errorf("%s: key algorithm = %s %s %+v", tc.cert, key.Name, key.OID, *key.Alg)
+		}
+		if pub.Mat.Size == nil || *pub.Mat.Size != tc.size {
+			t.Errorf("%s: public key size = %v, want %d", tc.cert, pub.Mat.Size, tc.size)
+		}
+		priv := find(t, inv, local+tc.cert+" private key")
+		if priv.Mat.AlgorithmRef != key.ID || priv.Mat.Size == nil || *priv.Mat.Size != tc.size {
+			t.Errorf("%s: private key algorithm %q size %v, want %s %d", tc.cert, priv.Mat.AlgorithmRef, priv.Mat.Size, key.ID, tc.size)
+		}
+		sig := byID(t, inv, c.Cert.SignatureAlgorithmRef)
+		if sig.Name != tc.sigAlg || sig.OID != tc.sigOID || sig.Alg.Primitive != "signature" || level(sig) != "0" {
+			t.Errorf("%s: signature algorithm = %s %s %+v", tc.cert, sig.Name, sig.OID, *sig.Alg)
+		}
+	}
+	// Like Ed25519, Ed448 is one component for the key and the signature.
+	ed := find(t, inv, local+"Fortinet_SSL_ED448")
+	if ed.Cert.SignatureAlgorithmRef != byID(t, inv, ed.Cert.SubjectPublicKeyRef).Mat.AlgorithmRef {
+		t.Errorf("Ed448 signature algorithm %s and key algorithm differ; want one component", ed.Cert.SignatureAlgorithmRef)
+	}
+	for _, a := range inv.Assets {
+		if strings.HasPrefix(a.Name, "OID ") {
+			t.Errorf("component %s is a bare OID", a.Name)
+		}
+	}
+}
+
+// TestDSASizeOnlyForDSAKeys: the size is read from the parameters only of a
+// key crypto/x509 parsed as DSA. The same key under an OID Go does not know
+// stays a bare OID with no size, although its parameters look like DSA's.
+func TestDSASizeOnlyForDSAKeys(t *testing.T) {
+	block, _ := pem.Decode([]byte(pemFile(t, "dsa1024-self.pem")))
+	dsa := []byte{0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x38, 0x04, 0x01} // OID 1.2.840.10040.4.1
+	if block == nil || bytes.Count(block.Bytes, dsa) != 1 {
+		t.Fatal("dsa1024-self.pem does not hold the DSA key OID once")
+	}
+	other := slices.Concat(dsa[:8], []byte{0x09}) // 1.2.840.10040.4.9, same length
+	der := bytes.Replace(block.Bytes, dsa, other, 1)
+	cfg := hdr + `config vpn certificate local
+    edit "odd"
+        set certificate "` + strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}))) + `"
+    next
+end
+`
+	_, inv := extract(t, cfg, now)
+	pub := byID(t, inv, find(t, inv, local+"odd").Cert.SubjectPublicKeyRef)
+	key := byID(t, inv, pub.Mat.AlgorithmRef)
+	if key.Name != "OID 1.2.840.10040.4.9" || key.Alg.Primitive != "unknown" || pub.Mat.Size != nil {
+		t.Errorf("key algorithm = %s %+v, size %v; want a bare OID with no size", key.Name, *key.Alg, pub.Mat.Size)
+	}
 }
 
 func level(a *model.Asset) string {

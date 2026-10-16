@@ -1,0 +1,41 @@
+{
+  "$schema": "https://cyclonedx.org/schema/tool-center-v2.tool.schema.json",
+  "specVersion": "2.0",
+  "tool": {
+    "name": "cbom-netscan",
+    "publisher": "yechuri-github64",
+    "description": "Reads a FortiOS (FortiGate) configuration backup offline and writes a CycloneDX 1.6 CBOM of the protocols, algorithms, certificates and keys it configures (TLS, SSH, IPsec, SSL VPN), each with its config line. Secrets are never output.",
+    "repository_url": "https://github.com/yechuri-github64/cbom-netscan",
+    "website_url": "https://github.com/yechuri-github64/cbom-netscan",
+    "capabilities": [
+      "CBOM"
+    ],
+    "availability": [
+      "OPEN_SOURCE",
+      "OSI_APPROVED"
+    ],
+    "functions": [
+      "ANALYSIS"
+    ],
+    "packaging": [
+      "COMMAND_LINE_UTILITY"
+    ],
+    "library": [
+      "GO"
+    ],
+    "platform": [
+      "LINUX",
+      "MAC",
+      "WINDOWS"
+    ],
+    "lifecycle": [
+      "OPERATIONS"
+    ],
+    "supportedStandards": [
+      "CYCLONEDX"
+    ],
+    "cycloneDxVersion": [
+      "CYCLONEDX_V1.6"
+    ]
+  }
+}

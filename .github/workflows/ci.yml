@@ -95,7 +95,7 @@ jobs:
         run: go test -run='^$' -fuzz=FuzzParse -fuzztime=1000000x ./pkg/fortios/tree/
 
       - name: fuzz certificate extractor
-        run: go test -run='^$' -fuzz='^FuzzExtract$' -fuzztime=60000x ./pkg/fortios/extract/certs/
+        run: go test -run='^$' -fuzz='^FuzzExtract$' -fuzztime=500000x ./pkg/fortios/extract/certs/
 
       - name: fuzz certificate field scanner
         run: go test -run='^$' -fuzz='^FuzzScanCertField$' -fuzztime=800000x ./pkg/fortios/extract/certs/

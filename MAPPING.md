@@ -39,8 +39,8 @@ Contents:
   - **not yet**: never filled. The note says whether it is planned, not
     derivable from a configuration backup, or has no defined value.
 - "Fixtures" counts are measured on the six FortiOS golden files in
-  `pkg/testdata/golden/fortios-*.cdx.json` (synthetic backups): 136 algorithm,
-  28 key, 34 protocol, and 15 certificate components. They show what the code
+  `pkg/testdata/golden/fortios-*.cdx.json` (synthetic backups): 141 algorithm,
+  34 key, 34 protocol, and 18 certificate components. They show what the code
   fills on realistic input, not a guarantee for every backup.
 
 Every component also has `evidence.occurrences[]` (file name, line, config
@@ -58,17 +58,17 @@ planned, 1 not derivable from a backup, 1 with no defined value).
 
 | Element | CycloneDX 1.6 field | Status | Source in cbom-netscan | Notes |
 |---|---|---|---|---|
-| Name | `name` | covered | Algorithm names chosen by cbom-netscan: `AES-256-GCM`, `HMAC-SHA256`, `MODP-2048`, `ECP-384`, `X25519`, `FFDHE-4096`, `ML-KEM-768`, `RSA-2048`, `ECDSA-P256`, `Ed25519`, `SHA256-RSA` | Named by algorithm, not by protocol token (§6.2). The configured tokens are kept on the protocol as `<field>:value`. Fixtures: 136/136 |
-| Asset Type | `cp.assetType` = `algorithm` | covered | — | Fixtures: 136/136 |
-| Primitive | `cp.algorithmProperties.primitive` | covered | Token tables in `extract/*/tokens.go`; certificate keys from the parsed key type | `key-agree` (hyphen, as in the schema), `kem`, `combiner`, `ae`, `block-cipher`, `mac`, `kdf`, `signature`, `pke` (RSA certificate keys, which can encrypt as well as sign). Fixtures: 136/136 |
-| Mode | `cp.algorithmProperties.mode` | covered | Token tables (`aes256-ctr` → `ctr`, `aes256gcm` → `gcm`, `3des` → `cbc`) | Set on every block-cipher and AE algorithm that has a mode; omitted where none applies (ChaCha20-Poly1305, MACs, key agreement). Fixtures: 13/136, which is every component a mode applies to |
-| Crypto Functions | `cp.algorithmProperties.cryptoFunctions[]` | not yet | — | Planned. Needs a documented convention for functions by role (ENCR → encrypt/decrypt, KE → keygen, …); the emitter already supports the field. Fixtures: 0/136 |
-| Classical security level | `cp.algorithmProperties.classicalSecurityLevel` | not yet | — | Planned, from NIST SP 800-57 Part 1 Rev. 5 Table 2. The emitter already supports the field. Fixtures: 0/136 |
-| OID | `cp.oid` | partial | Certificate algorithms only: read from the certificate's ASN.1, so algorithms Go does not know still get an OID | IPsec, SSH, and TLS-group algorithms have no OID yet (planned: generated catalog; MODP groups and the non-NIST PQC KEMs have none to give). Fixtures: 16/136 |
+| Name | `name` | covered | Algorithm names chosen by cbom-netscan: `AES-256-GCM`, `HMAC-SHA256`, `MODP-2048`, `ECP-384`, `X25519`, `FFDHE-4096`, `ML-KEM-768`, `RSA-2048`, `ECDSA-P256`, `DSA-2048`, `Ed25519`, `Ed448`, `SHA256-RSA` | Named by algorithm, not by protocol token (§6.2). The configured tokens are kept on the protocol as `<field>:value`. Fixtures: 141/141 |
+| Asset Type | `cp.assetType` = `algorithm` | covered | — | Fixtures: 141/141 |
+| Primitive | `cp.algorithmProperties.primitive` | covered | Token tables in `extract/*/tokens.go`; certificate keys from the parsed key type | `key-agree` (hyphen, as in the schema), `kem`, `combiner`, `ae`, `block-cipher`, `mac`, `kdf`, `signature`, `pke` (RSA certificate keys, which can encrypt as well as sign). Fixtures: 141/141 |
+| Mode | `cp.algorithmProperties.mode` | covered | Token tables (`aes256-ctr` → `ctr`, `aes256gcm` → `gcm`, `3des` → `cbc`) | Set on every block-cipher and AE algorithm that has a mode; omitted where none applies (ChaCha20-Poly1305, MACs, key agreement). Fixtures: 13/141, which is every component a mode applies to |
+| Crypto Functions | `cp.algorithmProperties.cryptoFunctions[]` | not yet | — | Planned. Needs a documented convention for functions by role (ENCR → encrypt/decrypt, KE → keygen, …); the emitter already supports the field. Fixtures: 0/141 |
+| Classical security level | `cp.algorithmProperties.classicalSecurityLevel` | not yet | — | Planned, from NIST SP 800-57 Part 1 Rev. 5 Table 2. The emitter already supports the field. Fixtures: 0/141 |
+| OID | `cp.oid` | partial | Certificate algorithms only: read from the certificate's ASN.1, so algorithms Go does not know still get an OID | IPsec, SSH, and TLS-group algorithms have no OID yet (planned: generated catalog; MODP groups and the non-NIST PQC KEMs have none to give). Fixtures: 21/141 |
 | List | no 1.6 field; the CBOM's set of algorithm components | covered (interpretation) | — | The PDF's layout puts "List" under Algorithms, but its description speaks of the algorithms "employed by the quantum device or system". Read here as the list of algorithm components, which every CBOM with crypto has. See §8.2 |
 
 Not a Table 9 element but always set where it applies:
-`cp.algorithmProperties.nistQuantumSecurityLevel` (§6.6). Fixtures: 93/136.
+`cp.algorithmProperties.nistQuantumSecurityLevel` (§6.6). Fixtures: 98/141.
 
 ### 2.2 Keys
 
@@ -78,13 +78,13 @@ no `key` asset type; keys are `related-crypto-material` with a
 
 | Element | CycloneDX 1.6 field | Status | Source in cbom-netscan | Notes |
 |---|---|---|---|---|
-| Name | `name` | covered | `<certificate component name> public key` / `private key`; `<tunnel name> pre-shared key` | Never contains a value. Fixtures: 28/28 |
-| Asset Type | `cp.assetType` = `related-crypto-material`, `cp.relatedCryptoMaterialProperties.type` | covered | `public-key` (from the certificate), `private-key` (presence only), `secret-key` (IPsec PSK, presence only) | Fixtures: 28/28 (14 public, 10 private, 4 secret) |
-| id | `cp.relatedCryptoMaterialProperties.id` | partial | Public keys: `spki-sha256:<hex>`, the SHA-256 of the SubjectPublicKeyInfo | Private and secret keys get no id on purpose: any id derived from a secret could leak it, and a hashed PSK could be brute-forced. Fixtures: 14/28 |
-| state | `cp.relatedCryptoMaterialProperties.state` | not yet | — | Planned, see §8.3. CERT-In's examples (active, revoked, expired) do not all exist in the 1.6 enum. Fixtures: 0/28 |
-| size | `cp.relatedCryptoMaterialProperties.size` | partial | From the parsed certificate's public key (RSA modulus bits, EC curve bits, 256 for Ed25519), also set on that certificate's private key | Never for a PSK (its length could only come from reading it), nor for a private key whose certificate does not parse. Fixtures: 24/28 |
-| Creation Date | `cp.relatedCryptoMaterialProperties.creationDate` | not yet (not derivable) | — | A backup does not say when a key was created, and a certificate's notBefore is not the key's creation date (keys are often reused). Fixtures: 0/28 |
-| Activation Date | `cp.relatedCryptoMaterialProperties.activationDate` | not yet | — | Planned as a documented convention (notBefore of the certificate that binds the key), see §8.4. Fixtures: 0/28 |
+| Name | `name` | covered | `<certificate component name> public key` / `private key`; `<tunnel name> pre-shared key` | Never contains a value. Fixtures: 34/34 |
+| Asset Type | `cp.assetType` = `related-crypto-material`, `cp.relatedCryptoMaterialProperties.type` | covered | `public-key` (from the certificate), `private-key` (presence only), `secret-key` (IPsec PSK, presence only) | Fixtures: 34/34 (17 public, 13 private, 4 secret) |
+| id | `cp.relatedCryptoMaterialProperties.id` | partial | Public keys: `spki-sha256:<hex>`, the SHA-256 of the SubjectPublicKeyInfo | Private and secret keys get no id on purpose: any id derived from a secret could leak it, and a hashed PSK could be brute-forced. Fixtures: 17/34 |
+| state | `cp.relatedCryptoMaterialProperties.state` | not yet | — | Planned, see §8.3. CERT-In's examples (active, revoked, expired) do not all exist in the 1.6 enum. Fixtures: 0/34 |
+| size | `cp.relatedCryptoMaterialProperties.size` | partial | From the parsed certificate's public key (RSA modulus bits, DSA prime bits, EC curve bits, 256 for Ed25519, 448 for Ed448), also set on that certificate's private key | Never for a PSK (its length could only come from reading it), nor for a private key whose certificate does not parse. Fixtures: 30/34 |
+| Creation Date | `cp.relatedCryptoMaterialProperties.creationDate` | not yet (not derivable) | — | A backup does not say when a key was created, and a certificate's notBefore is not the key's creation date (keys are often reused). Fixtures: 0/34 |
+| Activation Date | `cp.relatedCryptoMaterialProperties.activationDate` | not yet | — | Planned as a documented convention (notBefore of the certificate that binds the key), see §8.4. Fixtures: 0/34 |
 
 ### 2.3 Protocols
 
@@ -99,7 +99,7 @@ no `key` asset type; keys are `related-crypto-material` with a
 ### 2.4 Certificates
 
 All ten are filled from the certificate PEM parsed with Go's `crypto/x509`,
-whenever the PEM parses. Fixtures: 14/15 (the fifteenth is a deliberately
+whenever the PEM parses. Fixtures: 17/18 (the eighteenth is a deliberately
 broken PEM, which gets `cbom-netscan:cert:parse=failed` and a warning).
 
 | Element | CycloneDX 1.6 field | Status | Notes |
@@ -376,13 +376,17 @@ warning.
 ### 6.8 Certificate keys and signatures: one Ed25519, separate from ssh-ed25519
 
 - Key algorithms are named by key: `RSA-<bits>` (`pke`), `ECDSA-P256/P384/
-  P521` (`signature` with the curve), `Ed25519`. Signature algorithms use
-  Go's names (`SHA256-RSA`, `ECDSA-SHA384`), with OIDs read from the
-  certificate's ASN.1 so algorithms Go does not know (ML-DSA in Go 1.26) still
-  get one.
+  P521` (`signature` with the curve), `DSA-<bits>` (`signature`; the size of
+  the prime p, read from the key's parameters, as RSA's is from its modulus),
+  `Ed25519`, and `Ed448`. Signature algorithms use Go's names (`SHA256-RSA`,
+  `ECDSA-SHA384`, `DSA-SHA256`), with OIDs read from the certificate's ASN.1
+  so algorithms Go does not know (ML-DSA in Go 1.26) still get one. Go does
+  not know Ed448 either; it is recognised by its OID (`1.3.101.113`).
 - Pure Ed25519 uses one OID (`1.3.101.112`, RFC 8410) for the key and the
   signature, and Go names both `Ed25519`. They are the same algorithm, so they
   are one component with one definition (`signature`, curve `ed25519`).
+  Ed448 is the same case: one OID for both, one component `Ed448`
+  (`signature`, curve `ed448`, key size 448).
   Defining it twice under one bom-ref caused a merge conflict, now guarded by
   a test that no signature algorithm can share a key algorithm's name unless
   the definitions match.
@@ -558,7 +562,8 @@ weaker of its parts).
 - RFC 9370 (multiple key exchanges in IKEv2), RFC 7296 §3.3.2 (private-use
   transform IDs), IANA IKEv2 Transform Type 4 registry.
 - RFC 7919 (FFDHE groups), RFC 3526 (MODP groups), FIPS 203 (ML-KEM).
-- RFC 8410 (Ed25519 in X.509), RFC 8709 (Ed25519 in SSH), RFC 1421 (PEM
+- RFC 8410 (Ed25519 and Ed448 in X.509), RFC 8032 §5.2 (Ed448), RFC 3279
+  §2.3.2 (DSA keys in X.509), RFC 8709 (Ed25519 in SSH), RFC 1421 (PEM
   Proc-Type header), RFC 7468 (PEM labels).
 - OpenSSH `PROTOCOL.key`:
   <https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.key>

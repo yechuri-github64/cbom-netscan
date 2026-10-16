@@ -18,6 +18,12 @@
 //	                 like FortiOS's factory DSA certificates
 //	ed448-self.pem   Ed448 self-signed, 366 days, like FortiOS's factory
 //	                 Ed448 certificate (see below)
+//	fgvm-factory.pem RSA-2048 self-signed, 2026-01-01 to 2036-01-01, with
+//	                 the made-up serial number FGVMEV0000000000 as common
+//	                 name, like a FortiGate's factory certificate
+//	fgvm-rsa1024.pem RSA-1024 with the same subject and dates. The
+//	                 multi-VDOM VM fixture stores it as Fortinet_SSL_RSA2048:
+//	                 the name says 2048 bits, the key has 1024
 //
 // Day counts are inclusive, as the CA/Browser Forum counts them. The private
 // keys are generated in memory and discarded; only certificates are written,
@@ -256,4 +262,11 @@ func main() {
 	ed448Pub, _ := hex.DecodeString(ed448TestKey)
 	save("ed448-self", swapKey(standIn(9, "ed448.example.org", day("2026-01-01"), day("2027-01-01")),
 		subjectPublicKeyInfo(oidEd448, nil, ed448Pub), oidEd448, func([]byte) []byte { return make([]byte, 114) }))
+
+	const fakeSerial = "FGVMEV0000000000" // made up, not a real device's serial
+	factoryKey, _ := rsa.GenerateKey(rand.Reader, 2048)
+	mk("fgvm-factory", 10, fakeSerial, day("2026-01-01"), day("2036-01-01"), &factoryKey.PublicKey, false, nil, factoryKey)
+
+	shortKey, _ := rsa.GenerateKey(rand.Reader, 1024)
+	mk("fgvm-rsa1024", 11, fakeSerial, day("2026-01-01"), day("2036-01-01"), &shortKey.PublicKey, false, nil, shortKey)
 }

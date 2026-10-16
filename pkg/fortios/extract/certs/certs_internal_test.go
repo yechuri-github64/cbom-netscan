@@ -7,6 +7,7 @@ package certs
 import (
 	"crypto/x509"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -72,9 +73,10 @@ func TestValidityDays(t *testing.T) {
 // TestSignatureNamesDoNotShadowKeyNames: key and signature algorithm
 // components share one namespace of bom-refs, so a signature algorithm may
 // share a key algorithm's name only if it is the same algorithm with the
-// same definition (pure Ed25519). Covers every signature algorithm
-// crypto/x509 knows.
+// same definition (pure Ed25519 and Ed448). Covers every signature algorithm
+// crypto/x509 knows, and Ed448, which it does not.
 func TestSignatureNamesDoNotShadowKeyNames(t *testing.T) {
+	dsaKeyName := regexp.MustCompile(`^DSA-[0-9]+$`) // DSA-SHA256 is a signature name
 	for sa := x509.SignatureAlgorithm(1); sa < 64; sa++ {
 		name := sa.String()
 		if _, err := strconv.Atoi(name); err == nil {
@@ -86,9 +88,14 @@ func TestSignatureNamesDoNotShadowKeyNames(t *testing.T) {
 			if want := ed25519Alg("oid"); !reflect.DeepEqual(got, want) {
 				t.Errorf("Ed25519 signature = %+v, key = %+v; want one definition", got, want)
 			}
-		case strings.HasPrefix(got.name, "RSA-"), strings.HasPrefix(got.name, "ECDSA-P"), strings.HasPrefix(got.name, "OID "):
+		case strings.HasPrefix(got.name, "RSA-"), strings.HasPrefix(got.name, "ECDSA-P"), strings.HasPrefix(got.name, "OID "),
+			dsaKeyName.MatchString(got.name):
 			t.Errorf("signature algorithm %v is named %q, like a key algorithm", sa, got.name)
 		}
+	}
+	ed448 := &parsed{cert: &x509.Certificate{}, sigOID: oidEd448, keyOID: oidEd448}
+	if sig, key := signatureAlgorithm(ed448), keyAlgorithm(ed448); sig.name != "Ed448" || !reflect.DeepEqual(sig, key) {
+		t.Errorf("Ed448 signature = %+v, key = %+v; want one Ed448 definition", sig, key)
 	}
 }
 

@@ -81,21 +81,24 @@ jobs:
       - name: test
         run: go test -race ./...
 
-      # Short fuzz smoke run: replays the seed corpus and mutates for 20 s to
-      # catch panics or hangs on malformed input.  Run longer locally with
-      # -fuzztime=60s or more when changing the lexer.
+      # Short fuzz smoke runs: each replays its seed corpus, then tries a
+      # fixed number of mutated inputs (about 20 s each on a GitHub runner) to
+      # catch panics or hangs on malformed input. A count rather than
+      # -fuzztime=20s: with a duration, Go 1.26 sometimes fails a clean run
+      # with "context deadline exceeded" (golang/go#75804, fixed for Go 1.27).
+      # Run longer locally (-fuzztime=60s or more) when changing a parser.
       - name: fuzz lexer
-        run: go test -run='^$' -fuzz=FuzzLexer -fuzztime=20s ./pkg/fortios/lexer/
+        run: go test -run='^$' -fuzz=FuzzLexer -fuzztime=1000000x ./pkg/fortios/lexer/
 
       # go test -fuzz accepts one package per run, so each target has its own step.
       - name: fuzz tree
-        run: go test -run='^$' -fuzz=FuzzParse -fuzztime=20s ./pkg/fortios/tree/
+        run: go test -run='^$' -fuzz=FuzzParse -fuzztime=1000000x ./pkg/fortios/tree/
 
       - name: fuzz certificate extractor
-        run: go test -run='^$' -fuzz='^FuzzExtract$' -fuzztime=20s ./pkg/fortios/extract/certs/
+        run: go test -run='^$' -fuzz='^FuzzExtract$' -fuzztime=500000x ./pkg/fortios/extract/certs/
 
       - name: fuzz certificate field scanner
-        run: go test -run='^$' -fuzz='^FuzzScanCertField$' -fuzztime=20s ./pkg/fortios/extract/certs/
+        run: go test -run='^$' -fuzz='^FuzzScanCertField$' -fuzztime=800000x ./pkg/fortios/extract/certs/
 
       # Every file must have a license and copyright (REUSE spec 3.x).
       - name: reuse lint

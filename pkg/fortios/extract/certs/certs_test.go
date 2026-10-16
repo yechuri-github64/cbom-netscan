@@ -480,8 +480,11 @@ func TestVDOMGlobalReferences(t *testing.T) {
 	want := []string{
 		"FortiOS certificate ca Fortinet_CA (global)",
 		"FortiOS certificate local Fortinet_Factory (global)",
+		"FortiOS certificate local Fortinet_SSL_DSA1024 (global)",
+		"FortiOS certificate local Fortinet_SSL_DSA2048 (global)",
 		"FortiOS certificate local Fortinet_SSL_ECDSA256 (global)",
 		"FortiOS certificate local Fortinet_SSL_ED25519 (global)",
+		"FortiOS certificate local Fortinet_SSL_ED448 (global)",
 	}
 	slices.Sort(certNames)
 	if !slices.Equal(certNames, want) {

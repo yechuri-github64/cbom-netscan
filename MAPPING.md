@@ -38,9 +38,9 @@ Contents:
     and why not the others;
   - **not yet**: never filled. The note says whether it is planned, not
     derivable from a configuration backup, or has no defined value.
-- "Fixtures" counts are measured on the six FortiOS golden files in
-  `pkg/testdata/golden/fortios-*.cdx.json` (synthetic backups): 141 algorithm,
-  34 key, 34 protocol, and 18 certificate components. They show what the code
+- "Fixtures" counts are measured on the seven FortiOS golden files in
+  `pkg/testdata/golden/fortios-*.cdx.json` (synthetic backups): 171 algorithm,
+  40 key, 40 protocol, and 20 certificate components. They show what the code
   fills on realistic input, not a guarantee for every backup.
 
 Every component also has `evidence.occurrences[]` (file name, line, config
@@ -58,17 +58,17 @@ planned, 1 not derivable from a backup, 1 with no defined value).
 
 | Element | CycloneDX 1.6 field | Status | Source in cbom-netscan | Notes |
 |---|---|---|---|---|
-| Name | `name` | covered | Algorithm names chosen by cbom-netscan: `AES-256-GCM`, `HMAC-SHA256`, `MODP-2048`, `ECP-384`, `X25519`, `FFDHE-4096`, `ML-KEM-768`, `RSA-2048`, `ECDSA-P256`, `DSA-2048`, `Ed25519`, `Ed448`, `SHA256-RSA` | Named by algorithm, not by protocol token (§6.2). The configured tokens are kept on the protocol as `<field>:value`. Fixtures: 141/141 |
-| Asset Type | `cp.assetType` = `algorithm` | covered | — | Fixtures: 141/141 |
-| Primitive | `cp.algorithmProperties.primitive` | covered | Token tables in `extract/*/tokens.go`; certificate keys from the parsed key type | `key-agree` (hyphen, as in the schema), `kem`, `combiner`, `ae`, `block-cipher`, `mac`, `kdf`, `signature`, `pke` (RSA certificate keys, which can encrypt as well as sign). Fixtures: 141/141 |
-| Mode | `cp.algorithmProperties.mode` | covered | Token tables (`aes256-ctr` → `ctr`, `aes256gcm` → `gcm`, `3des` → `cbc`) | Set on every block-cipher and AE algorithm that has a mode; omitted where none applies (ChaCha20-Poly1305, MACs, key agreement). Fixtures: 13/141, which is every component a mode applies to |
-| Crypto Functions | `cp.algorithmProperties.cryptoFunctions[]` | not yet | — | Planned. Needs a documented convention for functions by role (ENCR → encrypt/decrypt, KE → keygen, …); the emitter already supports the field. Fixtures: 0/141 |
-| Classical security level | `cp.algorithmProperties.classicalSecurityLevel` | not yet | — | Planned, from NIST SP 800-57 Part 1 Rev. 5 Table 2. The emitter already supports the field. Fixtures: 0/141 |
-| OID | `cp.oid` | partial | Certificate algorithms only: read from the certificate's ASN.1, so algorithms Go does not know still get an OID | IPsec, SSH, and TLS-group algorithms have no OID yet (planned: generated catalog; MODP groups and the non-NIST PQC KEMs have none to give). Fixtures: 21/141 |
+| Name | `name` | covered | Algorithm names chosen by cbom-netscan: `AES-256-GCM`, `HMAC-SHA256`, `MODP-2048`, `ECP-384`, `X25519`, `FFDHE-4096`, `ML-KEM-768`, `RSA-2048`, `ECDSA-P256`, `DSA-2048`, `Ed25519`, `Ed448`, `SHA256-RSA` | Named by algorithm, not by protocol token (§6.2). The configured tokens are kept on the protocol as `<field>:value`. Fixtures: 171/171 |
+| Asset Type | `cp.assetType` = `algorithm` | covered | — | Fixtures: 171/171 |
+| Primitive | `cp.algorithmProperties.primitive` | covered | Token tables in `extract/*/tokens.go`; certificate keys from the parsed key type | `key-agree` (hyphen, as in the schema), `kem`, `combiner`, `ae`, `block-cipher`, `mac`, `kdf`, `signature`, `pke` (RSA certificate keys, which can encrypt as well as sign). Fixtures: 171/171 |
+| Mode | `cp.algorithmProperties.mode` | covered | Token tables (`aes256-ctr` → `ctr`, `aes256gcm` → `gcm`, `3des` → `cbc`) | Set on every block-cipher and AE algorithm that has a mode; omitted where none applies (ChaCha20-Poly1305, MACs, key agreement). Fixtures: 18/171, which is every component a mode applies to |
+| Crypto Functions | `cp.algorithmProperties.cryptoFunctions[]` | not yet | — | Planned. Needs a documented convention for functions by role (ENCR → encrypt/decrypt, KE → keygen, …); the emitter already supports the field. Fixtures: 0/171 |
+| Classical security level | `cp.algorithmProperties.classicalSecurityLevel` | not yet | — | Planned, from NIST SP 800-57 Part 1 Rev. 5 Table 2. The emitter already supports the field. Fixtures: 0/171 |
+| OID | `cp.oid` | partial | Certificate algorithms only: read from the certificate's ASN.1, so algorithms Go does not know still get an OID | IPsec, SSH, and TLS-group algorithms have no OID yet (planned: generated catalog; MODP groups and the non-NIST PQC KEMs have none to give). Fixtures: 24/171 |
 | List | no 1.6 field; the CBOM's set of algorithm components | covered (interpretation) | — | The PDF's layout puts "List" under Algorithms, but its description speaks of the algorithms "employed by the quantum device or system". Read here as the list of algorithm components, which every CBOM with crypto has. See §8.2 |
 
 Not a Table 9 element but always set where it applies:
-`cp.algorithmProperties.nistQuantumSecurityLevel` (§6.6). Fixtures: 98/141.
+`cp.algorithmProperties.nistQuantumSecurityLevel` (§6.6). Fixtures: 118/171.
 
 ### 2.2 Keys
 
@@ -78,28 +78,28 @@ no `key` asset type; keys are `related-crypto-material` with a
 
 | Element | CycloneDX 1.6 field | Status | Source in cbom-netscan | Notes |
 |---|---|---|---|---|
-| Name | `name` | covered | `<certificate component name> public key` / `private key`; `<tunnel name> pre-shared key` | Never contains a value. Fixtures: 34/34 |
-| Asset Type | `cp.assetType` = `related-crypto-material`, `cp.relatedCryptoMaterialProperties.type` | covered | `public-key` (from the certificate), `private-key` (presence only), `secret-key` (IPsec PSK, presence only) | Fixtures: 34/34 (17 public, 13 private, 4 secret) |
-| id | `cp.relatedCryptoMaterialProperties.id` | partial | Public keys: `spki-sha256:<hex>`, the SHA-256 of the SubjectPublicKeyInfo | Private and secret keys get no id on purpose: any id derived from a secret could leak it, and a hashed PSK could be brute-forced. Fixtures: 17/34 |
-| state | `cp.relatedCryptoMaterialProperties.state` | not yet | — | Planned, see §8.3. CERT-In's examples (active, revoked, expired) do not all exist in the 1.6 enum. Fixtures: 0/34 |
-| size | `cp.relatedCryptoMaterialProperties.size` | partial | From the parsed certificate's public key (RSA modulus bits, DSA prime bits, EC curve bits, 256 for Ed25519, 448 for Ed448), also set on that certificate's private key | Never for a PSK (its length could only come from reading it), nor for a private key whose certificate does not parse. Fixtures: 30/34 |
-| Creation Date | `cp.relatedCryptoMaterialProperties.creationDate` | not yet (not derivable) | — | A backup does not say when a key was created, and a certificate's notBefore is not the key's creation date (keys are often reused). Fixtures: 0/34 |
-| Activation Date | `cp.relatedCryptoMaterialProperties.activationDate` | not yet | — | Planned as a documented convention (notBefore of the certificate that binds the key), see §8.4. Fixtures: 0/34 |
+| Name | `name` | covered | `<certificate component name> public key` / `private key`; `<tunnel name> pre-shared key` | Never contains a value. Fixtures: 40/40 |
+| Asset Type | `cp.assetType` = `related-crypto-material`, `cp.relatedCryptoMaterialProperties.type` | covered | `public-key` (from the certificate), `private-key` (presence only), `secret-key` (IPsec PSK, presence only) | Fixtures: 40/40 (19 public, 15 private, 6 secret) |
+| id | `cp.relatedCryptoMaterialProperties.id` | partial | Public keys: `spki-sha256:<hex>`, the SHA-256 of the SubjectPublicKeyInfo | Private and secret keys get no id on purpose: any id derived from a secret could leak it, and a hashed PSK could be brute-forced. Fixtures: 19/40 |
+| state | `cp.relatedCryptoMaterialProperties.state` | not yet | — | Planned, see §8.3. CERT-In's examples (active, revoked, expired) do not all exist in the 1.6 enum. Fixtures: 0/40 |
+| size | `cp.relatedCryptoMaterialProperties.size` | partial | From the parsed certificate's public key (RSA modulus bits, DSA prime bits, EC curve bits, 256 for Ed25519, 448 for Ed448), also set on that certificate's private key | Never for a PSK (its length could only come from reading it), nor for a private key whose certificate does not parse. Fixtures: 34/40 |
+| Creation Date | `cp.relatedCryptoMaterialProperties.creationDate` | not yet (not derivable) | — | A backup does not say when a key was created, and a certificate's notBefore is not the key's creation date (keys are often reused). Fixtures: 0/40 |
+| Activation Date | `cp.relatedCryptoMaterialProperties.activationDate` | not yet | — | Planned as a documented convention (notBefore of the certificate that binds the key), see §8.4. Fixtures: 0/40 |
 
 ### 2.3 Protocols
 
 | Element | CycloneDX 1.6 field | Status | Source in cbom-netscan | Notes |
 |---|---|---|---|---|
-| Name | `name` | covered | `FortiOS admin HTTPS TLS 1.3`, `FortiOS admin SSH`, `FortiOS IPsec phase1-interface <name>`, `FortiOS IPsec phase2-interface <name>`, `FortiOS SSL VPN TLS 1.3`, `FortiOS SSL VPN DTLS 1.2`, each with ` (vdom <name>)` or ` (global)` in multi-VDOM backups | Fixtures: 34/34 |
-| Asset Type | `cp.assetType` = `protocol`, `cp.protocolProperties.type` | covered | `tls`, `ssh`, `ike` (phase1), `ipsec` (phase2) | Fixtures: 34/34 |
-| Version | `cp.protocolProperties.version` | partial | TLS: one component per enabled version (`1.2`, `1.3`); IKE: `ike-version` (`1`, `2`) | SSH has no version setting in FortiOS and ESP (phase2) has no version, so those have none; an SSL VPN whose versions cannot be resolved gets one component without a version. Fixtures: 26/34 |
-| Cipher Suites | `cp.protocolProperties.cipherSuites[]`; IKEv2: `ikev2TransformTypes.{encr,prf,integ,ke,auth}`; IKEv1, SSH, TLS groups: `cryptoRefArray` | partial | TLS 1.3: `ciphersuite` / `admin-https-ssl-ciphersuites`; IKE/IPsec: `proposal`, `dhgrp`, `addke1`…`addke7`; SSH: `ssh-enc-algo`, `ssh-mac-algo`, `ssh-kex-algo`, `ssh-hsk-algo`; TLS groups: `tls-groups` | TLS 1.2 and below: the suite list is set only by `algorithm high/medium/low` and depends on the firmware build, so it is recorded as `cipher-suites: unknown` (§7.2). Fixtures: 30/34 have algorithm references (the 4 without are admin HTTPS TLS 1.2) |
-| OID | `cp.oid` | not yet (no defined value) | — | No registry of OIDs that identify TLS, IPsec, or SSH as protocols was found (⚠U6 in docs/PLAN.md). Fixtures: 0/34 |
+| Name | `name` | covered | `FortiOS admin HTTPS TLS 1.3`, `FortiOS admin SSH`, `FortiOS IPsec phase1-interface <name>`, `FortiOS IPsec phase2-interface <name>`, `FortiOS SSL VPN TLS 1.3`, `FortiOS SSL VPN DTLS 1.2`, each with ` (vdom <name>)` or ` (global)` in multi-VDOM backups | Fixtures: 40/40 |
+| Asset Type | `cp.assetType` = `protocol`, `cp.protocolProperties.type` | covered | `tls`, `ssh`, `ike` (phase1), `ipsec` (phase2) | Fixtures: 40/40 |
+| Version | `cp.protocolProperties.version` | partial | TLS: one component per enabled version (`1.2`, `1.3`); IKE: `ike-version` (`1`, `2`) | SSH has no version setting in FortiOS and ESP (phase2) has no version, so those have none; an SSL VPN whose versions cannot be resolved gets one component without a version. Fixtures: 30/40 |
+| Cipher Suites | `cp.protocolProperties.cipherSuites[]`; IKEv2: `ikev2TransformTypes.{encr,prf,integ,ke,auth}`; IKEv1, SSH, TLS groups: `cryptoRefArray` | partial | TLS 1.3: `ciphersuite` / `admin-https-ssl-ciphersuites`; IKE/IPsec: `proposal`, `dhgrp`, `addke1`…`addke7`; SSH: `ssh-enc-algo`, `ssh-mac-algo`, `ssh-kex-algo`, `ssh-hsk-algo`; TLS groups: `tls-groups` | TLS 1.2 and below: the suite list is set only by `algorithm high/medium/low` and depends on the firmware build, so it is recorded as `cipher-suites: unknown` (§7.2). Fixtures: 34/40 list cipher suites or algorithm references, 30 of them algorithm references (admin HTTPS TLS 1.3 lists suite names only); the 6 with neither are admin HTTPS TLS 1.1 and 1.2 |
+| OID | `cp.oid` | not yet (no defined value) | — | No registry of OIDs that identify TLS, IPsec, or SSH as protocols was found (⚠U6 in docs/PLAN.md). Fixtures: 0/40 |
 
 ### 2.4 Certificates
 
 All ten are filled from the certificate PEM parsed with Go's `crypto/x509`,
-whenever the PEM parses. Fixtures: 17/18 (the eighteenth is a deliberately
+whenever the PEM parses. Fixtures: 19/20 (the twentieth is a deliberately
 broken PEM, which gets `cbom-netscan:cert:parse=failed` and a warning).
 
 | Element | CycloneDX 1.6 field | Status | Notes |

@@ -562,3 +562,26 @@ end
 		t.Errorf("Blocks(ScopeGlobal, system global) = %d, want 1", len(bs))
 	}
 }
+
+func TestDuplicateEditName(t *testing.T) {
+	tr := parse(t, hdrSingle+`config vpn ipsec phase1-interface
+    edit "vpn"
+        set ike-version 2
+    next
+    edit "vpn"
+        set ike-version 1
+    next
+end
+`)
+	if len(tr.Warnings) != 1 || tr.Warnings[0].Code != "duplicate-edit-name" {
+		t.Fatalf("warnings = %+v, want one duplicate-edit-name", tr.Warnings)
+	}
+	w := tr.Warnings[0]
+	if w.Ev.Line != 6 || !strings.Contains(w.Message, "line 6") || !strings.Contains(w.Message, "line 3") {
+		t.Errorf("duplicate-edit-name = %+v; want the second edit's line and the first's", w)
+	}
+	es := tr.Get(tree.ScopeSingle, "vpn ipsec phase1-interface")
+	if len(es) != 2 || es[0].Name != "vpn" || es[1].Name != "vpn" || es[0].Line != 3 || es[1].Line != 6 {
+		t.Errorf("entries = %+v, want both edits kept", es)
+	}
+}

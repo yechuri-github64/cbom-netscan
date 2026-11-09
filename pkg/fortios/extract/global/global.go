@@ -22,14 +22,18 @@
 // The components describe the configured set. strong-crypto is recorded as a
 // property, and what it may disable is marked (§3.1a), but its effect on what
 // is actually negotiated is not applied; that "effective" view is separate
-// work (§8.12).
+// work (§8.12). A configured admin-server-cert is linked to that local
+// certificate; the default Fortinet_GUI_Server is not, because it is
+// usually absent from backups.
 package global
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/defaults"
+	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/certs"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/internal/algo"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/internal/field"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/lexer"
@@ -124,11 +128,14 @@ func (x *extractor) adminHTTPS() {
 		return a
 	}
 
+	certRefs := x.certRefs(cert)
+
 	if versions.Source == field.Unknown {
 		a := newTLS("FortiOS admin HTTPS TLS", "")
 		x.r.Record(a, suites, false)
 		x.r.Record(a, banned, true)
 		x.r.Record(a, static, true)
+		attachCerts(a, certRefs)
 		x.inv.Add(a)
 		return
 	}
@@ -159,7 +166,47 @@ func (x *extractor) adminHTTPS() {
 			x.r.Record(a, static, true)
 			a.Properties[field.Prefix+"cipher-suites"] = field.Unknown
 		}
+		attachCerts(a, certRefs)
 		x.inv.Add(a)
+	}
+}
+
+// certRefs are the local certificates named by a configured admin-server-cert.
+// The default Fortinet_GUI_Server is usually absent from backups, so only a
+// configured name is resolved; a missing name is warned about once.
+func (x *extractor) certRefs(cert field.Value) []string {
+	if cert.Source != field.Configured {
+		return nil
+	}
+	var refs []string
+	for _, name := range cert.Tokens {
+		r := certs.Ref(x.t, x.r.Loc, x.scope, name)
+		if r.Missing && r.Reported {
+			continue
+		}
+		if r.Missing {
+			x.inv.AddWarning(model.Warning{
+				Code:    "unknown-certificate",
+				Message: fmt.Sprintf("admin-server-cert %q is not among the local certificates it can use (it may be built in)", name),
+				Ev:      x.r.Evidence(cert),
+			})
+			continue
+		}
+		if !slices.Contains(refs, r.Cert) {
+			refs = append(refs, r.Cert)
+		}
+	}
+	return refs
+}
+
+func attachCerts(a *model.Asset, refs []string) {
+	for _, id := range refs {
+		if !slices.Contains(a.DependsOn, id) {
+			a.DependsOn = append(a.DependsOn, id)
+		}
+		if !slices.Contains(a.Proto.Refs, id) {
+			a.Proto.Refs = append(a.Proto.Refs, id)
+		}
 	}
 }
 
@@ -232,11 +279,12 @@ func (x *extractor) ssh() {
 // component, because a shared algorithm can be configured in one place and a
 // default in another; a configured value adds an evidence occurrence here.
 func (x *extractor) algorithm(name string, alg model.Algorithm, v field.Value) *model.Asset {
-	algo.MarkQuantumVulnerable(&alg)
+	algo.Complete(name, &alg)
 	a := &model.Asset{
 		ID:         model.BOMRef(model.AssetTypeAlgorithm, name, x.r.Loc),
 		Type:       model.AssetTypeAlgorithm,
 		Name:       name,
+		OID:        algo.OID(name),
 		Alg:        &alg,
 		Properties: map[string]string{},
 	}

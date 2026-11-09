@@ -142,6 +142,12 @@
         ],
         "source": "CLI-7.6.7 p2286–2318 via research notes §3.3"
       },
+      "ppk": {
+        "value": [
+          "disable"
+        ],
+        "source": "CLI HTML 7.6.7 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14; research notes §3.3 (RFC 8784, default disable)"
+      },
       "addke1": {
         "value": [],
         "source": "CLI HTML 7.6.7 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14 (no default); research notes §3.3"
@@ -223,6 +229,12 @@
           "sha2-512"
         ],
         "source": "CLI-7.6.7 p2286–2318 via research notes §3.3 The policy-based table has the same fields (research notes §3.3)."
+      },
+      "ppk": {
+        "value": [
+          "disable"
+        ],
+        "source": "CLI HTML 7.6.7 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14; research notes §3.3 (RFC 8784, default disable). The policy-based table has the same fields (research notes §3.3)."
       },
       "addke1": {
         "value": [],

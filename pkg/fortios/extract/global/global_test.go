@@ -8,10 +8,13 @@ package global_test
 
 import (
 	"encoding/json"
+	"os"
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/certs"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/global"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/extract/ipsec"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/tree"
@@ -456,5 +459,61 @@ end
 				}
 			}
 		})
+	}
+}
+
+func TestAdminServerCertLinked(t *testing.T) {
+	pem, err := os.ReadFile("../certs/testdata/gw-ecdsa.pem")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := hdr76 + `config system global
+    set admin-server-cert "gw"
+end
+config vpn certificate local
+    edit "gw"
+        set certificate "` + strings.TrimSpace(string(pem)) + `"
+    next
+end
+`
+	tr, err := tree.Parse(strings.NewReader(cfg))
+	if err != nil {
+		t.Fatal(err)
+	}
+	inv := model.NewInventory()
+	certs.Extract(tr, "fw.conf", inv, time.Time{})
+	global.Extract(tr, "fw.conf", inv)
+	tls := find(inv, "FortiOS admin HTTPS TLS 1.3")
+	if tls == nil {
+		t.Fatal("no TLS 1.3 component")
+	}
+	want := "FortiOS certificate local gw"
+	var got []string
+	byID := map[string]string{}
+	for _, a := range inv.Assets {
+		byID[a.ID] = a.Name
+	}
+	for _, id := range tls.DependsOn {
+		got = append(got, byID[id])
+	}
+	if !slices.Equal(got, []string{want}) {
+		t.Errorf("TLS 1.3 dependsOn = %v, want [%s]", got, want)
+	}
+	if !slices.Contains(tls.Proto.Refs, tls.DependsOn[0]) {
+		t.Errorf("certificate ref missing from cryptoRefArray")
+	}
+	if codes := warnCodes(inv); len(codes) != 0 {
+		t.Errorf("warnings = %v, want none", codes)
+	}
+
+	missing := extract(t, hdr76+`config system global
+    set admin-server-cert "Fortinet_GUI_Server"
+end
+`)
+	if got := warnCodes(missing); !slices.Equal(got, []string{"unknown-certificate"}) {
+		t.Errorf("configured built-in cert: warnings = %v, want [unknown-certificate]", got)
+	}
+	if a := find(missing, "FortiOS admin HTTPS TLS 1.3"); a != nil && len(a.DependsOn) != 0 {
+		t.Errorf("missing cert still linked: %v", a.DependsOn)
 	}
 }

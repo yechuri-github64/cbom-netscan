@@ -308,11 +308,12 @@ func (x *extractor) groups(v field.Value) (all, classical, pq []string) {
 // other extractors compute for the same name.
 func (x *extractor) algorithm(g alg, v field.Value, dependsOn []string) string {
 	def := g.a
-	algo.MarkQuantumVulnerable(&def)
+	algo.Complete(g.name, &def)
 	a := &model.Asset{
 		ID:        model.BOMRef(model.AssetTypeAlgorithm, g.name, x.r.Loc),
 		Type:      model.AssetTypeAlgorithm,
 		Name:      g.name,
+		OID:       algo.OID(g.name),
 		Alg:       &def,
 		DependsOn: dependsOn,
 	}

@@ -66,10 +66,12 @@ func TestFortiOS_GoldenToFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("fortios: %v\nstderr: %s", err, stderr)
 	}
-	// The fixture's config system admin block is a settings-only section:
-	// recorded in metadata, not warned about.
-	if stdout != "" || stderr != "" {
-		t.Errorf("expected no stdout/stderr with -o; stdout=%q stderr=%q", stdout, stderr)
+	// The fixture names admin-server-cert lab-gui-cert, which is not among
+	// its local certificates (it may be built in). The config system admin
+	// block is a settings-only section: recorded in metadata, not warned.
+	wantWarn := "global-7.6.conf:8: warning: admin-server-cert \"lab-gui-cert\" is not among the local certificates it can use (it may be built in) [unknown-certificate]\n"
+	if stdout != "" || stderr != wantWarn {
+		t.Errorf("stdout=%q stderr=%q, want empty stdout and:\n%s", stdout, stderr, wantWarn)
 	}
 	got, err := os.ReadFile(out)
 	if err != nil {
@@ -799,8 +801,9 @@ func TestFortiOS_InventoryLimits(t *testing.T) {
 
 // limitBackup is a synthetic backup with warnings parser warnings (each
 // "config global" block in a single-VDOM backup gives one) and, if repeats is
-// above zero, one tunnel name repeated that many times, which adds evidence
-// occurrences without adding components.
+// above zero, that many IPsec tunnels. They share algorithm components, so
+// most of the growth is evidence; each tunnel has a distinct name so the
+// parser does not emit duplicate-edit-name.
 func limitBackup(t *testing.T, warnings, repeats int) string {
 	t.Helper()
 	var b strings.Builder
@@ -809,7 +812,7 @@ func limitBackup(t *testing.T, warnings, repeats int) string {
 	if repeats > 0 {
 		b.WriteString("config vpn ipsec phase1-interface\n")
 		for i := 0; i < repeats; i++ {
-			b.WriteString("    edit \"r\"\n        set ike-version 2\n        set proposal aes256gcm-prfsha384 aes256-sha256\n        set dhgrp 20 21\n    next\n")
+			b.WriteString("    edit \"r-" + strconv.Itoa(i) + "\"\n        set ike-version 2\n        set proposal aes256gcm-prfsha384 aes256-sha256\n        set dhgrp 20 21\n    next\n")
 		}
 		b.WriteString("end\n")
 	}

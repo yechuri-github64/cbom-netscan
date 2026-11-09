@@ -107,6 +107,9 @@ func TestSharedDefinitionsAgree(t *testing.T) {
 		if a.ID != b.ID {
 			t.Errorf("%s: bom-ref %s from SSH, %s from IPsec", b.Name, a.ID, b.ID)
 		}
+		if a.OID != b.OID {
+			t.Errorf("%s: OID %q from SSH, %q from IPsec", b.Name, a.OID, b.OID)
+		}
 	}
 	if shared < 8 {
 		t.Errorf("only %d algorithms shared; the fixture should share at least 8", shared)

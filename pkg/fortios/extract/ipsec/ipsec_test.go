@@ -355,6 +355,40 @@ end
 			},
 		},
 		{
+			// Phase2 allows ESP NULL encryption (null-sha256) and NULL
+			// integrity (aes256-null). Both must appear as algorithm
+			// components; reporting only the other half would hide that
+			// the tunnel can run without encryption or without a MAC.
+			name: "phase2_null_proposals",
+			cfg: hdr767 + `config vpn ipsec phase1-interface
+    edit "t"
+        set ike-version 2
+        set proposal aes256gcm-prfsha384
+    next
+end
+config vpn ipsec phase2-interface
+    edit "t2"
+        set phase1name "t"
+        set proposal null-sha256 aes256-null
+    next
+end
+`,
+			check: func(t *testing.T, inv *model.Inventory) {
+				p := find(t, inv, p2+"t2")
+				eq(t, "t2 encr", names(inv, p.Proto.IKEEncr), []string{"NULL", "AES-256-CBC"})
+				eq(t, "t2 integ", names(inv, p.Proto.IKEInteg), []string{"HMAC-SHA256", "NULL-MAC"})
+				prop(t, p, "proposal:value", "null-sha256 aes256-null")
+				nullEnc := find(t, inv, "NULL")
+				if nullEnc.Alg.Primitive != "other" || nullEnc.Alg.ClassicalSecurityLevel == nil || *nullEnc.Alg.ClassicalSecurityLevel != 0 {
+					t.Errorf("NULL alg = %+v; want primitive other and 0 classical bits", nullEnc.Alg)
+				}
+				nullMAC := find(t, inv, "NULL-MAC")
+				if nullMAC.Alg.Primitive != "mac" || nullMAC.Alg.ClassicalSecurityLevel == nil || *nullMAC.Alg.ClassicalSecurityLevel != 0 {
+					t.Errorf("NULL-MAC alg = %+v; want primitive mac and 0 classical bits", nullMAC.Alg)
+				}
+			},
+		},
+		{
 			name: "policy_based_tables",
 			cfg:  hdr767 + "config vpn ipsec phase1\n    edit \"pb\"\n        set ike-version 2\n        set proposal aes128gcm-prfsha256\n    next\nend\nconfig vpn ipsec phase2\n    edit \"pb2\"\n        set phase1name \"pb\"\n        set proposal aes128gcm\n    next\nend\n",
 			check: func(t *testing.T, inv *model.Inventory) {

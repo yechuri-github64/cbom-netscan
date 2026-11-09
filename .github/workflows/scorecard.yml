@@ -1,0 +1,71 @@
+# SPDX-FileCopyrightText: 2026 contributors to cbom-netscan
+# SPDX-License-Identifier: Apache-2.0
+
+# OpenSSF Scorecard: checks the repository's security practices (pinned
+# dependencies, token permissions, branch protection, signed releases, ...),
+# shows the findings in the Security tab (code scanning), and publishes the
+# score to the public Scorecard API, which a README badge can read.
+#
+# This follows the Scorecard Action's documentation (README at v2.4.4, whose
+# example is ossf/scorecard's scorecard-analysis.yml). With publish_results,
+# the Scorecard API accepts results only from a workflow it can verify: no
+# top-level env or defaults, no workflow-level write permissions, id-token:
+# write only on the Scorecard job, and in that job no env, defaults,
+# containers, or services, an Ubuntu runner, and only uses: steps from an
+# approved list (checkout, upload-artifact, upload-sarif, scorecard-action,
+# harden-runner). So there are no run: steps here.
+#
+# Third-party actions are pinned to full commit SHAs, tags in comments, as in
+# ci.yml; Dependabot proposes updates.
+name: scorecard
+
+on:
+  # The action supports the default branch only.
+  push:
+    branches: [main]
+  # Weekly, Saturdays at 01:30 UTC, as in the documented example.
+  schedule:
+    - cron: "30 1 * * 6"
+  # Manual runs, from main only (the action refuses other branches). The
+  # README calls this trigger experimental. Not run on pull requests: their
+  # results would not be published.
+  workflow_dispatch:
+
+# Nothing by default; the job asks for exactly what it needs.
+permissions: {}
+
+jobs:
+  analysis:
+    name: Scorecard analysis
+    runs-on: ubuntu-latest
+    permissions:
+      # Upload the results to code scanning.
+      security-events: write
+      # The OIDC token that signs the published results.
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run analysis
+        uses: ossf/scorecard-action@2d1146689b8cda280b9bc96326124645441f03bc # v2.4.4
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true
+
+      # The SARIF file in the Actions tab, public for five days, for
+      # debugging.
+      - name: Upload artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: SARIF file
+          path: results.sarif
+          retention-days: 5
+
+      - name: Upload to code scanning
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          sarif_file: results.sarif

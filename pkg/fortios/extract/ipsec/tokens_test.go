@@ -63,10 +63,14 @@ func TestProposalsDecompose(t *testing.T) {
 	}
 	for tok := range specP2Proposal.Known {
 		cipher, hash, _ := splitProposal(tok)
-		_, c := ciphers[cipher]
-		_, h := hashes[hash]
-		if !c && !h {
-			t.Errorf("phase2 %s: neither %q nor %q has an algorithm", tok, cipher, hash)
+		if _, ok := ciphers[cipher]; !ok {
+			t.Errorf("phase2 %s: cipher %q has no algorithm", tok, cipher)
+		}
+		if hash == "" {
+			continue // AEAD (aes256gcm, chacha20poly1305): encryption only
+		}
+		if _, ok := hashes[hash]; !ok {
+			t.Errorf("phase2 %s: hash %q has no algorithm", tok, hash)
 		}
 	}
 }

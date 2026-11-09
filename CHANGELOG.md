@@ -5,6 +5,17 @@ All notable changes to cbom-netscan are listed here. The format follows
 follow [Semantic Versioning](https://semver.org/); while the version is
 0.x, a minor release may change the output.
 
+## [Unreleased]
+
+### Security
+
+- IPsec phase2 proposals that use NULL encryption (`null-sha256` and the
+  other `null-*` options) or NULL integrity (`aes256-null` and the other
+  `*-null` options) were recorded only as the other half of the pair, so
+  a tunnel that can run ESP-NULL did not show a NULL algorithm. The CBOM
+  now includes `NULL` (encryption) and `NULL-MAC` (integrity), each with
+  classical security level 0.
+
 ## [0.1.2] - 2026-10-15
 
 ### Security

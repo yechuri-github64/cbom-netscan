@@ -80,6 +80,11 @@ type alg struct {
 	a    model.Algorithm
 }
 
+// classicalNone is 0 classical bits: ESP NULL encryption (RFC 2410) and
+// NULL integrity provide none. It is a package var so algorithm structs can
+// take its address.
+var classicalNone = 0
+
 var ciphers = map[string]alg{
 	"des":              {"DES-CBC", model.Algorithm{Primitive: "block-cipher", Mode: "cbc"}},
 	"3des":             {"3DES-CBC", model.Algorithm{Primitive: "block-cipher", Mode: "cbc"}},
@@ -94,6 +99,9 @@ var ciphers = map[string]alg{
 	"aes128gcm":        {"AES-128-GCM", model.Algorithm{Primitive: "ae", Mode: "gcm", ParameterSetIdentifier: "128"}},
 	"aes256gcm":        {"AES-256-GCM", model.Algorithm{Primitive: "ae", Mode: "gcm", ParameterSetIdentifier: "256"}},
 	"chacha20poly1305": {"ChaCha20-Poly1305", model.Algorithm{Primitive: "ae"}},
+	// Phase2-only: null-sha256 and similar. Primitive "other" so NULL is not
+	// mistaken for a block cipher; the name is distinct from NULL-MAC below.
+	"null": {"NULL", model.Algorithm{Primitive: "other", ClassicalSecurityLevel: &classicalNone}},
 }
 
 // hashes maps a proposal hash to its integrity (HMAC) and PRF algorithms.
@@ -105,9 +113,19 @@ var hashes = map[string]struct{ integ, prf string }{
 	"sha384": {"HMAC-SHA384", "PRF-HMAC-SHA384"},
 	"sha512": {"HMAC-SHA512", "PRF-HMAC-SHA512"},
 	"sm3":    {"HMAC-SM3", "PRF-HMAC-SM3"},
+	// Phase2-only: aes256-null and similar. Integrity without a MAC; the PRF
+	// name is unused (phase1 has no NULL proposals) but must be non-empty so
+	// TestProposalsDecompose can require every hash side to map.
+	"null": {"NULL-MAC", "NULL-PRF"},
 }
 
-func macAlg(name string) alg { return alg{name, model.Algorithm{Primitive: "mac"}} }
+func macAlg(name string) alg {
+	a := model.Algorithm{Primitive: "mac"}
+	if name == "NULL-MAC" {
+		a.ClassicalSecurityLevel = &classicalNone
+	}
+	return alg{name, a}
+}
 func prfAlg(name string) alg { return alg{name, model.Algorithm{Primitive: "kdf"}} }
 
 var nist1, nist3, nist5 = 1, 3, 5

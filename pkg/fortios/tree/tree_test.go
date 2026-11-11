@@ -12,6 +12,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/lexer"
 	"github.com/yechuri-github64/cbom-netscan/pkg/fortios/tree"
@@ -583,5 +584,47 @@ end
 	es := tr.Get(tree.ScopeSingle, "vpn ipsec phase1-interface")
 	if len(es) != 2 || es[0].Name != "vpn" || es[1].Name != "vpn" || es[0].Line != 3 || es[1].Line != 6 {
 		t.Errorf("entries = %+v, want both edits kept", es)
+	}
+}
+
+// TestParseScalesLinearly: a table with 2n entries must take about twice as
+// long to parse as one with n, not four times. Looking for a duplicate edit
+// name by scanning the table's earlier entries is quadratic, and a crafted
+// backup with millions of entries would not finish. Measured like
+// model.TestAddScalesLinearly: three interleaved rounds, the fastest time of
+// each size compared, failing above a ratio of 3.
+func TestParseScalesLinearly(t *testing.T) {
+	n := 50_000
+	if testing.Short() {
+		n = 10_000
+	}
+	table := func(size int) string {
+		var b strings.Builder
+		b.WriteString(hdrSingle + "config firewall address\n")
+		for i := 0; i < size; i++ {
+			fmt.Fprintf(&b, "    edit \"a%d\"\n    next\n", i)
+		}
+		b.WriteString("end\n")
+		return b.String()
+	}
+	best := map[int]time.Duration{}
+	for round := 0; round < 3; round++ {
+		for _, size := range []int{n, 2 * n} {
+			input := table(size)
+			start := time.Now()
+			tr := parse(t, input)
+			d := time.Since(start)
+			if es := tr.Get(tree.ScopeSingle, "firewall address"); len(es) != size || len(tr.Warnings) != 0 {
+				t.Fatalf("%d entries: got %d entries and %d warnings", size, len(es), len(tr.Warnings))
+			}
+			if b, ok := best[size]; !ok || d < b {
+				best[size] = d
+			}
+		}
+	}
+	ratio := float64(best[2*n]) / float64(best[n])
+	t.Logf("%d entries in %v, %d in %v: ratio %.2f", n, best[n].Round(time.Millisecond), 2*n, best[2*n].Round(time.Millisecond), ratio)
+	if ratio > 3 {
+		t.Errorf("doubling the entries multiplied the time by %.2f, want about 2 (linear); above 3 suggests quadratic growth", ratio)
 	}
 }

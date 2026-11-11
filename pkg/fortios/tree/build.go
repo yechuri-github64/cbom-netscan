@@ -49,6 +49,9 @@ func build(l *lexer.Lexer) ([]*Block, []model.Warning, error) {
 	var roots []*Block
 	var stack []frame
 	var warns []model.Warning
+	// The edit names of each open block, with the line of the first use, so
+	// a duplicate is found in O(1) however many entries the table has.
+	editNames := map[*Block]map[string]int{}
 
 	tok, err := nextToken(l)
 	for {
@@ -103,15 +106,19 @@ func build(l *lexer.Lexer) ([]*Block, []model.Warning, error) {
 				return nil, nil, errAt(line, "edit needs exactly one name, got %d", len(args))
 			}
 			e := &Entry{Name: args[0], Line: line}
-			for _, prev := range top.block.Entries {
-				if prev.Name == e.Name {
-					warns = append(warns, model.Warning{
-						Code:    "duplicate-edit-name",
-						Message: fmt.Sprintf("config %q has a second edit %q (line %d); the first was at line %d", top.block.Path, e.Name, line, prev.Line),
-						Ev:      model.Evidence{Line: line, Symbol: top.block.Path + "/" + e.Name},
-					})
-					break
-				}
+			names := editNames[top.block]
+			if names == nil {
+				names = map[string]int{}
+				editNames[top.block] = names
+			}
+			if first, dup := names[e.Name]; dup {
+				warns = append(warns, model.Warning{
+					Code:    "duplicate-edit-name",
+					Message: fmt.Sprintf("config %q has a second edit %q (line %d); the first was at line %d", top.block.Path, e.Name, line, first),
+					Ev:      model.Evidence{Line: line, Symbol: top.block.Path + "/" + e.Name},
+				})
+			} else {
+				names[e.Name] = line
 			}
 			top.block.Entries = append(top.block.Entries, e)
 			stack = append(stack, frame{entry: e})
@@ -174,6 +181,7 @@ func build(l *lexer.Lexer) ([]*Block, []model.Warning, error) {
 				}
 				stack = stack[:len(stack)-1]
 			}
+			delete(editNames, stack[len(stack)-1].block)
 			stack = stack[:len(stack)-1]
 
 		case lexer.TokString:

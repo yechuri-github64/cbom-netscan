@@ -2,7 +2,7 @@
 
 This document says what cbom-netscan puts in a CBOM, where each value comes
 from, and what it does not (yet) produce. It describes the code as of
-2026-10-14 (FortiOS extractors: system global and SSH, IPsec, certificates,
+2026-11-09 (FortiOS extractors: system global and SSH, IPsec, certificates,
 SSL VPN). Where this document and the code disagree, the code is right and
 this document has a bug.
 
@@ -51,7 +51,7 @@ default has no occurrence, since no line sets it.
 
 ## 2. CERT-In Table 9 → CycloneDX 1.6
 
-Summary: of the 30 elements, **19 covered, 5 partial, 6 not yet** (4 of those
+Summary: of the 30 elements, **21 covered, 4 partial, 5 not yet** (3 of those
 planned, 1 not derivable from a backup, 1 with no defined value).
 
 ### 2.1 Algorithms
@@ -62,9 +62,9 @@ planned, 1 not derivable from a backup, 1 with no defined value).
 | Asset Type | `cp.assetType` = `algorithm` | covered | — | Fixtures: 171/171 |
 | Primitive | `cp.algorithmProperties.primitive` | covered | Token tables in `extract/*/tokens.go`; certificate keys from the parsed key type | `key-agree` (hyphen, as in the schema), `kem`, `combiner`, `ae`, `block-cipher`, `mac`, `kdf`, `signature`, `pke` (RSA certificate keys, which can encrypt as well as sign). Fixtures: 171/171 |
 | Mode | `cp.algorithmProperties.mode` | covered | Token tables (`aes256-ctr` → `ctr`, `aes256gcm` → `gcm`, `3des` → `cbc`) | Set on every block-cipher and AE algorithm that has a mode; omitted where none applies (ChaCha20-Poly1305, MACs, key agreement). Fixtures: 18/171, which is every component a mode applies to |
-| Crypto Functions | `cp.algorithmProperties.cryptoFunctions[]` | not yet | — | Planned. Needs a documented convention for functions by role (ENCR → encrypt/decrypt, KE → keygen, …); the emitter already supports the field. Fixtures: 0/171 |
-| Classical security level | `cp.algorithmProperties.classicalSecurityLevel` | not yet | — | Planned, from NIST SP 800-57 Part 1 Rev. 5 Table 2. The emitter already supports the field. Fixtures: 0/171 |
-| OID | `cp.oid` | partial | Certificate algorithms only: read from the certificate's ASN.1, so algorithms Go does not know still get an OID | IPsec, SSH, and TLS-group algorithms have no OID yet (planned: generated catalog; MODP groups and the non-NIST PQC KEMs have none to give). Fixtures: 24/171 |
+| Crypto Functions | `cp.algorithmProperties.cryptoFunctions[]` | covered | By primitive, in `extract/internal/algo`: block-cipher/ae/stream-cipher → encrypt+decrypt; mac → tag; kdf → keyderive; hash → digest; signature → sign+verify; pke → encrypt+decrypt+sign+verify; key-agree → keyderive; kem → encapsulate+decapsulate | Combiners, `other`, and `unknown` have none: a combiner's parts carry the functions (§8.5). Fixtures: 163/171 |
+| Classical security level | `cp.algorithmProperties.classicalSecurityLevel` | covered | NIST SP 800-57 Part 1 Rev. 5: Table 2 for RSA/DSA/MODP/FFDHE/ECC and 3DES; Table 3 (HMAC column) for HMAC and the HMAC PRFs, so HMAC-SHA1 is 128 and HMAC with SHA-256 or longer is 256; the key size for AES, ChaCha20, and the other block ciphers; NULL is 0 | Combiners and NIST KEMs are left unset: a combiner has no single Table 2 number (§8.5). So are RC4 (broken whatever its key size) and the MACs Table 3 does not rate (MD5, RIPEMD-160, SM3, UMAC). Sizes between Table 2 rows use the weaker row (4096-bit RSA is 128). Fixtures: 134/171 |
+| OID | `cp.oid` | partial | Certificate algorithms from the certificate's ASN.1; IPsec, SSH, and TLS-group algorithms from a well-known catalog (NIST CSOR, PKCS #1, RFC 8410) | MODP/FFDHE groups, AES in CTR mode (NIST's `aes` arcs 9, 29, and 49 are AES-GMAC, RFC 9044), and Fortinet-private KEMs (Kyber, FrodoKEM, BIKE, HQC) have no OID to give. Fixtures: 76/171 |
 | List | no 1.6 field; the CBOM's set of algorithm components | covered (interpretation) | — | The PDF's layout puts "List" under Algorithms, but its description speaks of the algorithms "employed by the quantum device or system". Read here as the list of algorithm components, which every CBOM with crypto has. See §8.2 |
 
 Not a Table 9 element but always set where it applies:
@@ -79,7 +79,7 @@ no `key` asset type; keys are `related-crypto-material` with a
 | Element | CycloneDX 1.6 field | Status | Source in cbom-netscan | Notes |
 |---|---|---|---|---|
 | Name | `name` | covered | `<certificate component name> public key` / `private key`; `<tunnel name> pre-shared key` | Never contains a value. Fixtures: 40/40 |
-| Asset Type | `cp.assetType` = `related-crypto-material`, `cp.relatedCryptoMaterialProperties.type` | covered | `public-key` (from the certificate), `private-key` (presence only), `secret-key` (IPsec PSK, presence only) | Fixtures: 40/40 (19 public, 15 private, 6 secret) |
+| Asset Type | `cp.assetType` = `related-crypto-material`, `cp.relatedCryptoMaterialProperties.type` | covered | `public-key` (from the certificate), `private-key` (presence only), `secret-key` (IPsec PSK and RFC 8784 PPK, presence only) | Fixtures: 40/40 (19 public, 15 private, 6 secret) |
 | id | `cp.relatedCryptoMaterialProperties.id` | partial | Public keys: `spki-sha256:<hex>`, the SHA-256 of the SubjectPublicKeyInfo | Private and secret keys get no id on purpose: any id derived from a secret could leak it, and a hashed PSK could be brute-forced. Fixtures: 19/40 |
 | state | `cp.relatedCryptoMaterialProperties.state` | not yet | — | Planned, see §8.3. CERT-In's examples (active, revoked, expired) do not all exist in the 1.6 enum. Fixtures: 0/40 |
 | size | `cp.relatedCryptoMaterialProperties.size` | partial | From the parsed certificate's public key (RSA modulus bits, DSA prime bits, EC curve bits, 256 for Ed25519, 448 for Ed448), also set on that certificate's private key | Never for a PSK (its length could only come from reading it), nor for a private key whose certificate does not parse. Fixtures: 34/40 |
@@ -122,11 +122,11 @@ Also recorded as properties, since 1.6 has no field for them:
 
 | Section (every scope) | Components | Research notes |
 |---|---|---|
-| `system global` | Admin HTTPS: one `tls` protocol per version in `admin-https-ssl-versions`; TLS 1.3 suites from `admin-https-ssl-ciphersuites`; `strong-crypto`, `admin-server-cert` (by name) recorded as properties | §3.1 |
+| `system global` | Admin HTTPS: one `tls` protocol per version in `admin-https-ssl-versions`; TLS 1.3 suites from `admin-https-ssl-ciphersuites`; `strong-crypto`, `admin-server-cert` (by name) recorded as properties; a configured `admin-server-cert` is linked to that local certificate | §3.1 |
 | `system ssh-config` | Admin SSH: one `ssh` protocol referencing cipher, MAC, key-exchange, and host-key algorithms | §3.2 |
-| `vpn ipsec phase1-interface`, `vpn ipsec phase1` | One `ike` protocol per tunnel; IKEv2 in `ikev2TransformTypes`, IKEv1 and unknown versions in `cryptoRefArray`; a PSK as a `secret-key` (presence only); a signature tunnel depends on its certificates | §3.3 |
+| `vpn ipsec phase1-interface`, `vpn ipsec phase1` | One `ike` protocol per tunnel; IKEv2 in `ikev2TransformTypes`, IKEv1 and unknown versions in `cryptoRefArray`; a PSK as a `secret-key` (presence only); RFC 8784 `ppk` / `ppk-secret` as a presence-only `secret-key` (not an IKE auth transform); a signature tunnel depends on its certificates | §3.3 |
 | `vpn ipsec phase2-interface`, `vpn ipsec phase2` | One `ipsec` protocol per phase2, depending on its phase1 | §3.4 |
-| `vpn certificate local/ca/remote`, `certificate local/ca/remote` | One `certificate` per entry, its public key, key algorithm, and signature algorithm; a `private-key` (presence only) for local certificates | §3.8 |
+| `vpn certificate local/ca/remote`, `certificate local/ca/remote` | One `certificate` per entry, its public key, key algorithm, and signature algorithm; a `private-key` (presence only) for local certificates; `enroll-protocol` when set | §3.8 |
 | `vpn ssl settings` | One `tls` protocol per enabled version (DTLS separately on 7.4.12), referencing TLS groups and the server certificate | §3.7 |
 
 Sections that hold crypto but are not read yet are listed in the CBOM's
@@ -183,15 +183,18 @@ Other configuration properties:
 | `fortios:hybrid` | SSH hybrid key-exchange algorithm (the combiner) | Names its parts, e.g. `ML-KEM-768 + X25519` |
 | `fortios:phase1name` | IPsec phase2 | The phase1 it belongs to |
 | `fortios:psksecret` = `present`/`absent`, `fortios:psksecret:unused`; `fortios:psksecret:form`, `fortios:psksecret:line` | IPsec phase1; its pre-shared key component | Whether a PSK is set, and its form (`ENC`, `masked`, `plaintext`) and line, never its value; `psksecret:unused` names the authmethod when the tunnel does not use the PSK |
+| `fortios:ppk:value` | IPsec phase1 | RFC 8784 PPK mode: `disable`, `allow`, or `require` |
+| `fortios:ppk-secret` = `present`/`absent`, `fortios:ppk-secret:unused`; `fortios:ppk-secret:form`, `fortios:ppk-secret:line` | IPsec phase1; its post-quantum preshared key component | Whether a PPK is set, and its form, never its value; `ppk-secret:unused` when `ppk` is not `allow` or `require` |
 | `fortios:certificate-kind` | certificates | `local`, `ca`, or `remote` |
 | `fortios:source:value`, `fortios:range:value` (with `:line`) | certificates | The entry's `source` (`factory`, `user`, `bundle`) and `range` (`global`, `vdom`), when set to a known value |
+| `fortios:enroll-protocol:value` (with `:line`) | local certificates | `none`, `scep`, `cmpv2`, `acme2`, or `est`, when set |
 | `fortios:referenced-from` | global certificates | The VDOMs whose tables list this certificate by name (§6.4), e.g. `vdom branch, vdom root` |
 
 ### 4.2 Private keys
 
-A certificate's private key, and an IPsec PSK, become a component that
-records presence only. The value is never parsed, decoded, stored, or
-printed; `model.Material` has no value field at all.
+A certificate's private key, an IPsec PSK, and an IPsec RFC 8784 PPK
+become a component that records presence only. The value is never parsed,
+decoded, stored, or printed; `model.Material` has no value field at all.
 
 | Property | Meaning |
 |---|---|
@@ -243,9 +246,15 @@ merged into the first:
 - properties are combined; if both copies set a property to different
   values, the smaller value is kept, so the result does not depend on
   extractor order, and a `merge-conflict` warning names both values;
+- `DependsOn` is the union of both copies, first-seen order (the emitter
+  sorts the refs);
 - the algorithm, protocol, certificate, or material details of the first
   copy are kept; if the second copy's details differ, that is a
-  `merge-conflict` warning too.
+  `merge-conflict` warning too, except for protocols and certificates,
+  which are kept as separate components named `… (line N)` so a second
+  `edit` with the same name cannot hide weaker crypto. The parser also
+  emits `duplicate-edit-name` for that case. `merge-conflict` warnings
+  include the file and line of the second copy when it has evidence.
 
 A merge conflict means two extractors disagree about the same component,
 which is a bug. Tests check that extractors define shared algorithms
@@ -271,6 +280,7 @@ warning, from the parser or an extractor, counts toward the
 | `opaque-secrets` | The backup has a `#private-encryption-key=` line, so its secret fields are encrypted with that key; they are reported as present only |
 | `section-not-inventoried` | The backup has crypto sections the CBOM does not cover yet |
 | `plaintext-psk` | An IPsec PSK is stored in plaintext in the backup |
+| `plaintext-ppk` | An IPsec RFC 8784 post-quantum preshared key is stored in plaintext in the backup |
 | `plaintext-private-key` | A private key is, or may be, stored unencrypted (§4.2) |
 | `private-key-in-certificate-field` | A certificate field also holds a private key block |
 | `cert-unparseable` | A certificate entry has no PEM that parses (and is not a VDOM reference) |
@@ -281,6 +291,7 @@ warning, from the parser or an extractor, counts toward the
 | `addke-not-ikev2`, `addke-applies-unknown` | `addke` on an IKEv1 tunnel, or on one whose IKE version is unknown; not counted |
 | `ssl-version-range-empty` | SSL VPN minimum version is above the maximum |
 | `merge-conflict` | Two extractors disagree about one component (§4.4) |
+| `duplicate-edit-name` | A table has two `edit` blocks with the same name; both are kept |
 
 ## 6. Design decisions
 
@@ -464,11 +475,11 @@ with SSL offload), `firewall access-proxy`,
 
 ### 7.5 Other limitations
 
-- Table 9 elements not filled yet: Crypto Functions, Classical security
-  level, key state, Activation Date (§2; §8.3–8.5), and algorithm OIDs
-  outside certificates.
-- `admin-server-cert` is recorded by name; admin HTTPS is not linked to a
-  certificate component yet.
+- Table 9 elements not filled yet: key state, Activation Date (§2; §8.3–8.4),
+  and algorithm OIDs for MODP groups, AES in CTR mode, and Fortinet-private
+  KEMs.
+- `admin-server-cert` is linked to a certificate component only when it is
+  configured; the default `Fortinet_GUI_Server` is recorded by name only.
 - The effective cipher set under `strong-crypto` is not computed; options it
   may disable are marked (§4.1).
 - `ike-transform-id` is added by the IPsec extractor, so an X25519 or
@@ -477,7 +488,8 @@ with SSL offload), `firewall access-proxy`,
 - Certificate validity is judged against today's Baseline Requirements text;
   the limits before 2020 are not modelled.
 - DTLS exists only in 7.4.12, so DTLS components appear only for that version.
-- `merge-conflict` warnings name the component but not a file line.
+- `merge-conflict` warnings name the component and, when the second copy
+  has evidence, its file and line.
 - CycloneDX 1.6 only; a 1.7 emitter (with `tlsGroups` and certificate
   extensions) is planned.
 - Fixture syntax comes from Fortinet's CLI reference; checks on a FortiGate-VM
@@ -539,10 +551,17 @@ Using it would fill the element but needs to be documented as a convention.
 
 ### 8.5 Crypto Functions and Classical security level
 
-Both need rules cbom-netscan would own: functions by the algorithm's role in
-the protocol, and security levels from NIST SP 800-57 Part 1 Rev. 5 Table 2.
-The open question is how to describe a combiner's level (the stronger or
-weaker of its parts).
+Filled from `extract/internal/algo.Complete`: functions by the algorithm's
+primitive (not by which protocol slot used it, so AES-256-GCM in SSH and
+IPsec is one component), and classical bits from NIST SP 800-57 Part 1
+Rev. 5: Table 2, Table 3's HMAC column for HMAC (a keyed MAC needs
+pre-image resistance, not collision resistance, so HMAC-SHA1 is 128, not
+80), or the key size of a symmetric cipher. Algorithms those tables do not
+rate, and RC4, are left unset instead of being given a number. A
+combiner's classical level is left unset: it is not a single Table 2
+number (neither the stronger nor the weaker of its parts is recorded as
+the combiner's own level). NIST KEMs (ML-KEM) have a NIST quantum level
+instead of a Table 2 classical number.
 
 ## 9. Sources
 

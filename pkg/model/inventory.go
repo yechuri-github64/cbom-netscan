@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"strconv"
+	"strings"
 )
 
 // NewInventory creates an empty Inventory with the dedupe map initialised.
@@ -51,6 +53,11 @@ func (inv *Inventory) Add(a *Asset) *Asset {
 		return a
 	}
 	if dup {
+		if splitDuplicate(existing, a) {
+			a.Name = disambiguate(a)
+			a.ID = ""
+			return inv.Add(a)
+		}
 		before := len(existing.Evidence)
 		inv.merge(existing, a)
 		inv.countEvidence(len(existing.Evidence) - before)
@@ -140,10 +147,16 @@ func (e *LimitError) Error() string {
 //     a merge-conflict warning names both values, because a real conflict
 //     means two extractors disagree about the same component.
 //
+// DependsOn is the union of both copies, first-seen order, so a hybrid
+// algorithm (or a protocol) that two extractors attach different children
+// to keeps every child whichever ran first.
+//
 // The algorithm, protocol, certificate, or material details of the stored
 // asset are kept; if the duplicate's details differ, that is also reported
-// as a merge-conflict. extract/shared_test.go checks that the extractors
-// define shared components identically.
+// as a merge-conflict. Protocols and certificates with different details
+// are not merged: Add keeps both, renaming the second (see splitDuplicate).
+// extract/shared_test.go checks that the extractors define shared
+// components identically.
 func (inv *Inventory) merge(existing, a *Asset) {
 	es := inv.seen[existing]
 	if es == nil || es.n > len(existing.Evidence) {
@@ -177,20 +190,80 @@ func (inv *Inventory) merge(existing, a *Asset) {
 		case v != old:
 			lo, hi := min(v, old), max(v, old)
 			existing.Properties[k] = lo
-			inv.conflict(existing, fmt.Sprintf("property %s was set to %q and to %q; kept %q", k, lo, hi, lo))
+			inv.conflict(existing, a, fmt.Sprintf("property %s was set to %q and to %q; kept %q", k, lo, hi, lo))
 		}
 	}
+	existing.DependsOn = union(existing.DependsOn, a.DependsOn)
 	if !reflect.DeepEqual(existing.Alg, a.Alg) || !reflect.DeepEqual(existing.Proto, a.Proto) ||
 		!reflect.DeepEqual(existing.Cert, a.Cert) || !reflect.DeepEqual(existing.Mat, a.Mat) {
-		inv.conflict(existing, "two copies have different algorithm, protocol, certificate, or material details; kept the first")
+		inv.conflict(existing, a, "two copies have different algorithm, protocol, certificate, or material details; kept the first")
 	}
 }
 
-func (inv *Inventory) conflict(a *Asset, detail string) {
+// splitDuplicate is true when two assets share a merge key but are not the
+// same object: two IPsec tunnels named "vpn" with different proposals, or
+// two certificates with the same CN. Algorithms with the same name are one
+// algorithm; a detail mismatch there is a merge-conflict, not a new row.
+func splitDuplicate(existing, a *Asset) bool {
+	switch a.Type {
+	case AssetTypeProtocol, AssetTypeCertificate:
+		return !reflect.DeepEqual(existing.Alg, a.Alg) || !reflect.DeepEqual(existing.Proto, a.Proto) ||
+			!reflect.DeepEqual(existing.Cert, a.Cert) || !reflect.DeepEqual(existing.Mat, a.Mat)
+	}
+	return false
+}
+
+func disambiguate(a *Asset) string {
+	suffix := " (duplicate)"
+	if ev := firstEvidence(a); ev.Line > 0 {
+		suffix = " (line " + strconv.Itoa(ev.Line) + ")"
+	}
+	if strings.Contains(a.Name, " (line ") || strings.HasSuffix(a.Name, " (duplicate)") {
+		return a.Name + " (duplicate)"
+	}
+	return a.Name + suffix
+}
+
+func firstEvidence(a *Asset) Evidence {
+	if a == nil || len(a.Evidence) == 0 {
+		return Evidence{}
+	}
+	return a.Evidence[0]
+}
+
+func union(a, b []string) []string {
+	seen := make(map[string]struct{}, len(a)+len(b))
+	out := make([]string, 0, len(a)+len(b))
+	for _, s := range append(append([]string{}, a...), b...) {
+		if s == "" {
+			continue
+		}
+		if _, ok := seen[s]; ok {
+			continue
+		}
+		seen[s] = struct{}{}
+		out = append(out, s)
+	}
+	return out
+}
+
+func (inv *Inventory) conflict(stored, incoming *Asset, detail string) {
+	ev := Evidence{Symbol: stored.Name}
+	if got := firstEvidence(incoming); got.Location != "" || got.Line > 0 {
+		ev = got
+		if ev.Symbol == "" {
+			ev.Symbol = stored.Name
+		}
+	} else if got := firstEvidence(stored); got.Location != "" || got.Line > 0 {
+		ev = got
+		if ev.Symbol == "" {
+			ev.Symbol = stored.Name
+		}
+	}
 	inv.AddWarning(Warning{
 		Code:    "merge-conflict",
-		Message: fmt.Sprintf("component %q: %s", a.Name, detail),
-		Ev:      Evidence{Symbol: a.Name},
+		Message: fmt.Sprintf("component %q: %s", stored.Name, detail),
+		Ev:      ev,
 	})
 }
 

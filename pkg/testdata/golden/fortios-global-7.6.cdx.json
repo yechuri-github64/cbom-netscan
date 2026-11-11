@@ -336,8 +336,14 @@
         "algorithmProperties": {
           "primitive": "ae",
           "parameterSetIdentifier": "256",
-          "mode": "gcm"
-        }
+          "mode": "gcm",
+          "cryptoFunctions": [
+            "encrypt",
+            "decrypt"
+          ],
+          "classicalSecurityLevel": 256
+        },
+        "oid": "2.16.840.1.101.3.4.1.46"
       }
     },
     {
@@ -347,8 +353,13 @@
       "cryptoProperties": {
         "assetType": "algorithm",
         "algorithmProperties": {
-          "primitive": "mac"
-        }
+          "primitive": "mac",
+          "cryptoFunctions": [
+            "tag"
+          ],
+          "classicalSecurityLevel": 256
+        },
+        "oid": "1.2.840.113549.2.9"
       }
     },
     {
@@ -358,8 +369,13 @@
       "cryptoProperties": {
         "assetType": "algorithm",
         "algorithmProperties": {
-          "primitive": "mac"
-        }
+          "primitive": "mac",
+          "cryptoFunctions": [
+            "tag"
+          ],
+          "classicalSecurityLevel": 256
+        },
+        "oid": "1.2.840.113549.2.11"
       }
     },
     {
@@ -380,6 +396,10 @@
         "algorithmProperties": {
           "primitive": "key-agree",
           "curve": "x25519",
+          "cryptoFunctions": [
+            "keyderive"
+          ],
+          "classicalSecurityLevel": 128,
           "nistQuantumSecurityLevel": 0
         }
       }
@@ -402,6 +422,10 @@
         "algorithmProperties": {
           "primitive": "key-agree",
           "curve": "secp384r1",
+          "cryptoFunctions": [
+            "keyderive"
+          ],
+          "classicalSecurityLevel": 192,
           "nistQuantumSecurityLevel": 0
         }
       }
@@ -415,6 +439,11 @@
         "algorithmProperties": {
           "primitive": "signature",
           "curve": "secp256r1",
+          "cryptoFunctions": [
+            "sign",
+            "verify"
+          ],
+          "classicalSecurityLevel": 128,
           "nistQuantumSecurityLevel": 0
         }
       }
@@ -428,6 +457,11 @@
         "algorithmProperties": {
           "primitive": "signature",
           "curve": "secp384r1",
+          "cryptoFunctions": [
+            "sign",
+            "verify"
+          ],
+          "classicalSecurityLevel": 192,
           "nistQuantumSecurityLevel": 0
         }
       }
@@ -441,6 +475,11 @@
         "algorithmProperties": {
           "primitive": "signature",
           "curve": "secp521r1",
+          "cryptoFunctions": [
+            "sign",
+            "verify"
+          ],
+          "classicalSecurityLevel": 256,
           "nistQuantumSecurityLevel": 0
         }
       }
@@ -453,6 +492,10 @@
         "assetType": "algorithm",
         "algorithmProperties": {
           "primitive": "signature",
+          "cryptoFunctions": [
+            "sign",
+            "verify"
+          ],
           "nistQuantumSecurityLevel": 0
         }
       }
@@ -465,6 +508,10 @@
         "assetType": "algorithm",
         "algorithmProperties": {
           "primitive": "signature",
+          "cryptoFunctions": [
+            "sign",
+            "verify"
+          ],
           "nistQuantumSecurityLevel": 0
         }
       }
@@ -478,6 +525,11 @@
         "algorithmProperties": {
           "primitive": "signature",
           "curve": "ed25519",
+          "cryptoFunctions": [
+            "sign",
+            "verify"
+          ],
+          "classicalSecurityLevel": 128,
           "nistQuantumSecurityLevel": 0
         }
       }

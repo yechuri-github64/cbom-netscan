@@ -106,3 +106,65 @@ func TestAdd_DetailConflictWarns(t *testing.T) {
 		t.Errorf("warnings = %+v, want one merge-conflict", inv.Warnings)
 	}
 }
+
+func TestAdd_DetailConflictIncludesLine(t *testing.T) {
+	inv := model.NewInventory()
+	inv.Add(asset(nil, evA))
+	other := asset(nil, evB)
+	other.Alg = &model.Algorithm{Primitive: "block-cipher"}
+	inv.Add(other)
+	w := inv.Warnings[0]
+	if w.Ev.Line != evB.Line || w.Ev.Location != evB.Location {
+		t.Errorf("merge-conflict evidence = %+v, want line %d of %s", w.Ev, evB.Line, evB.Location)
+	}
+}
+
+func TestAdd_SplitsConflictingProtocols(t *testing.T) {
+	inv := model.NewInventory()
+	first := inv.Add(&model.Asset{
+		Type: model.AssetTypeProtocol, Name: "FortiOS IPsec phase1-interface vpn",
+		Proto:    &model.Protocol{Type: "ike", Version: "2"},
+		Evidence: []model.Evidence{{Location: "fw.conf", Line: 3, Symbol: "vpn ipsec phase1-interface/vpn/ike-version"}},
+	})
+	second := inv.Add(&model.Asset{
+		Type: model.AssetTypeProtocol, Name: "FortiOS IPsec phase1-interface vpn",
+		Proto:    &model.Protocol{Type: "ike", Version: "1"},
+		Evidence: []model.Evidence{{Location: "fw.conf", Line: 8, Symbol: "vpn ipsec phase1-interface/vpn/ike-version"}},
+	})
+	if first == second || len(inv.Assets) != 2 {
+		t.Fatalf("conflicting protocols merged: %d assets, same pointer %v", len(inv.Assets), first == second)
+	}
+	if second.Name != "FortiOS IPsec phase1-interface vpn (line 8)" {
+		t.Errorf("second name = %q, want a line suffix", second.Name)
+	}
+	if len(inv.Warnings) != 0 {
+		t.Errorf("warnings = %+v, want none (split, not merge-conflict)", inv.Warnings)
+	}
+}
+
+func TestAdd_UnionsDependsOn(t *testing.T) {
+	inv := model.NewInventory()
+	a := inv.Add(&model.Asset{
+		Type: model.AssetTypeAlgorithm, Name: "X25519MLKEM768",
+		Alg: &model.Algorithm{Primitive: "combiner"}, DependsOn: []string{"ref-a", "ref-b"},
+	})
+	inv.Add(&model.Asset{
+		Type: model.AssetTypeAlgorithm, Name: "X25519MLKEM768",
+		Alg: &model.Algorithm{Primitive: "combiner"}, DependsOn: []string{"ref-b", "ref-c"},
+	})
+	if got, want := fmt.Sprint(a.DependsOn), "[ref-a ref-b ref-c]"; got != want {
+		t.Errorf("DependsOn = %s, want %s", got, want)
+	}
+	invYX := model.NewInventory()
+	b := invYX.Add(&model.Asset{
+		Type: model.AssetTypeAlgorithm, Name: "X25519MLKEM768",
+		Alg: &model.Algorithm{Primitive: "combiner"}, DependsOn: []string{"ref-b", "ref-c"},
+	})
+	invYX.Add(&model.Asset{
+		Type: model.AssetTypeAlgorithm, Name: "X25519MLKEM768",
+		Alg: &model.Algorithm{Primitive: "combiner"}, DependsOn: []string{"ref-a", "ref-b"},
+	})
+	if got, want := fmt.Sprint(b.DependsOn), "[ref-b ref-c ref-a]"; got != want {
+		t.Errorf("reverse order DependsOn = %s, want %s", got, want)
+	}
+}

@@ -68,6 +68,7 @@ var (
 	specP2Proposal = field.Spec{Known: phase2Proposals(), Pattern: proposalRE}
 	specDHGroup    = field.Spec{Known: keys(dhGroups), Pattern: regexp.MustCompile(`^[0-9]{1,4}$`)}
 	specAuth       = field.Spec{Known: set("psk", "signature")}
+	specPPK        = field.Spec{Known: set("disable", "allow", "require")}
 	specSigHash    = field.Spec{Known: set("sha1", "sha2-256", "sha2-384", "sha2-512", "identity")}
 	specPFS        = field.Spec{Known: set("enable", "disable")}
 	specAddke      = field.Spec{Known: addkeKnown(), Pattern: regexp.MustCompile(`^[a-z0-9-]{1,20}$`)}

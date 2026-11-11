@@ -78,6 +78,18 @@
           "value": "2"
         },
         {
+          "name": "cbom-netscan:fortios:ppk:default-source",
+          "value": "CLI HTML 7.6.7 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14; research notes §3.3 (RFC 8784, default disable)"
+        },
+        {
+          "name": "cbom-netscan:fortios:ppk:source",
+          "value": "default"
+        },
+        {
+          "name": "cbom-netscan:fortios:ppk:value",
+          "value": "disable"
+        },
+        {
           "name": "cbom-netscan:fortios:proposal:line",
           "value": "103"
         },
@@ -199,6 +211,18 @@
         {
           "name": "cbom-netscan:fortios:ike-version:value",
           "value": "1"
+        },
+        {
+          "name": "cbom-netscan:fortios:ppk:default-source",
+          "value": "CLI HTML 7.6.7 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14; research notes §3.3 (RFC 8784, default disable)"
+        },
+        {
+          "name": "cbom-netscan:fortios:ppk:source",
+          "value": "default"
+        },
+        {
+          "name": "cbom-netscan:fortios:ppk:value",
+          "value": "disable"
         },
         {
           "name": "cbom-netscan:fortios:proposal:line",
@@ -650,8 +674,14 @@
         "assetType": "algorithm",
         "algorithmProperties": {
           "primitive": "block-cipher",
-          "mode": "cbc"
-        }
+          "mode": "cbc",
+          "cryptoFunctions": [
+            "encrypt",
+            "decrypt"
+          ],
+          "classicalSecurityLevel": 112
+        },
+        "oid": "1.2.840.113549.3.7"
       }
     },
     {
@@ -679,8 +709,14 @@
         "algorithmProperties": {
           "primitive": "block-cipher",
           "parameterSetIdentifier": "128",
-          "mode": "cbc"
-        }
+          "mode": "cbc",
+          "cryptoFunctions": [
+            "encrypt",
+            "decrypt"
+          ],
+          "classicalSecurityLevel": 128
+        },
+        "oid": "2.16.840.1.101.3.4.1.2"
       }
     },
     {
@@ -708,8 +744,14 @@
         "algorithmProperties": {
           "primitive": "block-cipher",
           "parameterSetIdentifier": "256",
-          "mode": "cbc"
-        }
+          "mode": "cbc",
+          "cryptoFunctions": [
+            "encrypt",
+            "decrypt"
+          ],
+          "classicalSecurityLevel": 256
+        },
+        "oid": "2.16.840.1.101.3.4.1.42"
       }
     },
     {
@@ -721,7 +763,12 @@
         "algorithmProperties": {
           "primitive": "block-cipher",
           "parameterSetIdentifier": "256",
-          "mode": "ctr"
+          "mode": "ctr",
+          "cryptoFunctions": [
+            "encrypt",
+            "decrypt"
+          ],
+          "classicalSecurityLevel": 256
         }
       }
     },
@@ -734,8 +781,14 @@
         "algorithmProperties": {
           "primitive": "ae",
           "parameterSetIdentifier": "256",
-          "mode": "gcm"
-        }
+          "mode": "gcm",
+          "cryptoFunctions": [
+            "encrypt",
+            "decrypt"
+          ],
+          "classicalSecurityLevel": 256
+        },
+        "oid": "2.16.840.1.101.3.4.1.46"
       }
     },
     {
@@ -763,8 +816,13 @@
         "algorithmProperties": {
           "primitive": "key-agree",
           "curve": "secp256r1",
+          "cryptoFunctions": [
+            "keyderive"
+          ],
+          "classicalSecurityLevel": 128,
           "nistQuantumSecurityLevel": 0
-        }
+        },
+        "oid": "1.2.840.10045.3.1.7"
       }
     },
     {
@@ -784,8 +842,13 @@
       "cryptoProperties": {
         "assetType": "algorithm",
         "algorithmProperties": {
-          "primitive": "mac"
-        }
+          "primitive": "mac",
+          "cryptoFunctions": [
+            "tag"
+          ],
+          "classicalSecurityLevel": 128
+        },
+        "oid": "1.2.840.113549.2.7"
       }
     },
     {
@@ -811,8 +874,13 @@
       "cryptoProperties": {
         "assetType": "algorithm",
         "algorithmProperties": {
-          "primitive": "mac"
-        }
+          "primitive": "mac",
+          "cryptoFunctions": [
+            "tag"
+          ],
+          "classicalSecurityLevel": 256
+        },
+        "oid": "1.2.840.113549.2.9"
       }
     },
     {
@@ -822,8 +890,13 @@
       "cryptoProperties": {
         "assetType": "algorithm",
         "algorithmProperties": {
-          "primitive": "mac"
-        }
+          "primitive": "mac",
+          "cryptoFunctions": [
+            "tag"
+          ],
+          "classicalSecurityLevel": 256
+        },
+        "oid": "1.2.840.113549.2.11"
       }
     },
     {
@@ -851,6 +924,10 @@
         "algorithmProperties": {
           "primitive": "key-agree",
           "parameterSetIdentifier": "1024",
+          "cryptoFunctions": [
+            "keyderive"
+          ],
+          "classicalSecurityLevel": 80,
           "nistQuantumSecurityLevel": 0
         }
       }
@@ -886,6 +963,10 @@
         "algorithmProperties": {
           "primitive": "key-agree",
           "parameterSetIdentifier": "2048",
+          "cryptoFunctions": [
+            "keyderive"
+          ],
+          "classicalSecurityLevel": 112,
           "nistQuantumSecurityLevel": 0
         }
       }
@@ -907,7 +988,11 @@
       "cryptoProperties": {
         "assetType": "algorithm",
         "algorithmProperties": {
-          "primitive": "kdf"
+          "primitive": "kdf",
+          "cryptoFunctions": [
+            "keyderive"
+          ],
+          "classicalSecurityLevel": 128
         }
       }
     },
@@ -928,7 +1013,11 @@
       "cryptoProperties": {
         "assetType": "algorithm",
         "algorithmProperties": {
-          "primitive": "kdf"
+          "primitive": "kdf",
+          "cryptoFunctions": [
+            "keyderive"
+          ],
+          "classicalSecurityLevel": 256
         }
       }
     },
@@ -951,6 +1040,13 @@
         "algorithmProperties": {
           "primitive": "pke",
           "parameterSetIdentifier": "1024",
+          "cryptoFunctions": [
+            "encrypt",
+            "decrypt",
+            "sign",
+            "verify"
+          ],
+          "classicalSecurityLevel": 80,
           "nistQuantumSecurityLevel": 0
         },
         "oid": "1.2.840.113549.1.1.1"
@@ -975,6 +1071,13 @@
         "algorithmProperties": {
           "primitive": "pke",
           "parameterSetIdentifier": "2048",
+          "cryptoFunctions": [
+            "encrypt",
+            "decrypt",
+            "sign",
+            "verify"
+          ],
+          "classicalSecurityLevel": 112,
           "nistQuantumSecurityLevel": 0
         },
         "oid": "1.2.840.113549.1.1.1"
@@ -1005,6 +1108,10 @@
         "algorithmProperties": {
           "primitive": "signature",
           "padding": "pkcs1v15",
+          "cryptoFunctions": [
+            "sign",
+            "verify"
+          ],
           "nistQuantumSecurityLevel": 0
         },
         "oid": "1.2.840.113549.1.1.11"
@@ -1019,6 +1126,10 @@
         "algorithmProperties": {
           "primitive": "key-agree",
           "curve": "x25519",
+          "cryptoFunctions": [
+            "keyderive"
+          ],
+          "classicalSecurityLevel": 128,
           "nistQuantumSecurityLevel": 0
         }
       }
@@ -1031,6 +1142,9 @@
         "assetType": "algorithm",
         "algorithmProperties": {
           "primitive": "key-agree",
+          "cryptoFunctions": [
+            "keyderive"
+          ],
           "nistQuantumSecurityLevel": 0
         }
       }
@@ -1044,6 +1158,10 @@
         "algorithmProperties": {
           "primitive": "key-agree",
           "parameterSetIdentifier": "2048",
+          "cryptoFunctions": [
+            "keyderive"
+          ],
+          "classicalSecurityLevel": 112,
           "nistQuantumSecurityLevel": 0
         }
       }
@@ -1057,6 +1175,10 @@
         "algorithmProperties": {
           "primitive": "key-agree",
           "parameterSetIdentifier": "4096",
+          "cryptoFunctions": [
+            "keyderive"
+          ],
+          "classicalSecurityLevel": 128,
           "nistQuantumSecurityLevel": 0
         }
       }
@@ -1070,6 +1192,10 @@
         "algorithmProperties": {
           "primitive": "key-agree",
           "parameterSetIdentifier": "8192",
+          "cryptoFunctions": [
+            "keyderive"
+          ],
+          "classicalSecurityLevel": 192,
           "nistQuantumSecurityLevel": 0
         }
       }
@@ -1083,6 +1209,10 @@
         "algorithmProperties": {
           "primitive": "key-agree",
           "curve": "secp256r1",
+          "cryptoFunctions": [
+            "keyderive"
+          ],
+          "classicalSecurityLevel": 128,
           "nistQuantumSecurityLevel": 0
         }
       }
@@ -1096,6 +1226,10 @@
         "algorithmProperties": {
           "primitive": "key-agree",
           "curve": "secp384r1",
+          "cryptoFunctions": [
+            "keyderive"
+          ],
+          "classicalSecurityLevel": 192,
           "nistQuantumSecurityLevel": 0
         }
       }
@@ -1109,6 +1243,10 @@
         "algorithmProperties": {
           "primitive": "key-agree",
           "curve": "secp521r1",
+          "cryptoFunctions": [
+            "keyderive"
+          ],
+          "classicalSecurityLevel": 256,
           "nistQuantumSecurityLevel": 0
         }
       }
@@ -1122,6 +1260,11 @@
         "algorithmProperties": {
           "primitive": "signature",
           "curve": "secp256r1",
+          "cryptoFunctions": [
+            "sign",
+            "verify"
+          ],
+          "classicalSecurityLevel": 128,
           "nistQuantumSecurityLevel": 0
         }
       }
@@ -1135,6 +1278,11 @@
         "algorithmProperties": {
           "primitive": "signature",
           "curve": "secp384r1",
+          "cryptoFunctions": [
+            "sign",
+            "verify"
+          ],
+          "classicalSecurityLevel": 192,
           "nistQuantumSecurityLevel": 0
         }
       }
@@ -1148,6 +1296,11 @@
         "algorithmProperties": {
           "primitive": "signature",
           "curve": "secp521r1",
+          "cryptoFunctions": [
+            "sign",
+            "verify"
+          ],
+          "classicalSecurityLevel": 256,
           "nistQuantumSecurityLevel": 0
         }
       }
@@ -1160,6 +1313,10 @@
         "assetType": "algorithm",
         "algorithmProperties": {
           "primitive": "signature",
+          "cryptoFunctions": [
+            "sign",
+            "verify"
+          ],
           "nistQuantumSecurityLevel": 0
         }
       }
@@ -1172,6 +1329,10 @@
         "assetType": "algorithm",
         "algorithmProperties": {
           "primitive": "signature",
+          "cryptoFunctions": [
+            "sign",
+            "verify"
+          ],
           "nistQuantumSecurityLevel": 0
         }
       }
@@ -1185,6 +1346,11 @@
         "algorithmProperties": {
           "primitive": "signature",
           "curve": "ed25519",
+          "cryptoFunctions": [
+            "sign",
+            "verify"
+          ],
+          "classicalSecurityLevel": 128,
           "nistQuantumSecurityLevel": 0
         }
       }

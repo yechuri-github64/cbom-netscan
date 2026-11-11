@@ -18,6 +18,9 @@
 //	  → signature algorithm e.g. ECDSA-SHA384, SHA256-RSA
 //	private key             related-crypto-material, presence only
 //
+// Local certificates also record enroll-protocol when it is set (none, scep,
+// cmpv2, acme2, est).
+//
 // The private-key value is never parsed, decoded, or emitted: the code only
 // checks whether the field is set and, to tell its form, its first token or
 // a PEM key's BEGIN line (plus, for traditional RSA/EC/DSA keys, the RFC 1421
@@ -99,6 +102,7 @@ var tables = []table{
 var (
 	knownSource = map[string]bool{"factory": true, "user": true, "bundle": true}
 	knownRange  = map[string]bool{"global": true, "vdom": true}
+	knownEnroll = map[string]bool{"none": true, "scep": true, "cmpv2": true, "acme2": true, "est": true}
 )
 
 // Extract adds certificate components for every certificate in every scope
@@ -447,6 +451,12 @@ func addCert(inv *model.Inventory, location string, scope tree.Scope, tb table, 
 		slices.Sort(ctx)
 		c.Properties[field.Prefix+"referenced-from"] = strings.Join(slices.Compact(ctx), ", ")
 	}
+	if tb.kind == "local" {
+		if a := e.Attr("enroll-protocol"); a != nil && !a.Unset && len(a.Values) == 1 && knownEnroll[a.Values[0]] {
+			c.Properties[field.Prefix+"enroll-protocol:value"] = a.Values[0]
+			c.Properties[field.Prefix+"enroll-protocol:line"] = strconv.Itoa(a.Line)
+		}
+	}
 	for _, f := range []struct {
 		key   string
 		known map[string]bool
@@ -595,12 +605,16 @@ func addPrivateKey(inv *model.Inventory, location, ctx string, tb table, e *tree
 
 func addAlgorithm(inv *model.Inventory, location string, a alg, ev []model.Evidence) string {
 	def := a.a
-	algo.MarkQuantumVulnerable(&def)
+	algo.Complete(a.name, &def)
+	oid := a.oid
+	if oid == "" {
+		oid = algo.OID(a.name)
+	}
 	return inv.Add(&model.Asset{
 		ID:       model.BOMRef(model.AssetTypeAlgorithm, a.name, location),
 		Type:     model.AssetTypeAlgorithm,
 		Name:     a.name,
-		OID:      a.oid,
+		OID:      oid,
 		Alg:      &def,
 		Evidence: ev,
 	}).ID

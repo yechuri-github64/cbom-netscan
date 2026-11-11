@@ -310,6 +310,7 @@ func buildComponents(assets []*model.Asset) ([]cdx.Component, []cdx.Dependency) 
 		// Dependency.Ref and Dependencies are plain strings (not BOMReference).
 		if len(a.DependsOn) > 0 {
 			refs := append([]string(nil), a.DependsOn...)
+			sort.Strings(refs)
 			deps = append(deps, cdx.Dependency{
 				Ref:          a.ID,
 				Dependencies: &refs,

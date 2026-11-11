@@ -40,7 +40,7 @@ value, and warnings never quote them. Encrypted backups are refused, not
 decrypted.
 
 [MAPPING.md](MAPPING.md) maps every field to CERT-In's CBOM minimum elements
-(Table 9) and CycloneDX 1.6: 19 of the 30 elements fully and 5 partially from
+(Table 9) and CycloneDX 1.6: 21 of the 30 elements fully and 4 partially from
 a backup alone.
 
 **The output is an inventory, not a compliance certification.** It records

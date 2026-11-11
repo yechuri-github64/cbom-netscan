@@ -103,6 +103,16 @@ func build(l *lexer.Lexer) ([]*Block, []model.Warning, error) {
 				return nil, nil, errAt(line, "edit needs exactly one name, got %d", len(args))
 			}
 			e := &Entry{Name: args[0], Line: line}
+			for _, prev := range top.block.Entries {
+				if prev.Name == e.Name {
+					warns = append(warns, model.Warning{
+						Code:    "duplicate-edit-name",
+						Message: fmt.Sprintf("config %q has a second edit %q (line %d); the first was at line %d", top.block.Path, e.Name, line, prev.Line),
+						Ev:      model.Evidence{Line: line, Symbol: top.block.Path + "/" + e.Name},
+					})
+					break
+				}
+			}
 			top.block.Entries = append(top.block.Entries, e)
 			stack = append(stack, frame{entry: e})
 

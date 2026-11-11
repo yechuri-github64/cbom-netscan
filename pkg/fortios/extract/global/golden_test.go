@@ -46,8 +46,8 @@ func TestGolden_Global76(t *testing.T) {
 
 	inv := model.NewInventory()
 	global.Extract(tr, filepath.Base(fixture), inv)
-	if len(inv.Warnings) != 0 {
-		t.Errorf("unexpected warnings: %+v", inv.Warnings)
+	if len(inv.Warnings) != 1 || inv.Warnings[0].Code != "unknown-certificate" {
+		t.Errorf("warnings = %+v, want one unknown-certificate for lab-gui-cert", inv.Warnings)
 	}
 
 	// The same serial and timestamp that "cbom-netscan fortios --reproducible"

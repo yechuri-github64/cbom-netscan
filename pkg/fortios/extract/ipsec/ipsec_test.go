@@ -148,6 +148,8 @@ func TestExtract(t *testing.T) {
 				eq(t, "hq ke", names(inv, hq.Proto.IKEKE), []string{"ECP-384", "ECP-521"})
 				eq(t, "hq auth", names(inv, hq.Proto.IKEAuth), []string{p1 + "hq-ikev2 pre-shared key"})
 				prop(t, hq, "dhgrp:source", "configured")
+				prop(t, hq, "ppk:source", "default")
+				prop(t, hq, "ppk:value", "disable")
 				prop(t, hq, "view", "configured")
 				prop(t, find(t, inv, p2+"hq-p2"), "view", "configured")
 				prop(t, hq, "dhgrp:line", "36")
@@ -217,7 +219,15 @@ func TestExtract(t *testing.T) {
 				if n != 1 {
 					t.Errorf("AES-256-GCM components = %d, want 1 shared component", n)
 				}
-				eq(t, "AES-256-GCM occurrences", occurrences(find(t, inv, "AES-256-GCM")), []string{"35 ", "49 ", "61 ", "71 "})
+				aes := find(t, inv, "AES-256-GCM")
+				if aes.OID != "2.16.840.1.101.3.4.1.46" {
+					t.Errorf("AES-256-GCM OID = %q", aes.OID)
+				}
+				if aes.Alg.ClassicalSecurityLevel == nil || *aes.Alg.ClassicalSecurityLevel != 256 {
+					t.Errorf("AES-256-GCM classicalSecurityLevel = %v, want 256", aes.Alg.ClassicalSecurityLevel)
+				}
+				eq(t, "AES-256-GCM functions", aes.Alg.CryptoFunctions, []string{"encrypt", "decrypt"})
+				eq(t, "AES-256-GCM occurrences", occurrences(aes), []string{"35 ", "49 ", "61 ", "71 "})
 
 				hqp2 := find(t, inv, p2+"hq-p2")
 				eq(t, "hq-p2 dependsOn", names(inv, hqp2.DependsOn), []string{p1 + "hq-ikev2"})
@@ -505,6 +515,83 @@ end
 				eq(t, "warnings", warnCodes(inv), []string{"unknown-token", "unknown-token"})
 				prop(t, find(t, inv, p1+"m"), "proposal:value", "aes256-sha256")
 				prop(t, find(t, inv, p1+"m"), "certificate:value", "")
+				prop(t, find(t, inv, p1+"m"), "ppk:value", "disable")
+				prop(t, find(t, inv, p1+"m"), "ppk-secret", "present")
+				prop(t, find(t, inv, p1+"m"), "ppk-secret:unused", "ppk is disable")
+				prop(t, find(t, inv, p1+"m post-quantum preshared key"), "ppk-secret:form", "ENC")
+			},
+		},
+		{
+			name: "ppk_require",
+			cfg: hdr767 + `config vpn ipsec phase1-interface
+    edit "pq"
+        set ike-version 2
+        set proposal aes256-sha256
+        set ppk require
+        set ppk-secret ENC c3ludGhldGljLXBwaw==
+    next
+end
+`,
+			check: func(t *testing.T, inv *model.Inventory) {
+				tun := find(t, inv, p1+"pq")
+				prop(t, tun, "ppk:source", "configured")
+				prop(t, tun, "ppk:value", "require")
+				prop(t, tun, "ppk-secret", "present")
+				eq(t, "ppk dependsOn", names(inv, tun.DependsOn), []string{p1 + "pq post-quantum preshared key"})
+				if len(tun.Proto.IKEAuth) != 0 {
+					t.Errorf("IKEAuth = %v; PPK is not an IKE auth transform", names(inv, tun.Proto.IKEAuth))
+				}
+				prop(t, find(t, inv, p1+"pq post-quantum preshared key"), "ppk-secret:form", "ENC")
+				eq(t, "warnings", warnCodes(inv), []string{})
+			},
+		},
+		{
+			name: "ppk_plaintext",
+			cfg: hdr767 + `config vpn ipsec phase1-interface
+    edit "pq"
+        set ppk allow
+        set ppk-secret synthetic-ppk
+    next
+end
+`,
+			check: func(t *testing.T, inv *model.Inventory) {
+				eq(t, "warnings", warnCodes(inv), []string{"plaintext-ppk"})
+				prop(t, find(t, inv, p1+"pq post-quantum preshared key"), "ppk-secret:form", "plaintext")
+			},
+		},
+		{
+			name: "duplicate_edit_name",
+			cfg: hdr767 + `config vpn ipsec phase1-interface
+    edit "vpn"
+        set ike-version 2
+        set proposal aes256-sha256
+    next
+    edit "vpn"
+        set ike-version 1
+        set proposal 3des-sha1
+    next
+end
+`,
+			check: func(t *testing.T, inv *model.Inventory) {
+				strong := find(t, inv, p1+"vpn")
+				if strong.Proto.Version != "2" {
+					t.Errorf("first vpn version = %q, want 2", strong.Proto.Version)
+				}
+				var weak *model.Asset
+				for _, a := range inv.Assets {
+					if a.Type == model.AssetTypeProtocol && strings.HasPrefix(a.Name, p1+"vpn (line ") {
+						weak = a
+					}
+				}
+				if weak == nil || weak.Proto.Version != "1" {
+					t.Fatalf("second vpn not kept as its own component")
+				}
+				if !slices.Contains(names(inv, strong.Proto.IKEEncr), "AES-256-CBC") {
+					t.Errorf("first vpn encr = %v, want AES-256-CBC", names(inv, strong.Proto.IKEEncr))
+				}
+				if !slices.Contains(names(inv, weak.Proto.Refs), "3DES-CBC") {
+					t.Errorf("second vpn refs = %v, want 3DES-CBC", names(inv, weak.Proto.Refs))
+				}
 			},
 		},
 	}

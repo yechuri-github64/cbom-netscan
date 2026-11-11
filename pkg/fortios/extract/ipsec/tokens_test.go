@@ -16,7 +16,7 @@ import (
 func TestDefaultsUseKnownTokens(t *testing.T) {
 	phase1 := map[string]field.Spec{
 		"ike-version": specIKEVersion, "dhgrp": specDHGroup,
-		"authmethod": specAuth, "signature-hash-alg": specSigHash,
+		"authmethod": specAuth, "ppk": specPPK, "signature-hash-alg": specSigHash,
 	}
 	phase2 := map[string]field.Spec{"pfs": specPFS, "dhgrp": specDHGroup}
 	for i := 1; i <= 7; i++ {

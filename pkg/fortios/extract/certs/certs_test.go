@@ -54,6 +54,7 @@ func pemFile(t *testing.T, name string) string {
 func config(t *testing.T) string {
 	return hdr + `config vpn certificate local
     edit "vpn-rsa"
+        set enroll-protocol acme2
         set password ENC c3ludGhldGljLWNlcnQtcGFzcw==
         set private-key "-----BEGIN ENCRYPTED PRIVATE KEY-----
 c3ludGhldGljLXJzYS1rZXk=
@@ -236,7 +237,9 @@ func TestExtractCertificates(t *testing.T) {
 
 	// Configured source and range are recorded; an unknown value is dropped.
 	prop(t, find(t, inv, local+"vpn-rsa"), "cbom-netscan:fortios:source:value", "user")
+	prop(t, find(t, inv, local+"vpn-rsa"), "cbom-netscan:fortios:enroll-protocol:value", "acme2")
 	prop(t, find(t, inv, local+"old-expired"), "cbom-netscan:fortios:range:value", "global")
+	noProp(t, find(t, inv, local+"gw-ecdsa"), "cbom-netscan:fortios:enroll-protocol:value")
 	noProp(t, find(t, inv, "FortiOS certificate ca lab-root-ca"), "cbom-netscan:fortios:source:value")
 
 	// RSA-2048 and ECDSA-SHA384 are each one component shared by the

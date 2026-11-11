@@ -114,6 +114,12 @@
           "sha2-512"
         ],
         "source": "CLI-7.4.12 p2239–2265 via research notes §3.3"
+      },
+      "ppk": {
+        "value": [
+          "disable"
+        ],
+        "source": "CLI HTML 7.4.12 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14; research notes §3.3 (RFC 8784, default disable)"
       }
     },
     "vpn ipsec phase1": {
@@ -145,6 +151,12 @@
           "sha2-512"
         ],
         "source": "CLI-7.4.12 p2239–2265 via research notes §3.3 The policy-based table has the same fields (research notes §3.3)."
+      },
+      "ppk": {
+        "value": [
+          "disable"
+        ],
+        "source": "CLI HTML 7.4.12 305883427/config-vpn-ipsec-phase1-interface, verified 2026-10-14; research notes §3.3 (RFC 8784, default disable). The policy-based table has the same fields (research notes §3.3)."
       }
     },
     "vpn ipsec phase2-interface": {

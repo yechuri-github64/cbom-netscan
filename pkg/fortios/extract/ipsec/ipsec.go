@@ -18,9 +18,11 @@
 // per round as properties, since CycloneDX 1.6 has no per-round slot.
 //
 // Field provenance is recorded as in the global extractor (package field).
-// Only allow-listed fields are read. psksecret is looked at only to report
-// whether it is present and in which form (ENC, masked, or plaintext); its
-// value is never stored.
+// Only allow-listed fields are read. psksecret and ppk-secret are looked at
+// only to report whether they are present and in which form (ENC, masked, or
+// plaintext); their values are never stored. ppk (RFC 8784) is recorded on
+// the tunnel; a present ppk-secret becomes a presence-only secret-key. PPK
+// is not an IKE authentication transform.
 //
 // A tunnel with authmethod signature depends on the local certificates its
 // certificate field names, and its auth transform references each
@@ -145,11 +147,12 @@ func (r *refs) apply(p *model.Protocol, ikev2 bool) {
 // configured value adds an evidence occurrence; a default adds none.
 func (x *extractor) algorithm(a alg, v field.Value) string {
 	alg := a.a
-	algo.MarkQuantumVulnerable(&alg)
+	algo.Complete(a.name, &alg)
 	asset := &model.Asset{
 		ID:         model.BOMRef(model.AssetTypeAlgorithm, a.name, x.r.Loc),
 		Type:       model.AssetTypeAlgorithm,
 		Name:       a.name,
+		OID:        algo.OID(a.name),
 		Alg:        &alg,
 		Properties: map[string]string{},
 	}
@@ -321,6 +324,7 @@ func (x *extractor) phase1(scope tree.Scope, section string, e *tree.Entry) *mod
 	if id := x.psk(en, a, method); id != "" && method == "psk" {
 		rs.add(&rs.auth, id)
 	}
+	x.ppk(en, a)
 
 	rs.apply(a.Proto, a.Proto.Version == "2")
 	return x.inv.Add(a)
@@ -401,6 +405,65 @@ func (x *extractor) psk(en entry, tunnel *model.Asset, method string) string {
 		Evidence: []model.Evidence{x.r.Evidence(v)},
 	}
 	return x.inv.Add(m).ID
+}
+
+// ppk records RFC 8784 post-quantum preshared key settings. ppk is
+// disable, allow, or require (default disable). A ppk-secret, when set, is
+// a presence-only secret-key; its value is never stored. PPK is not an IKE
+// authentication transform: when it is in effect (allow or require) the
+// tunnel depends on the secret-key component.
+func (x *extractor) ppk(en entry, tunnel *model.Asset) {
+	v := x.resolve(en, "ppk", specPPK)
+	x.r.Record(tunnel, v, true)
+	mode := strings.Join(v.Tokens, " ")
+
+	attr := en.e.Attr("ppk-secret")
+	if attr == nil || attr.Unset || len(attr.Values) == 0 {
+		if mode == "allow" || mode == "require" {
+			tunnel.Properties[field.Prefix+"ppk-secret"] = "absent"
+		}
+		return
+	}
+	form := "plaintext"
+	switch attr.Values[0] {
+	case "ENC":
+		form = "ENC"
+	case "FortinetPasswordMask":
+		form = "masked"
+	}
+	tunnel.Properties[field.Prefix+"ppk-secret"] = "present"
+	if mode != "allow" && mode != "require" {
+		reason := mode
+		if reason == "" {
+			reason = "unknown"
+		}
+		tunnel.Properties[field.Prefix+"ppk-secret:unused"] = "ppk is " + reason
+	}
+	if form == "plaintext" {
+		x.inv.AddWarning(model.Warning{
+			Code:    "plaintext-ppk",
+			Message: en.label + " has a plaintext post-quantum preshared key in the backup (value not shown); take backups with secrets encrypted",
+			Ev:      model.Evidence{Location: x.r.Loc, Line: attr.Line, Symbol: en.section + "/" + en.e.Name + "/ppk-secret", Context: en.ctx},
+		})
+	}
+
+	ev := field.Value{Field: "ppk-secret", Symbol: en.section + "/" + en.e.Name + "/ppk-secret", Context: en.ctx, Line: attr.Line}
+	m := &model.Asset{
+		Type: model.AssetTypeRelatedMaterial,
+		Name: en.label + " post-quantum preshared key",
+		Mat:  &model.Material{Type: "secret-key"},
+		Properties: map[string]string{
+			field.Prefix + "ppk-secret:form": form,
+			field.Prefix + "ppk-secret:line": strconv.Itoa(attr.Line),
+		},
+		Evidence: []model.Evidence{x.r.Evidence(ev)},
+	}
+	id := x.inv.Add(m).ID
+	if mode == "allow" || mode == "require" {
+		if !slices.Contains(tunnel.DependsOn, id) {
+			tunnel.DependsOn = append(tunnel.DependsOn, id)
+		}
+	}
 }
 
 func (x *extractor) phase2(scope tree.Scope, section string, e *tree.Entry, tunnels map[string]*model.Asset) {

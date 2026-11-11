@@ -23,8 +23,15 @@ func TestComplete(t *testing.T) {
 	}{
 		{"AES-256-GCM", model.Algorithm{Primitive: "ae", Mode: "gcm", ParameterSetIdentifier: "256"}, ptr(256), []string{"encrypt", "decrypt"}, nil},
 		{"3DES-CBC", model.Algorithm{Primitive: "block-cipher", Mode: "cbc"}, ptr(112), []string{"encrypt", "decrypt"}, nil},
-		{"HMAC-SHA256", model.Algorithm{Primitive: "mac"}, ptr(128), []string{"tag"}, nil},
-		{"PRF-HMAC-SHA256", model.Algorithm{Primitive: "kdf"}, ptr(128), []string{"keyderive"}, nil},
+		// SP 800-57 Part 1 Rev. 5 Table 3, HMAC column, not collision resistance.
+		{"HMAC-SHA1", model.Algorithm{Primitive: "mac"}, ptr(128), []string{"tag"}, nil},
+		{"HMAC-SHA256", model.Algorithm{Primitive: "mac"}, ptr(256), []string{"tag"}, nil},
+		{"HMAC-SHA384", model.Algorithm{Primitive: "mac"}, ptr(256), []string{"tag"}, nil},
+		{"PRF-HMAC-SHA256", model.Algorithm{Primitive: "kdf"}, ptr(256), []string{"keyderive"}, nil},
+		// Not rated by Table 3, and RC4 is broken whatever its key size.
+		{"HMAC-MD5", model.Algorithm{Primitive: "mac"}, nil, []string{"tag"}, nil},
+		{"UMAC-128", model.Algorithm{Primitive: "mac"}, nil, []string{"tag"}, nil},
+		{"RC4", model.Algorithm{Primitive: "stream-cipher"}, nil, []string{"encrypt", "decrypt"}, nil},
 		{"NULL", model.Algorithm{Primitive: "other", ClassicalSecurityLevel: ptr(0)}, ptr(0), nil, nil},
 		{"X25519", model.Algorithm{Primitive: "key-agree", Curve: "x25519"}, ptr(128), []string{"keyderive"}, ptr(0)},
 		{"MODP-2048", model.Algorithm{Primitive: "key-agree", ParameterSetIdentifier: "2048"}, ptr(112), []string{"keyderive"}, ptr(0)},
@@ -64,6 +71,12 @@ func TestOID(t *testing.T) {
 	}
 	if got, want := OID("RSA-2048"), "1.2.840.113549.1.1.1"; got != want {
 		t.Errorf("RSA-2048 OID = %q, want %q", got, want)
+	}
+	// NIST's aes arcs 9, 29, and 49 are AES-GMAC (RFC 9044); CTR has none.
+	for _, name := range []string{"AES-128-CTR", "AES-192-CTR", "AES-256-CTR"} {
+		if got := OID(name); got != "" {
+			t.Errorf("%s OID = %q, want empty", name, got)
+		}
 	}
 	if got := OID("MODP-2048"); got != "" {
 		t.Errorf("MODP-2048 OID = %q, want empty", got)

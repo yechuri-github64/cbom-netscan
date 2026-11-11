@@ -63,8 +63,8 @@ planned, 1 not derivable from a backup, 1 with no defined value).
 | Primitive | `cp.algorithmProperties.primitive` | covered | Token tables in `extract/*/tokens.go`; certificate keys from the parsed key type | `key-agree` (hyphen, as in the schema), `kem`, `combiner`, `ae`, `block-cipher`, `mac`, `kdf`, `signature`, `pke` (RSA certificate keys, which can encrypt as well as sign). Fixtures: 171/171 |
 | Mode | `cp.algorithmProperties.mode` | covered | Token tables (`aes256-ctr` → `ctr`, `aes256gcm` → `gcm`, `3des` → `cbc`) | Set on every block-cipher and AE algorithm that has a mode; omitted where none applies (ChaCha20-Poly1305, MACs, key agreement). Fixtures: 18/171, which is every component a mode applies to |
 | Crypto Functions | `cp.algorithmProperties.cryptoFunctions[]` | covered | By primitive, in `extract/internal/algo`: block-cipher/ae/stream-cipher → encrypt+decrypt; mac → tag; kdf → keyderive; hash → digest; signature → sign+verify; pke → encrypt+decrypt+sign+verify; key-agree → keyderive; kem → encapsulate+decapsulate | Combiners, `other`, and `unknown` have none: a combiner's parts carry the functions (§8.5). Fixtures: 163/171 |
-| Classical security level | `cp.algorithmProperties.classicalSecurityLevel` | covered | NIST SP 800-57 Part 1 Rev. 5 Table 2 for RSA/DSA/MODP/FFDHE/ECC; well-known strengths for AES, 3DES, HMAC, ChaCha20, NULL (0) | Combiners and NIST KEMs are left unset: a combiner has no single Table 2 number (§8.5). Sizes between Table 2 rows use the weaker row (4096-bit RSA is 128). Fixtures: 134/171 |
-| OID | `cp.oid` | partial | Certificate algorithms from the certificate's ASN.1; IPsec, SSH, and TLS-group algorithms from a well-known catalog (NIST CSOR, PKCS #1, RFC 8410) | MODP/FFDHE groups and Fortinet-private KEMs (Kyber, FrodoKEM, BIKE, HQC) have no OID to give. Fixtures: 80/171 |
+| Classical security level | `cp.algorithmProperties.classicalSecurityLevel` | covered | NIST SP 800-57 Part 1 Rev. 5: Table 2 for RSA/DSA/MODP/FFDHE/ECC and 3DES; Table 3 (HMAC column) for HMAC and the HMAC PRFs, so HMAC-SHA1 is 128 and HMAC with SHA-256 or longer is 256; the key size for AES, ChaCha20, and the other block ciphers; NULL is 0 | Combiners and NIST KEMs are left unset: a combiner has no single Table 2 number (§8.5). So are RC4 (broken whatever its key size) and the MACs Table 3 does not rate (MD5, RIPEMD-160, SM3, UMAC). Sizes between Table 2 rows use the weaker row (4096-bit RSA is 128). Fixtures: 134/171 |
+| OID | `cp.oid` | partial | Certificate algorithms from the certificate's ASN.1; IPsec, SSH, and TLS-group algorithms from a well-known catalog (NIST CSOR, PKCS #1, RFC 8410) | MODP/FFDHE groups, AES in CTR mode (NIST's `aes` arcs 9, 29, and 49 are AES-GMAC, RFC 9044), and Fortinet-private KEMs (Kyber, FrodoKEM, BIKE, HQC) have no OID to give. Fixtures: 76/171 |
 | List | no 1.6 field; the CBOM's set of algorithm components | covered (interpretation) | — | The PDF's layout puts "List" under Algorithms, but its description speaks of the algorithms "employed by the quantum device or system". Read here as the list of algorithm components, which every CBOM with crypto has. See §8.2 |
 
 Not a Table 9 element but always set where it applies:
@@ -476,7 +476,8 @@ with SSL offload), `firewall access-proxy`,
 ### 7.5 Other limitations
 
 - Table 9 elements not filled yet: key state, Activation Date (§2; §8.3–8.4),
-  and algorithm OIDs for MODP groups and Fortinet-private KEMs.
+  and algorithm OIDs for MODP groups, AES in CTR mode, and Fortinet-private
+  KEMs.
 - `admin-server-cert` is linked to a certificate component only when it is
   configured; the default `Fortinet_GUI_Server` is recorded by name only.
 - The effective cipher set under `strong-crypto` is not computed; options it
@@ -553,7 +554,10 @@ Using it would fill the element but needs to be documented as a convention.
 Filled from `extract/internal/algo.Complete`: functions by the algorithm's
 primitive (not by which protocol slot used it, so AES-256-GCM in SSH and
 IPsec is one component), and classical bits from NIST SP 800-57 Part 1
-Rev. 5 Table 2, or a well-known strength when Table 2 has no row. A
+Rev. 5: Table 2, Table 3's HMAC column for HMAC (a keyed MAC needs
+pre-image resistance, not collision resistance, so HMAC-SHA1 is 128, not
+80), or the key size of a symmetric cipher. Algorithms those tables do not
+rate, and RC4, are left unset instead of being given a number. A
 combiner's classical level is left unset: it is not a single Table 2
 number (neither the stronger nor the weaker of its parts is recorded as
 the combiner's own level). NIST KEMs (ML-KEM) have a NIST quantum level

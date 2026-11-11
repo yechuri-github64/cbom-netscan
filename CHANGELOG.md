@@ -19,10 +19,13 @@ follow [Semantic Versioning](https://semver.org/); while the version is
   the same way SSL VPN links `servercert`. The default
   `Fortinet_GUI_Server` is not linked (it is usually absent from backups).
 - Algorithm components now fill `classicalSecurityLevel` (NIST SP 800-57
-  Part 1 Rev. 5 Table 2, and well-known strengths for HMAC, ChaCha20, and
-  NULL), `cryptoFunctions` (by primitive), and a dotted OID when one is
-  assigned. Combiners and non-NIST KEMs have no single Table 2 number;
-  MODP groups and Fortinet-private KEMs have no OID.
+  Part 1 Rev. 5: Table 2 for public-key sizes, curves, and 3DES; Table 3
+  for HMAC, so HMAC-SHA1 is 128 and HMAC with SHA-256 or longer is 256;
+  the key size for AES, ChaCha20, and the other block ciphers; 0 for NULL),
+  `cryptoFunctions` (by primitive), and a dotted OID when one is assigned.
+  Combiners and non-NIST KEMs have no single Table 2 number. RC4 and the
+  MACs Table 3 does not rate (MD5, RIPEMD-160, SM3, UMAC) have no level.
+  MODP groups, AES in CTR mode, and Fortinet-private KEMs have no OID.
 - Two `edit` blocks with the same name in one table produce a
   `duplicate-edit-name` warning. Protocols and certificates that share a
   name but not details are kept as separate components (`… (line N)`),

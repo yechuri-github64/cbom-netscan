@@ -933,8 +933,7 @@
             "decrypt"
           ],
           "classicalSecurityLevel": 256
-        },
-        "oid": "2.16.840.1.101.3.4.1.49"
+        }
       }
     },
     {
@@ -1194,7 +1193,7 @@
           "cryptoFunctions": [
             "tag"
           ],
-          "classicalSecurityLevel": 128
+          "classicalSecurityLevel": 256
         },
         "oid": "1.2.840.113549.2.9"
       }
@@ -1300,7 +1299,7 @@
           "cryptoFunctions": [
             "keyderive"
           ],
-          "classicalSecurityLevel": 128
+          "classicalSecurityLevel": 256
         }
       }
     },
@@ -1324,7 +1323,7 @@
           "cryptoFunctions": [
             "keyderive"
           ],
-          "classicalSecurityLevel": 192
+          "classicalSecurityLevel": 256
         }
       }
     },

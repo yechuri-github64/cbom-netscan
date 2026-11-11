@@ -1008,7 +1008,7 @@
           "cryptoFunctions": [
             "tag"
           ],
-          "classicalSecurityLevel": 80
+          "classicalSecurityLevel": 128
         },
         "oid": "1.2.840.113549.2.7"
       }
@@ -1033,7 +1033,7 @@
           "cryptoFunctions": [
             "tag"
           ],
-          "classicalSecurityLevel": 128
+          "classicalSecurityLevel": 256
         },
         "oid": "1.2.840.113549.2.9"
       }
@@ -1166,7 +1166,7 @@
           "cryptoFunctions": [
             "keyderive"
           ],
-          "classicalSecurityLevel": 80
+          "classicalSecurityLevel": 128
         }
       }
     },
@@ -1190,7 +1190,7 @@
           "cryptoFunctions": [
             "keyderive"
           ],
-          "classicalSecurityLevel": 128
+          "classicalSecurityLevel": 256
         }
       }
     },
@@ -1219,7 +1219,7 @@
           "cryptoFunctions": [
             "keyderive"
           ],
-          "classicalSecurityLevel": 192
+          "classicalSecurityLevel": 256
         }
       }
     },

@@ -357,7 +357,7 @@
           "cryptoFunctions": [
             "tag"
           ],
-          "classicalSecurityLevel": 128
+          "classicalSecurityLevel": 256
         },
         "oid": "1.2.840.113549.2.9"
       }

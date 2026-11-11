@@ -79,9 +79,11 @@ func functions(primitive string) []string {
 }
 
 // classicalLevel is bits of classical security, from NIST SP 800-57 Part 1
-// Rev. 5 Table 2 where that table has a row, and from the algorithm's
-// well-known strength otherwise. Combiners and NIST KEMs are left unset:
-// a combiner's level is not a single Table 2 number (MAPPING.md §8.5).
+// Rev. 5: Table 2 for public-key sizes, curves, and 3DES, Table 3 for HMAC,
+// and the key size for the other symmetric ciphers. Combiners and NIST KEMs
+// are left unset: a combiner's level is not a single Table 2 number
+// (MAPPING.md §8.5). So are RC4, which is broken whatever its key size, and
+// the MACs and PRFs Table 3 does not rate (MD5, RIPEMD-160, SM3, UMAC).
 func classicalLevel(name string, a *model.Algorithm) (int, bool) {
 	if n, ok := classicalByName[name]; ok {
 		return n, true
@@ -104,19 +106,21 @@ func classicalLevel(name string, a *model.Algorithm) (int, bool) {
 
 // classicalByName covers algorithms whose strength is not in ParameterSetIdentifier
 // or Curve (3DES, HMAC, ChaCha20, NULL).
+//
+// The HMAC and PRF rows are SP 800-57 Part 1 Rev. 5 Table 3, column "HMAC,
+// KMAC, key derivation functions": SHA-1 gives 128 and SHA-256, SHA-384,
+// and SHA-512 give 256 or more (recorded as 256). They are not the hash's
+// collision resistance (80 for SHA-1, 128 for SHA-256), which is what
+// matters for signatures, not for a keyed MAC.
 var classicalByName = map[string]int{
 	"NULL": 0, "NULL-MAC": 0,
 	"DES-CBC": 56, "3DES-CBC": 112,
 	"SM4": 128, "SEED": 128, "Blowfish-CBC": 128, "CAST-128-CBC": 128,
-	"HMAC-MD5": 64, "HMAC-MD5-96": 64,
-	"HMAC-SHA1": 80, "PRF-HMAC-SHA1": 80, "PRF-HMAC-MD5": 64,
-	"HMAC-SHA256": 128, "PRF-HMAC-SHA256": 128, "HMAC-SM3": 128, "PRF-HMAC-SM3": 128,
-	"HMAC-SHA384": 192, "PRF-HMAC-SHA384": 192,
+	"HMAC-SHA1": 128, "PRF-HMAC-SHA1": 128,
+	"HMAC-SHA256": 256, "PRF-HMAC-SHA256": 256,
+	"HMAC-SHA384": 256, "PRF-HMAC-SHA384": 256,
 	"HMAC-SHA512": 256, "PRF-HMAC-SHA512": 256,
-	"HMAC-RIPEMD160": 80,
-	"UMAC-64":        64, "UMAC-128": 128,
 	"ChaCha20-Poly1305": 256, "ChaCha20-Poly1305 (OpenSSH)": 256,
-	"RC4": 128, "RC4-128-drop1536": 128, "RC4-256-drop1536": 256,
 	"ARIA-128": 128, "ARIA-192": 192, "ARIA-256": 256,
 }
 
@@ -150,8 +154,9 @@ var curveLevel = map[string]int{
 }
 
 // OID returns a dotted OID for a named algorithm when one is assigned
-// (NIST CSOR, PKCS #1, RFC 8410). Empty if none: MODP groups and
-// Fortinet-private KEMs have no OID to give.
+// (NIST CSOR, PKCS #1, RFC 8410). Empty if none: MODP groups, AES in CTR
+// mode, and Fortinet-private KEMs have no OID to give. (NIST's aes arcs 9,
+// 29, and 49 are AES-GMAC, RFC 9044, not CTR.)
 func OID(name string) string {
 	if oid, ok := oids[name]; ok {
 		return oid
@@ -173,9 +178,6 @@ var oids = map[string]string{
 	"AES-128-GCM": "2.16.840.1.101.3.4.1.6",
 	"AES-192-GCM": "2.16.840.1.101.3.4.1.26",
 	"AES-256-GCM": "2.16.840.1.101.3.4.1.46",
-	"AES-128-CTR": "2.16.840.1.101.3.4.1.9",
-	"AES-192-CTR": "2.16.840.1.101.3.4.1.29",
-	"AES-256-CTR": "2.16.840.1.101.3.4.1.49",
 	"3DES-CBC":    "1.2.840.113549.3.7",
 	"HMAC-SHA1":   "1.2.840.113549.2.7",
 	"HMAC-SHA256": "1.2.840.113549.2.9",
